@@ -1,0 +1,33 @@
+name: customer_app
+description: Fresh Delivery Customer App
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.1.0
+  get: ^4.6.6
+  carousel_slider: ^5.1.2
+  cached_network_image: ^3.3.0
+  smooth_page_indicator: ^1.1.0
+  lucide_icons: any
+  flutter_svg: ^2.0.10
+  supabase_flutter: ^2.1.0
+  shimmer: ^3.0.0
+  google_maps_flutter: ^2.5.3
+  firebase_core: ^4.9.0
+  firebase_messaging: ^16.2.2
+  geolocator: ^11.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

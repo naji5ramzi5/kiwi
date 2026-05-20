@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "214305510491",
+    "project_id": "fresh-enterprise",
+    "storage_bucket": "fresh-enterprise.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214305510491:android:379de70091d30e52ec5b7e",
+        "android_client_info": {
+          "package_name": "com.example.customer_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ5Z_S6_fLECnRyu0MeIO5cdDmrEscIF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214305510491:android:0d29f2afd6d9f331ec5b7e",
+        "android_client_info": {
+          "package_name": "com.example.driver_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ5Z_S6_fLECnRyu0MeIO5cdDmrEscIF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

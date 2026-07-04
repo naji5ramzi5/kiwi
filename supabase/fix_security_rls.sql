@@ -171,8 +171,9 @@ CREATE POLICY "staff_notifications_insert" ON public.notifications
 -- ─── 11. favorites (خاصة بصاحبها) ───────────────────────────
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='favorites') THEN
+    -- الجدول يستخدم customer_id (كما في favorites_controller.dart)
     EXECUTE 'CREATE POLICY "own_favorites" ON public.favorites FOR ALL
-      USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid())';
+      USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid())';
   END IF;
 END $$;
 

@@ -128,6 +128,18 @@ class FavoritesScreen extends StatelessWidget {
           itemBuilder: (context, index) {
             final p = favProducts[index];
             final imageUrl = (p['image_url'] ?? '').toString();
+            int favStock = 0;
+            final dynamic favBiData = p['branch_inventory'] ?? p['inventory'];
+            if (favBiData != null) {
+              if (favBiData is List && favBiData.isNotEmpty) {
+                final dynamic first = favBiData[0];
+                final dynamic stockVal = first['actual_stock'] ?? first['quantity'] ?? 0;
+                favStock = (stockVal is num) ? stockVal.toInt() : 0;
+              } else if (favBiData is Map) {
+                final dynamic stockVal = favBiData['actual_stock'] ?? favBiData['quantity'] ?? 0;
+                favStock = (stockVal is num) ? stockVal.toInt() : 0;
+              }
+            }
             final productData = {
               'id': p['id'],
               'title': p['name'],
@@ -135,6 +147,7 @@ class FavoritesScreen extends StatelessWidget {
               'image': imageUrl,
               'category': p['category'],
               'unit': p['unit'] ?? 'حبة',
+              'stock': favStock,
             };
 
             return GestureDetector(
@@ -228,15 +241,16 @@ class FavoritesScreen extends StatelessWidget {
                                 ],
                               ),
                               GestureDetector(
-                                onTap: () => cartController.addToCart(productData),
+                                onTap: favStock == 0 ? null : () => cartController.addToCart(productData),
                                 child: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+                                    gradient: favStock == 0 ? null : const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+                                    color: favStock == 0 ? Colors.grey.shade300 : null,
                                     shape: BoxShape.circle,
-                                    boxShadow: [BoxShadow(color: AppTheme.primary.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))],
+                                    boxShadow: favStock == 0 ? [] : [BoxShadow(color: AppTheme.primary.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))],
                                   ),
-                                  child: const Icon(LucideIcons.plus, size: 16, color: Colors.white),
+                                  child: Icon(favStock == 0 ? LucideIcons.xCircle : LucideIcons.plus, size: 16, color: favStock == 0 ? Colors.grey : Colors.white),
                                 ),
                               ),
                             ],

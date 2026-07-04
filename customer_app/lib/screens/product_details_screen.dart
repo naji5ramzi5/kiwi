@@ -309,6 +309,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                       ),
                                     ),
                                     _buildQtyButton(LucideIcons.plus, () {
+                                      final int stock = (widget.product['stock'] as num?)?.toInt() ?? 0;
+                                      if (_quantity >= stock) {
+                                        Get.snackbar(
+                                          'الكمية غير متوفرة',
+                                          'الكمية المتاحة من هذا المنتج هي $stock فقط',
+                                          snackPosition: SnackPosition.TOP,
+                                          backgroundColor: Colors.orange.shade700,
+                                          colorText: Colors.white,
+                                          margin: const EdgeInsets.all(16),
+                                        );
+                                        return;
+                                      }
                                       setState(() => _quantity++);
                                     }, isPrimary: true),
                                   ],
@@ -493,8 +505,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           // Add to cart (on the right in RTL, which is first child)
           GestureDetector(
             onTap: () {
-              int stock = widget.product['stock'] ?? 10;
+              final int stock = (widget.product['stock'] as num?)?.toInt() ?? 0;
               if (stock == 0) return;
+              if (_quantity > stock) {
+                Get.snackbar(
+                  'الكمية غير متوفرة',
+                  'الكمية المتاحة من هذا المنتج هي $stock فقط',
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.orange.shade700,
+                  colorText: Colors.white,
+                  margin: const EdgeInsets.all(16),
+                );
+                return;
+              }
               cartController.addToCart(widget.product, qty: _quantity);
             },
             child: Container(

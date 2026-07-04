@@ -195,6 +195,20 @@ class ProductsSection extends StatelessWidget {
               }
 
               final double rating = (p['rating'] as num?)?.toDouble() ?? 4.8;
+              int stockQty = 0;
+              if (!isStatic) {
+                final dynamic biData = p['branch_inventory'] ?? p['inventory'];
+                if (biData != null) {
+                  if (biData is List && biData.isNotEmpty) {
+                    final dynamic first = biData[0];
+                    final dynamic stockVal = first['actual_stock'] ?? first['quantity'] ?? 0;
+                    stockQty = (stockVal is num) ? stockVal.toInt() : 0;
+                  } else if (biData is Map) {
+                    final dynamic stockVal = biData['actual_stock'] ?? biData['quantity'] ?? 0;
+                    stockQty = (stockVal is num) ? stockVal.toInt() : 0;
+                  }
+                }
+              }
               final productData = {
                 'id': p['id'],
                 'title': p['name'],
@@ -202,6 +216,7 @@ class ProductsSection extends StatelessWidget {
                 'image': imageUrl,
                 'category': p['category'],
                 'unit': p['unit'] ?? 'حبة',
+                'stock': stockQty,
               };
 
               return _buildProductCard(context, p, imageUrl, productData, isAvailable, rating, isDark);

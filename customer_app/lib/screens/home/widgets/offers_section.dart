@@ -89,6 +89,19 @@ class OffersSection extends StatelessWidget {
                 final imageUrl = offer['image_url'] ?? 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80';
                 final hasDiscount = offer['cost'] != null && (offer['cost'] as num) > (offer['price'] as num);
 
+                int offerStock = 0;
+                final dynamic offerBiData = offer['branch_inventory'] ?? offer['inventory'];
+                if (offerBiData != null) {
+                  if (offerBiData is List && offerBiData.isNotEmpty) {
+                    final dynamic first = offerBiData[0];
+                    final dynamic stockVal = first['actual_stock'] ?? first['quantity'] ?? 0;
+                    offerStock = (stockVal is num) ? stockVal.toInt() : 0;
+                  } else if (offerBiData is Map) {
+                    final dynamic stockVal = offerBiData['actual_stock'] ?? offerBiData['quantity'] ?? 0;
+                    offerStock = (stockVal is num) ? stockVal.toInt() : 0;
+                  }
+                }
+
                 return GestureDetector(
                   onTap: () {
                     final detailsData = {
@@ -98,6 +111,7 @@ class OffersSection extends StatelessWidget {
                       'image': imageUrl,
                       'category': offer['category'],
                       'unit': offer['unit'] ?? 'حبة',
+                      'stock': offerStock,
                     };
                     Get.to(() => ProductDetailsScreen(product: detailsData), transition: Transition.fadeIn);
                   },
@@ -163,6 +177,7 @@ class OffersSection extends StatelessWidget {
                                     const SizedBox(width: 4),
                                     GestureDetector(
                                       onTap: () {
+                                        if (offerStock == 0) return;
                                         final productData = {
                                           'id': offer['id'],
                                           'title': offer['name'],
@@ -170,27 +185,26 @@ class OffersSection extends StatelessWidget {
                                           'image': imageUrl,
                                           'category': offer['category'],
                                           'unit': offer['unit'] ?? 'حبة',
-                                          'stock': offer['stock'] ?? 10,
+                                          'stock': offerStock,
                                         };
-                                        if (productData['stock'] == 0) return;
                                         cartController.addToCart(productData);
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          gradient: (offer['stock'] == 0)
+                                          gradient: (offerStock == 0)
                                               ? null
                                               : const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
-                                          color: (offer['stock'] == 0) ? Colors.grey.shade300 : null,
+                                          color: (offerStock == 0) ? Colors.grey.shade300 : null,
                                           shape: BoxShape.circle,
-                                          boxShadow: (offer['stock'] != 0)
+                                          boxShadow: (offerStock != 0)
                                               ? [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))]
                                               : [],
                                         ),
                                         child: Icon(
-                                          (offer['stock'] == 0) ? LucideIcons.xCircle : LucideIcons.plus,
+                                          (offerStock == 0) ? LucideIcons.xCircle : LucideIcons.plus,
                                           size: 18,
-                                          color: (offer['stock'] == 0) ? Colors.grey : Colors.white,
+                                          color: (offerStock == 0) ? Colors.grey : Colors.white,
                                         ),
                                       ),
                                     ),

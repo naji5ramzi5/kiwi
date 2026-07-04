@@ -57,8 +57,36 @@ class CartController extends GetxController {
 
   void addToCart(Map<String, dynamic> product, {int qty = 1, bool showPopup = true}) {
     final String id = product['id'].toString();
+    final int? stock = product['stock'] != null ? (product['stock'] as num).toInt() : null;
+
+    final int currentQty = cartItems.containsKey(id) ? (cartItems[id]!['quantity'] as int? ?? 0) : 0;
+    if (stock != null && currentQty + qty > stock) {
+      final int allowed = stock - currentQty;
+      if (allowed <= 0) {
+        Get.snackbar(
+          'الكمية غير متوفرة',
+          'لا يمكن إضافة المزيد، الكمية المتاحة من هذا المنتج هي $stock فقط',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.orange.shade700,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+        );
+        return;
+      }
+      qty = allowed;
+      Get.snackbar(
+        'تنبيه',
+        'تمت إضافة الكمية المتاحة فقط ($stock)',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+      );
+    }
+
     if (cartItems.containsKey(id)) {
       cartItems[id]!['quantity'] = (cartItems[id]!['quantity'] as int? ?? 0) + qty;
+      if (stock != null) cartItems[id]!['stock'] = stock;
     } else {
       cartItems[id] = {
         'id': id,
@@ -67,6 +95,7 @@ class CartController extends GetxController {
         'image': product['image']?.toString() ?? '',
         'unit': product['unit']?.toString() ?? 'كغ',
         'quantity': qty,
+        if (stock != null) 'stock': stock,
       };
     }
     cartItems.refresh();

@@ -8,6 +8,7 @@ import '../auth/login_screen.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/main_screen_controller.dart';
+import '../../controllers/home_controller.dart';
 import '../order_details_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -43,6 +44,20 @@ class _CartScreenState extends State<CartScreen> {
   void _startCountdown() async {
     if (!authController.isLoggedIn) {
       _showGuestLoginDialog();
+      return;
+    }
+
+    final homeController = Get.isRegistered<HomeController>() ? Get.find<HomeController>() : null;
+    if (homeController != null && !homeController.isInDeliveryZone.value) {
+      Get.snackbar(
+        'خارج منطقة التوصيل',
+        'عذراً، موقعك الحالي خارج مناطق التوصيل المتاحة. الرجاء تحديد موقع ضمن النطاق.',
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
+      );
       return;
     }
 
@@ -89,8 +104,12 @@ class _CartScreenState extends State<CartScreen> {
     _countdownTimer?.cancel();
     cartController.isCountingDown(false);
     setState(() => _countdown = 6);
+    final homeController = Get.isRegistered<HomeController>() ? Get.find<HomeController>() : null;
+    final String address = (homeController != null && homeController.userAddress.value.isNotEmpty)
+        ? homeController.userAddress.value
+        : (homeController?.selectedBranch.value?['address']?.toString() ?? 'غير محدد');
     final success = await cartController.placeOrder(
-      address: 'بغداد - الكرادة',
+      address: address,
       paymentMethod: 'Cash on Delivery',
     );
     if (success) {

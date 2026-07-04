@@ -357,6 +357,18 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               itemBuilder: (context, index) {
                 final p = products[index];
                 final imageUrl = p['image_url'] ?? '';
+                int catStock = 0;
+                final dynamic catBiData = p['branch_inventory'] ?? p['inventory'];
+                if (catBiData != null) {
+                  if (catBiData is List && catBiData.isNotEmpty) {
+                    final dynamic first = catBiData[0];
+                    final dynamic stockVal = first['actual_stock'] ?? first['quantity'] ?? 0;
+                    catStock = (stockVal is num) ? stockVal.toInt() : 0;
+                  } else if (catBiData is Map) {
+                    final dynamic stockVal = catBiData['actual_stock'] ?? catBiData['quantity'] ?? 0;
+                    catStock = (stockVal is num) ? stockVal.toInt() : 0;
+                  }
+                }
                 final productData = {
                   'id': p['id'],
                   'title': p['name'],
@@ -364,6 +376,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   'image': imageUrl,
                   'category': p['category'],
                   'unit': p['unit'] ?? 'حبة',
+                  'stock': catStock,
                 };
 
                 return GestureDetector(
@@ -460,13 +473,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                     ),
                                   ),
                                   GestureDetector(
-                                    onTap: () => cartController.addToCart(productData),
+                                    onTap: catStock == 0 ? null : () => cartController.addToCart(productData),
                                     child: Container(
                                       padding: const EdgeInsets.all(6),
                                       decoration: BoxDecoration(
-                                        gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+                                        gradient: catStock == 0 ? null : const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+                                        color: catStock == 0 ? Colors.grey.shade300 : null,
                                         shape: BoxShape.circle,
-                                        boxShadow: [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))],
+                                        boxShadow: catStock == 0 ? [] : [BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))],
                                       ),
                                       child: const Icon(LucideIcons.plus, size: 14, color: Colors.white),
                                     ),

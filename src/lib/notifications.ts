@@ -70,7 +70,7 @@ export function useNotifications() {
 
       // Listen to foreground messages
       unsubRef.current = onForegroundMessage((payload) => {
-        const title = payload.notification?.title || 'Fresh System'
+        const title = payload.notification?.title || 'Kiwi System'
         const body = payload.notification?.body || ''
         const type = (payload.data?.type as AppNotification['type']) || 'system'
 

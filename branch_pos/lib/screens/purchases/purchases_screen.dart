@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/inventory_controller.dart';
+import '../../controllers/auth_controller.dart';
+import '../../services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PurchasesScreen extends StatefulWidget {
@@ -15,10 +17,51 @@ class PurchasesScreen extends StatefulWidget {
 class _PurchasesScreenState extends State<PurchasesScreen> {
   final supabase = Supabase.instance.client;
   final InventoryController inventoryController = Get.find<InventoryController>();
+  final AuthController authController = Get.find<AuthController>();
   
   List<Map<String, dynamic>> cart = [];
   String supplierName = '';
   double totalValue = 0;
+  final TextEditingController barcodeController = TextEditingController();
+
+  void scanBarcode(String barcode) {
+    if (barcode.isEmpty) return;
+    final product = inventoryController.inventory.firstWhere(
+      (p) => p['barcode'] == barcode || p['id'].toString() == barcode,
+      orElse: () => <String, dynamic>{},
+    );
+    if (product.isNotEmpty) {
+      addToPurchase(product);
+      barcodeController.clear();
+    } else {
+      Get.snackbar('غير موجود', 'لم يتم العثور على منتج بهذا الباركود');
+      barcodeController.clear();
+    }
+  }
+
+  void updateQuantityDialog(int index) {
+    final controller = TextEditingController(text: cart[index]['quantity'].toString());
+    Get.defaultDialog(
+      title: 'تعديل الكمية لـ ${cart[index]['name']}',
+      content: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(hintText: 'الكمية المستلمة'),
+      ),
+      onConfirm: () {
+        final qty = double.tryParse(controller.text);
+        if (qty != null && qty > 0) {
+          setState(() {
+            cart[index]['quantity'] = qty;
+            calculateTotal();
+          });
+          Get.back();
+        }
+      },
+      textConfirm: 'حفظ',
+      textCancel: 'إلغاء',
+    );
+  }
 
   void addToPurchase(Map<String, dynamic> product) {
     setState(() {
@@ -48,11 +91,14 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     }
 
     try {
+      final branchId = authController.currentBranchId.value;
+
       // 1. Create Purchase record
       final purchaseResponse = await supabase.from('purchases').insert({
-        'branch_id': 1, // Assume branch 1 for now
+        'branch_id': branchId,
         'supplier_name': supplierName,
-        'total_value': totalValue,
+        'total_amount': totalValue,
+        'created_by': Supabase.instance.client.auth.currentUser?.id,
       }).select().single();
 
       // 2. Create Purchase Items
@@ -66,7 +112,19 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
 
       await supabase.from('purchase_items').insert(itemsToInsert);
 
-      Get.snackbar('نجاح', 'تم تسجيل المشتريات وتحديث المخزون تلقائياً');
+      // 3. Update inventory for each purchased item
+      final supabaseService = SupabaseService();
+      for (final item in cart) {
+        await supabaseService.addStockEntry(
+          branchId,
+          item['id'],
+          item['quantity'],
+          item['unit_cost'],
+          Supabase.instance.client.auth.currentUser?.id ?? '',
+        );
+      }
+
+      Get.snackbar('نجاح', 'تم تسجيل المشتريات وتحديث المخزون');
       setState(() {
         cart = [];
         supplierName = '';
@@ -94,6 +152,18 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('كتالوج المنتجات', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: barcodeController,
+                    onSubmitted: scanBarcode,
+                    decoration: InputDecoration(
+                      hintText: 'اسحب الباركود هنا أو أدخل الرقم...',
+                      prefixIcon: const Icon(Icons.qr_code),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Expanded(
                     child: Obx(() {
@@ -156,7 +226,14 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                     calculateTotal();
                                   });
                                 }),
-                                Text('${item['quantity']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                GestureDetector(
+                                  onTap: () => updateQuantityDialog(index),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(color: AppTheme.primaryLight.withOpacity(0.3), borderRadius: BorderRadius.circular(8)),
+                                    child: Text('${item['quantity']}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDark)),
+                                  ),
+                                ),
                                 IconButton(icon: const Icon(LucideIcons.plusCircle, size: 20, color: AppTheme.primary), onPressed: () {
                                   setState(() {
                                     item['quantity'] += 1;

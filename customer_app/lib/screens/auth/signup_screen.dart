@@ -20,13 +20,17 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    final themeTextSecColor = isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowRight, color: AppTheme.textPrimary),
+          icon: Icon(LucideIcons.arrowRight, color: themeTextColor),
           onPressed: () => Get.back(),
         ),
       ),
@@ -37,19 +41,46 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
+               Center(
+                 child: Container(
+                   width: 100,
+                   height: 100,
+                   decoration: BoxDecoration(
+                     boxShadow: [
+                       BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 6)),
+                     ],
+                   ),
+                   child: ClipOval(
+                     child: Container(
+                       color: Colors.white,
+                       child: Padding(
+                         padding: const EdgeInsets.all(18),
+                         child: Image.asset(
+                           'assets/images/kwi.png',
+                           fit: BoxFit.contain,
+                         ),
+                       ),
+                     ),
+                   ),
+                 ),
+               ),
+              const SizedBox(height: 20),
               Text(
                 'signup'.tr,
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: themeTextColor),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'أنشئ حسابك الآن وابدأ التسوق',
-                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+                style: TextStyle(fontSize: 14, color: themeTextSecColor),
+                textAlign: TextAlign.center,
               ),
               
               const SizedBox(height: 48),
               
               _buildTextField(
+                context,
                 label: 'name'.tr,
                 hint: 'أحمد محمود',
                 icon: LucideIcons.user,
@@ -58,6 +89,7 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 20),
 
               _buildTextField(
+                context,
                 label: 'phone'.tr,
                 hint: '07X XXXX XXXX',
                 icon: LucideIcons.phone,
@@ -67,6 +99,7 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 20),
               
               _buildTextField(
+                context,
                 label: 'password'.tr,
                 hint: '••••••••',
                 icon: LucideIcons.lock,
@@ -84,7 +117,11 @@ class _SignupScreenState extends State<SignupScreen> {
                     passwordController.text,
                   );
                   if (success) {
-                    Get.offAll(() => const MainScreen());
+                    if (Get.previousRoute.isNotEmpty && Get.previousRoute != '/signup') {
+                      Get.back();
+                    } else {
+                      Get.offAll(() => const MainScreen());
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -107,7 +144,7 @@ class _SignupScreenState extends State<SignupScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('لديك حساب بالفعل؟ ', style: TextStyle(color: AppTheme.textSecondary)),
+                  Text('لديك حساب بالفعل؟ ', style: TextStyle(color: themeTextSecColor)),
                   GestureDetector(
                     onTap: () => Get.back(),
                     child: const Text('تسجيل الدخول', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
@@ -121,7 +158,8 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(
+    BuildContext context, {
     required String label, 
     required String hint, 
     required IconData icon, 
@@ -129,24 +167,29 @@ class _SignupScreenState extends State<SignupScreen> {
     bool isPassword = false, 
     TextInputType? keyboardType
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    final themeTextSecColor = isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: themeTextColor),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: isPassword,
           keyboardType: keyboardType,
+          style: TextStyle(color: themeTextColor),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppTheme.textSecondary),
-            prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+            hintStyle: TextStyle(color: themeTextSecColor.withOpacity(0.6)),
+            prefixIcon: Icon(icon, color: themeTextSecColor, size: 20),
             filled: true,
-            fillColor: AppTheme.background,
+            fillColor: isDark ? AppTheme.surfaceDark : AppTheme.background,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,

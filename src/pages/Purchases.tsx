@@ -48,17 +48,28 @@ const Purchases = () => {
   const [supplierName, setSupplierName] = useState('');
   const [cart, setCart] = useState<PurchaseItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
 
   useEffect(() => {
     fetchPurchases();
     fetchProducts();
+    fetchBranches();
   }, []);
+
+  const fetchBranches = async () => {
+    const { data } = await supabase.from('branches').select('id, name');
+    setBranches(data || []);
+    if (data && data.length > 0) {
+      setSelectedBranchId(data[0].id);
+    }
+  };
 
   const fetchPurchases = async () => {
     try {
       const { data, error } = await supabase
         .from('purchases')
-        .select('*')
+        .select('*, branches(name)')
         .order('created_at', { ascending: false });
 
       if (error && error.code !== '42P01') throw error;
@@ -106,8 +117,8 @@ const Purchases = () => {
   const totalAmount = cart.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
 
   const savePurchase = async () => {
-    if (!supplierName || cart.length === 0) {
-      toast.error('يرجى إدخال اسم المورد واختيار أصناف');
+    if (!supplierName || cart.length === 0 || !selectedBranchId) {
+      toast.error('يرجى إدخال اسم المورد واختيار الفرع وأصناف الفاتورة');
       return;
     }
 
@@ -117,9 +128,10 @@ const Purchases = () => {
       const { data: purchase, error: pError } = await supabase
         .from('purchases')
         .insert({
+          branch_id: selectedBranchId,
           supplier_name: supplierName,
-          total_amount: totalAmount,
-          status: 'مكتمل'
+          total_value: totalAmount,
+          payment_status: 'مدفوع'
         })
         .select()
         .single();
@@ -217,6 +229,7 @@ const Purchases = () => {
               <tr className="text-gray-400 text-xs uppercase font-bold">
                 <th className="px-6 py-4">رقم الفاتورة</th>
                 <th className="px-6 py-4">المورد</th>
+                <th className="px-6 py-4">الفرع المستلم</th>
                 <th className="px-6 py-4">التاريخ</th>
                 <th className="px-6 py-4">الإجمالي</th>
                 <th className="px-6 py-4 text-center">الإجراءات</th>
@@ -224,10 +237,10 @@ const Purchases = () => {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan={5} className="py-20 text-center"><div className="loader mx-auto"></div></td></tr>
+                <tr><td colSpan={6} className="py-20 text-center"><div className="loader mx-auto"></div></td></tr>
               ) : purchases.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-gray-400">
+                  <td colSpan={6} className="py-20 text-center text-gray-400">
                     <FileText size={40} className="mx-auto mb-4 opacity-20" />
                     لا توجد فواتير مسجلة بعد
                   </td>
@@ -237,8 +250,9 @@ const Purchases = () => {
                   <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-mono text-gray-400">#{p.id.substring(0, 8)}</td>
                     <td className="px-6 py-4 font-bold text-gray-900">{p.supplier_name}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{(p as any).branches?.name || 'مستودع مركزي'}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{new Date(p.created_at).toLocaleDateString('ar-IQ')}</td>
-                    <td className="px-6 py-4 font-black text-emerald-700">{p.total_amount.toLocaleString()} د.ع</td>
+                    <td className="px-6 py-4 font-black text-emerald-700">{((p as any).total_value ?? p.total_amount ?? 0).toLocaleString()} د.ع</td>
                     <td className="px-6 py-4 text-center">
                       <button className="p-2 text-gray-400 hover:text-gray-900"><MoreVertical size={18} /></button>
                     </td>
@@ -293,6 +307,19 @@ const Purchases = () => {
 
               {/* Cart Side */}
               <div className="w-96 bg-gray-50/30 p-6 flex flex-col">
+                <div className="mb-6">
+                  <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">الفرع المستهدف</label>
+                  <select
+                    value={selectedBranchId}
+                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm font-bold text-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
+                  >
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="mb-6">
                   <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">معلومات المورد</label>
                   <div className="relative">

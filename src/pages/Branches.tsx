@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, MapPin, Users, ShoppingCart, TrendingUp, Edit2, Key, Shield, ShieldOff, Search, Printer, Leaf } from 'lucide-react'
+import { Plus, MapPin, ShoppingCart, TrendingUp, Edit2, Key, Shield, ShieldOff, Search, Printer, Leaf } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 import ZoneMap from '../components/ZoneMap'
 
 interface Branch {
@@ -16,6 +17,7 @@ interface Branch {
   longitude?: number;
   created_at: string;
   access_code?: string;
+  delivery_zones?: any[];
   orders_count?: number;
   sales_sum?: number;
   drivers_count?: number;
@@ -37,33 +39,77 @@ export default function Branches() {
 
   async function fetchBranches() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('branches')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    if (error) console.error('Error:', error)
-    else setBranches(data || [])
-    setLoading(false)
+    try {
+      const { data: branchesData, error } = await supabase
+        .from('branches')
+        .select('*, orders(*)')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const { data: driversData } = await supabase.from('drivers').select('branch_id')
+
+      const formatted = (branchesData || []).map((branch: any) => {
+        const branchOrders = branch.orders || []
+        const completedOrders = branchOrders.filter((o: any) => o.status === 'تم التوصيل' || o.status === 'مكتمل' || o.status === 'delivered')
+        const salesSum = completedOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || o.total_price || 0), 0)
+        const branchDriversCount = (driversData || []).filter((d: any) => d.branch_id === branch.id).length
+
+        return {
+          ...branch,
+          orders_count: branchOrders.length,
+          sales_sum: salesSum,
+          drivers_count: branchDriversCount
+        }
+      })
+
+      setBranches(formatted)
+    } catch (err) {
+      console.error('Error fetching branches:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function saveBranch(form: Partial<Branch>) {
     setLoading(true)
     try {
-      if (form.id) {
-        const { error } = await supabase.from('branches').update(form).eq('id', form.id)
+      const deliveryZones = (form as any).delivery_zones || []
+      const { delivery_zones, ...branchData } = form as any
+
+      let branchId = form.id
+      if (branchId) {
+        const { error } = await supabase.from('branches').update(branchData).eq('id', branchId)
         if (error) throw error
       } else {
-        const code = form.access_code || ('FR-' + Math.random().toString(36).substring(2, 7).toUpperCase())
-        const { error } = await supabase.from('branches').insert([{ ...form, access_code: code }])
+        const code = branchData.access_code || ('FR-' + Math.random().toString(36).substring(2, 7).toUpperCase())
+        const { data, error } = await supabase.from('branches').insert([{ ...branchData, access_code: code }]).select('id').single()
         if (error) throw error
+        branchId = data.id
       }
+      
+      // Save delivery zones if any
+      if (deliveryZones.length > 0 && branchId) {
+        const zonePayload = deliveryZones.map((z: any) => ({
+          branch_id: branchId,
+          name: z.name || 'منطقة توصيل',
+          color: z.color || '#10b981',
+          delivery_fee: z.delivery_fee || 0,
+          min_order: z.min_order || 5000,
+          max_delivery_time: z.max_delivery_time || 45,
+          is_active: true,
+          geojson: z.geojson || null
+        }))
+        const { error: zoneError } = await supabase.from('delivery_zones').insert(zonePayload)
+        if (zoneError) console.error('Error saving delivery zones:', zoneError)
+      }
+      
       fetchBranches()
       setModal(null)
-      alert('تم حفظ الفرع وتوليد رمز التفعيل بنجاح! 🎉')
+      toast.success('✅ تم حفظ الفرع وتوليد رمز التفعيل بنجاح!')
     } catch (err: any) {
       console.error('Error saving branch:', err)
-      alert('فشل في حفظ الفرع: ' + (err.message || 'خطأ غير معروف'))
+      toast.error('فشل في حفظ الفرع: ' + (err.message || 'خطأ غير معروف'))
     } finally {
       setLoading(false)
     }
@@ -78,12 +124,15 @@ export default function Branches() {
 
   const filtered = branches.filter(b => b.name.includes(search))
 
+  const totalOrders = branches.reduce((sum, b) => sum + (b.orders_count || 0), 0)
+  const totalSales = branches.reduce((sum, b) => sum + (b.sales_sum || 0), 0)
+
   return (
     <div className="animate-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 className="brand-name" style={{ fontSize: 24 }}>إدارة الفروع</h1>
-          <p className="brand-sub">تحكم في فروع "فرش" وحسابات المديرين من هنا</p>
+           <p className="brand-sub">تحكم في فروع Kiwi وحسابات المديرين من هنا</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <div className="icon-btn" style={{ width: 'auto', padding: '0 16px', gap: 8 }}>
@@ -111,14 +160,14 @@ export default function Branches() {
         </div>
         <div className="stat-card">
           <div className="stat-icon-wrap" style={{ background: '#3b82f615' }}><ShoppingCart className="text-blue-500" /></div>
-          <div className="stat-label">إجمالي الطلبات اليوم</div>
-          <div className="stat-value">0</div>
-          <div className="stat-sub stat-up"><TrendingUp size={12} /> +0% عن أمس</div>
+          <div className="stat-label">إجمالي الطلبات المستلمة</div>
+          <div className="stat-value">{totalOrders.toLocaleString('ar-IQ')}</div>
+          <div className="stat-sub stat-up"><TrendingUp size={12} /> في جميع الفروع</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon-wrap" style={{ background: '#8b5cf615' }}><TrendingUp className="text-purple-500" /></div>
-          <div className="stat-label">مبيعات الفروع</div>
-          <div className="stat-value">0</div>
+          <div className="stat-label">مبيعات الفروع الإجمالية</div>
+          <div className="stat-value">{totalSales.toLocaleString('ar-IQ')}</div>
           <div className="stat-sub">د.ع</div>
         </div>
       </div>

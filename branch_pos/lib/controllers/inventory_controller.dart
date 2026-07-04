@@ -1,8 +1,7 @@
-import '../controllers/auth_controller.dart';
-
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../controllers/auth_controller.dart';
+import '../services/supabase_service.dart';
 
 class InventoryController extends GetxController {
   final supabase = Supabase.instance.client;
@@ -22,14 +21,18 @@ class InventoryController extends GetxController {
   Future<void> fetchInventory() async {
     try {
       isLoading(true);
-      // Fetch products and their current stock in branch 1
-      // We'll join products table to get names and images
-      final response = await supabase
-          .from('products')
-          .select('*, inventory(stock_quantity)')
-          .order('name');
+      // Fetch products using SupabaseService to ensure branch filtering applies correctly
+      final products = await SupabaseService().getProducts(branchId: authController.currentBranchId.value);
       
-      inventory.value = List<Map<String, dynamic>>.from(response);
+      inventory.value = products.map((p) => {
+        'id': p.id,
+        'name': p.name,
+        'image_url': p.imageUrl,
+        'default_price': p.defaultPrice,
+        'barcode': p.barcode,
+        'cost': p.defaultPrice,
+        'inventory': [{'stock_quantity': p.stockQuantity}],
+      }).toList();
     } catch (e) {
       print('Error fetching inventory: $e');
     } finally {

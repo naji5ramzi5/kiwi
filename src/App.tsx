@@ -15,7 +15,11 @@ import Inventory from './pages/Inventory'
 import Purchases from './pages/Purchases'
 import Categories from './pages/Categories'
 import AIChat from './pages/AIChat'
+import Ratings from './pages/Ratings'
 import Login from './pages/Login'
+import { GeoFenceStatus } from './components/GeoFenceStatus'
+import OrderForm from './pages/OrderForm'
+import DeliveryZones from './pages/DeliveryZones'
 
 export default function App() {
   const [session, setSession] = useState<any>(null)
@@ -36,15 +40,26 @@ export default function App() {
 
   if (loading) return <div className="loader-overlay"><div className="loader"></div></div>
 
-  // Bypass session for Demo Mode so user can see the UI immediately
-  // if (!session) {
-  //   return <Login onLogin={() => {}} />
-  // }
+  if (!session) {
+    return <Login onLogin={async () => {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      if (s) setSession(s)
+    }} />
+  }
+
+  // Try to get a branchId from the session (if available) to limit the geo-fence check.
+  // Adjust the path according to how you store branch info in the user's metadata.
+  const branchId = session?.user?.app_metadata?.default_branch_id ?? null;
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={
+          <>
+            <Layout />
+            <GeoFenceStatus branchId={branchId} />
+          </>
+        }>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<Products />} />
@@ -58,10 +73,12 @@ export default function App() {
           <Route path="inventory" element={<Inventory />} />
           <Route path="purchases" element={<Purchases />} />
           <Route path="categories" element={<Categories />} />
+          <Route path="delivery-zones" element={<DeliveryZones />} />
+          <Route path="ratings" element={<Ratings />} />
           <Route path="ai-chat" element={<AIChat />} />
+          <Route path="checkout" element={<OrderForm />} />
         </Route>
       </Routes>
     </BrowserRouter>
   )
 }
-

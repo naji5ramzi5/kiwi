@@ -14,51 +14,74 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final AuthController authController = Get.put(AuthController());
+  final AuthController authController = Get.find<AuthController>();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    final themeTextSecColor = isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
+              // Back button
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: Icon(LucideIcons.arrowRight, color: themeTextColor),
+                  onPressed: () => Get.back(),
+                ),
+              ),
+              const SizedBox(height: 10),
               Center(
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primary, AppTheme.primaryDark],
-                    ),
-                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 6)),
+                    ],
                   ),
-                  child: const Icon(LucideIcons.leaf, color: Colors.white, size: 40),
+                  child: ClipOval(
+                    child: Container(
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(22),
+                        child: Image.asset(
+                          'assets/images/kwi.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
               
               Text(
                 'login'.tr,
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: themeTextColor),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'مرحباً بك مجدداً في الخضروات الطازجة',
-                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+              Text(
+                'مرحباً بك مجدداً في Kiwi',
+                style: TextStyle(fontSize: 14, color: themeTextSecColor),
                 textAlign: TextAlign.center,
               ),
               
               const SizedBox(height: 48),
               
               _buildTextField(
+                context,
                 label: 'phone'.tr,
                 hint: '07X XXXX XXXX',
                 icon: LucideIcons.phone,
@@ -68,6 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               
               _buildTextField(
+                context,
                 label: 'password'.tr,
                 hint: '••••••••',
                 icon: LucideIcons.lock,
@@ -111,27 +135,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
               )),
               
-              const SizedBox(height: 16),
-              
-              OutlinedButton(
-                onPressed: () => Get.offAll(() => const MainScreen()),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  side: const BorderSide(color: AppTheme.primary),
-                ),
-                child: Text(
-                  'guest'.tr,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primary),
-                ),
-              ),
-              
               const SizedBox(height: 32),
               
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('ليس لديك حساب؟ ', style: TextStyle(color: AppTheme.textSecondary)),
+                  Text('ليس لديك حساب؟ ', style: TextStyle(color: themeTextSecColor)),
                   GestureDetector(
                     onTap: () => Get.to(() => const SignupScreen()),
                     child: const Text('إنشاء حساب', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
@@ -145,7 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(
+    BuildContext context, {
     required String label, 
     required String hint, 
     required IconData icon, 
@@ -153,24 +163,29 @@ class _LoginScreenState extends State<LoginScreen> {
     bool isPassword = false, 
     TextInputType? keyboardType
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    final themeTextSecColor = isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: themeTextColor),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: isPassword,
           keyboardType: keyboardType,
+          style: TextStyle(color: themeTextColor),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppTheme.textSecondary),
-            prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+            hintStyle: TextStyle(color: themeTextSecColor.withOpacity(0.6)),
+            prefixIcon: Icon(icon, color: themeTextSecColor, size: 20),
             filled: true,
-            fillColor: AppTheme.background,
+            fillColor: isDark ? AppTheme.surfaceDark : AppTheme.background,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,

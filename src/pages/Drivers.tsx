@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User } from 'lucide-react';
+import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Driver {
@@ -12,6 +12,8 @@ interface Driver {
   is_online: boolean;
   plate_number?: string;
   avatar_url?: string;
+  avg_rating?: number;
+  total_ratings?: number;
 }
 
 export default function Drivers() {
@@ -28,8 +30,23 @@ export default function Drivers() {
       .select('*')
       .eq('role', 'driver');
     
-    if (error) toast.error('خطأ في جلب البيانات');
-    else setDrivers(data || []);
+    if (error) {
+      toast.error('خطأ في جلب البيانات');
+      setLoading(false);
+      return;
+    }
+    
+    const driversWithRatings = await Promise.all((data || []).map(async (d) => {
+      const { data: ratingData } = await supabase
+        .from('driver_ratings')
+        .select('rating')
+        .eq('driver_id', d.id);
+      const ratings = (ratingData || []) as { rating: number }[];
+      const avg = ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
+      return { ...d, avg_rating: Math.round(avg * 10) / 10, total_ratings: ratings.length };
+    }));
+    
+    setDrivers(driversWithRatings);
     setLoading(false);
   }
 
@@ -101,6 +118,24 @@ export default function Drivers() {
                   {driver.is_approved ? 'حساب معتمد' : 'بانتظار المراجعة'}
                 </span>
               </div>
+
+              {(driver.total_ratings ?? 0) > 0 && (
+                <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Star size={18} className="text-amber-400" />
+                    <span className="font-bold">التقييم:</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star key={i} size={14} className={i < Math.round(driver.avg_rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'} />
+                      ))}
+                    </div>
+                    <span className="text-sm font-black text-gray-900">{driver.avg_rating?.toFixed(1)}</span>
+                    <span className="text-xs text-gray-400">({driver.total_ratings})</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <button

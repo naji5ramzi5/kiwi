@@ -152,7 +152,7 @@ export default function Inventory() {
                   <th style={{ padding: '16px 20px', textAlign: 'right', fontSize: 12, color: 'var(--gray500)' }}>المنتج</th>
                   <th style={{ padding: '16px 20px', textAlign: 'right', fontSize: 12, color: 'var(--gray500)' }}>التصنيف</th>
                   <th style={{ padding: '16px 20px', textAlign: 'center', fontSize: 12, color: 'var(--gray500)' }}>الحالة</th>
-                  <th style={{ padding: '16px 20px', textAlign: 'center', fontSize: 12, color: 'var(--gray500)', background: 'var(--g50)', color: 'var(--g700)' }}>المخزون الفعلي</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'center', fontSize: 12, background: 'var(--g50)', color: 'var(--g700)' }}>المخزون الفعلي</th>
                   <th style={{ padding: '16px 20px', textAlign: 'center', fontSize: 12, color: 'var(--gray500)' }}>حد الأمان (Buffer)</th>
                   <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: 12, color: 'var(--gray500)' }}>إجراءات</th>
                 </tr>

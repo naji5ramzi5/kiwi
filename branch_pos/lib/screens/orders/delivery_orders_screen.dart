@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/pos_orders_controller.dart';
+import '../../controllers/auth_controller.dart';
+import '../../models/invoice.dart';
+import '../../services/invoice_service.dart';
 import 'package:intl/intl.dart';
 
 class DeliveryOrdersScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class DeliveryOrdersScreen extends StatefulWidget {
 
 class _DeliveryOrdersScreenState extends State<DeliveryOrdersScreen> {
   final POSOrdersController controller = Get.put(POSOrdersController());
+  final AuthController authController = Get.find<AuthController>();
   Map<String, dynamic>? selectedOrder;
 
   @override
@@ -158,7 +162,7 @@ class _DeliveryOrdersScreenState extends State<DeliveryOrdersScreen> {
               ),
               Row(
                 children: [
-                  _buildActionButton('طباعة الفاتورة', LucideIcons.printer, Colors.grey[700]!, () {}),
+                  _buildActionButton('طباعة الفاتورة', LucideIcons.printer, Colors.grey[700]!, () => _printInvoice()),
                   const SizedBox(width: 12),
                   _buildActionButton(
                     'إسناد مندوب', 
@@ -261,6 +265,40 @@ class _DeliveryOrdersScreenState extends State<DeliveryOrdersScreen> {
         ],
       ),
     );
+  }
+
+  void _printInvoice() {
+    if (selectedOrder == null) return;
+    final order = selectedOrder!;
+    final items = (order['order_items'] as List).map((item) {
+      return InvoiceItem(
+        productId: item['product_id'] ?? '',
+        name: item['products']?['name'] ?? 'منتج',
+        price: (item['unit_price'] as num).toDouble(),
+        quantity: (item['quantity'] as num).toInt(),
+        unit: item['products']?['unit'] ?? 'قطعة',
+        total: (item['total_price'] as num).toDouble(),
+      );
+    }).toList();
+
+    final invoice = Invoice(
+      id: order['id'],
+      orderId: order['id'],
+      branchId: authController.currentBranchId.value,
+      branchName: authController.currentBranchName.value,
+      items: items,
+      subtotal: ((order['total_amount'] as num) - (order['delivery_fee'] as num)).toDouble(),
+      discount: 0,
+      tax: 0,
+      total: (order['total_amount'] as num).toDouble(),
+      paymentMethod: order['payment_method'] ?? 'نقداً',
+      createdAt: DateTime.parse(order['created_at']),
+      customerName: order['profiles']?['full_name'] ?? '',
+      cashierName: 'فرع ${authController.currentBranchName.value}',
+    );
+
+    final invoiceService = InvoiceService();
+    invoiceService.printInvoice(invoice);
   }
 
   void _showDriverAssignmentDialog(BuildContext context) {

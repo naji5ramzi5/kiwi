@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, GitBranch, ShoppingCart, Activity,
   Truck, Megaphone, DollarSign, Users, Bell, Search, Settings, FileText, Box, Leaf,
-  X, CheckCheck, Trash2, ShieldAlert, Tag, UserCheck, Printer
+  X, CheckCheck, Trash2, ShieldAlert, Tag, UserCheck, Printer, MapPin, Star
 } from 'lucide-react'
 import { useNotifications } from '../lib/notifications'
 import type { AppNotification } from '../lib/notifications'
@@ -18,12 +18,14 @@ const NAV = [
   { label: 'الفئات المركزية', path: '/categories', icon: Tag, section: 'التشغيل' },
   
   { label: 'الفروع', path: '/branches', icon: GitBranch, section: 'الموارد البشرية والفروع' },
+  { label: 'مناطق التوصيل', path: '/delivery-zones', icon: MapPin, section: 'الموارد البشرية والفروع' },
   { label: 'المناديب والسائقين', path: '/drivers', icon: Truck, section: 'الموارد البشرية والفروع' },
+  { label: 'التقييمات', path: '/ratings', icon: Star, section: 'الموارد البشرية والفروع' },
   { label: 'العملاء', path: '/customers', icon: Users, section: 'الموارد البشرية والفروع' },
   
   { label: 'الحسابات والتقارير', path: '/finance', icon: DollarSign, section: 'المالية والتسويق' },
   { label: 'التسويق', path: '/marketing', icon: Megaphone, section: 'المالية والتسويق' },
-  { label: 'FreshAI (الذكاء الاصطناعي)', path: '/ai-chat', icon: Activity, section: 'الذكاء الاصطناعي' },
+  { label: 'KiwiAI (الذكاء الاصطناعي)', path: '/ai-chat', icon: Activity, section: 'الذكاء الاصطناعي' },
 ]
 
 const SECTIONS = ['اللوحة المركزية', 'التشغيل', 'الموارد البشرية والفروع', 'المالية والتسويق', 'الذكاء الاصطناعي']
@@ -35,11 +37,13 @@ const PAGE_TITLES: Record<string, string> = {
   '/purchases': 'سجل المشتريات',
   '/products': 'إدارة المنتجات والتسعير',
   '/branches': 'إدارة الفروع',
+  '/delivery-zones': 'مناطق التوصيل',
   '/drivers': 'إدارة فريق التوصيل',
+  '/ratings': 'التقييمات والتعليقات',
   '/customers': 'قاعدة العملاء',
   '/finance': 'التقارير المالية والشركاء',
   '/marketing': 'الحملات التسويقية',
-  '/ai-chat': 'FreshAI - المساعد الذكي',
+  '/ai-chat': 'KiwiAI - المساعد الذكي',
 }
 
 const NOTIF_ICONS: Record<string, string> = {
@@ -145,7 +149,7 @@ export default function Layout() {
 
   const { notifications, unreadCount, permission, markRead, markAllRead, clearAll, requestPermission } = useNotifications()
 
-  let title = PAGE_TITLES[location.pathname] || 'Fresh System'
+  let title = PAGE_TITLES[location.pathname] || 'Kiwi System'
   if (location.pathname.includes('/branches/')) title = 'تفاصيل الفرع والأداء'
 
   // Close panel on outside click
@@ -169,7 +173,7 @@ export default function Layout() {
               <Leaf size={24} />
             </div>
             <div>
-              <div className="brand-name" style={{ letterSpacing: '0.5px' }}>FRESH</div>
+              <div className="brand-name" style={{ letterSpacing: '0.5px' }}>KIWI</div>
               <div className="brand-sub">ENTERPRISE SYSTEM</div>
             </div>
           </div>

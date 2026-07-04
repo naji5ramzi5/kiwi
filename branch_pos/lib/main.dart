@@ -6,35 +6,54 @@ import 'theme/app_theme.dart';
 import 'controllers/auth_controller.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_layout.dart';
+import 'services/database_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Supabase only
-  await Supabase.initialize(
-    url: 'https://pftjlvtdzokbzuioqfug.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDg0NjgsImV4cCI6MjA5NDE4NDQ2OH0.3ujKn2bxihvFfhfeIXPVNDjxjfqpWsXJq4bpaPNsQOM',
-  );
+  try {
+    // Initialize Supabase only
+    await Supabase.initialize(
+      url: 'https://pftjlvtdzokbzuioqfug.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDg0NjgsImV4cCI6MjA5NDE4NDQ2OH0.3ujKn2bxihvFfhfeIXPVNDjxjfqpWsXJq4bpaPNsQOM',
+    );
+  } catch (e) {
+    debugPrint('Supabase init error: $e');
+  }
 
   // Initialize Desktop Window Manager
   await windowManager.ensureInitialized();
+
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(1280, 800),
+    size: Size(900, 700),
+    minimumSize: Size(800, 600),
     center: true,
-    backgroundColor: Colors.transparent,
+    backgroundColor: Colors.white,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
-    title: 'Fresh Branch POS - إدارة الفروع',
+    title: 'Kiwi Fresh',
   );
+  
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
   });
 
-  // Register controllers
-  Get.put(AuthController());
+  // Init local DB to prevent future lag
+  try {
+    await DatabaseService().database;
+  } catch (e) {
+    debugPrint('DB Init error: $e');
+  }
 
   runApp(const FreshPOSApp());
+}
+
+class AppBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.put(AuthController(), permanent: true);
+  }
 }
 
 class FreshPOSApp extends StatelessWidget {
@@ -42,17 +61,22 @@ class FreshPOSApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authController = Get.find<AuthController>();
-    
     return GetMaterialApp(
-      title: 'Fresh POS',
+      title: 'Kiwi Fresh',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       locale: const Locale('ar'),
       fallbackLocale: const Locale('en'),
-      home: Obx(() => authController.isLoggedIn.value 
-        ? const MainLayout() 
-        : const LoginScreen()),
+      initialBinding: AppBinding(),
+      home: Obx(() {
+        if (!Get.isRegistered<AuthController>()) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        final authController = Get.find<AuthController>();
+        return authController.isLoggedIn.value 
+          ? const MainLayout() 
+          : const LoginScreen();
+      }),
     );
   }
 }

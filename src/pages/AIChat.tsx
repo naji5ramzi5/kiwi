@@ -13,7 +13,7 @@ export default function AIChat() {
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: 'assistant', 
-      content: 'أهلاً بك يا مدير! أنا FreshAI، مساعدك الذكي. يمكنني تحليل البيانات، تقديم تقارير عن المبيعات، التنبؤ بالتوالف، أو حتى اقتراح أسعار جديدة. كيف يمكنني مساعدتك اليوم؟' 
+      content: 'أهلاً بك يا مدير! أنا KiwiAI، مساعدك الذكي. يمكنني تحليل البيانات، تقديم تقارير عن المبيعات، التنبؤ بالتوالف، أو حتى اقتراح أسعار جديدة. كيف يمكنني مساعدتك اليوم؟' 
     }
   ])
   const [input, setInput] = useState('')
@@ -82,7 +82,7 @@ export default function AIChat() {
             <Bot size={24} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>FreshAI Assistant</div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>KiwiAI Assistant</div>
             <div style={{ fontSize: 12, color: 'var(--g700)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Sparkles size={12} /> متصل وجاهز للتحليل
             </div>

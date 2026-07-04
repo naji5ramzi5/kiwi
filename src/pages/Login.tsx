@@ -31,7 +31,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
           <div className="brand-icon" style={{ margin: '0 auto 16px', width: 64, height: 64, borderRadius: 20 }}>
             <Leaf size={32} color="white" />
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 800 }}>لوحة تحكم "فرش"</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 800 }}>لوحة تحكم Kiwi</h1>
           <p style={{ color: 'var(--gray400)', fontSize: 13, marginTop: 4 }}>الإدارة المركزية للفروع والمنظومة</p>
         </div>
 
@@ -46,7 +46,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 className="form-input" 
                 style={{ paddingRight: 44 }} 
                 type="email" 
-                placeholder="admin@fresh.iq" 
+                  placeholder="admin@kiwi.iq" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
@@ -83,7 +83,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
         </form>
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: 'var(--gray400)' }}>
-          جميع الحقوق محفوظة لمنظومة "فرش" 2026 ©
+          جميع الحقوق محفوظة لمنظومة Kiwi 2026 ©
         </div>
       </div>
     </div>

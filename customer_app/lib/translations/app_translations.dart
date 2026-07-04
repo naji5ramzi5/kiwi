@@ -35,7 +35,7 @@ class AppTranslations extends Translations {
           // Auth
           'login': 'Login',
           'signup': 'Create Account',
-          'guest': 'Continue as Guest',
+          'guest': 'Sign In',
           'phone': 'Phone Number',
           'password': 'Password',
           'name': 'Full Name',
@@ -72,7 +72,7 @@ class AppTranslations extends Translations {
           // Auth
           'login': 'تسجيل الدخول',
           'signup': 'إنشاء حساب جديد',
-          'guest': 'الدخول كزائر',
+          'guest': 'تسجيل الدخول',
           'phone': 'رقم الهاتف',
           'password': 'كلمة المرور',
           'name': 'الاسم الكامل',

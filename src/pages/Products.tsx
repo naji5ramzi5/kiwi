@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Package, Image as ImageIcon, MapPin, X } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Package, Image as ImageIcon, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 import type { Category, Branch } from '../lib/types'
 
 const UNITS = ['كيلو', 'حبة', 'كرتونة', 'ربطة', 'كيس', 'غرام']
@@ -182,31 +183,54 @@ function ProductCatalogModal({ product, categories, branches, onClose, onSave }:
     name: product?.name || '',
     category: product?.category || (categories[0]?.name || ''),
     unit: product?.unit || 'كيلو',
-    default_price: product?.default_price || 0,
+    default_price: product?.default_price || product?.price || 0,
     image_url: product?.image_url || '',
-    allowed_branches: product?.allowed_branches || [],
     is_active: product?.is_active ?? true,
     is_offer: product?.is_offer || false
   })
 
-  const toggleBranch = (bid: string) => {
-    const current = form.allowed_branches || []
-    const next = current.includes(bid) ? current.filter((id: string) => id !== bid) : [...current, bid]
-    setForm({...form, allowed_branches: next})
-  }
-
   async function handleSubmit() {
-    if (!form.name || form.default_price <= 0) return alert('يرجى إكمال البيانات')
+    if (!form.name || form.default_price <= 0) { toast.error('يرجى إكمال البيانات'); return }
     setLoading(true)
     try {
-      if (product?.id) {
-        await supabase.from('products').update(form).eq('id', product.id)
+      const payload = {
+        name: form.name,
+        category: form.category,
+        unit: form.unit,
+        price: form.default_price,
+        image_url: form.image_url,
+        is_active: form.is_active,
+        is_offer: form.is_offer
+      }
+
+      let productId = product?.id
+      if (productId) {
+        const { error } = await supabase.from('products').update(payload).eq('id', productId)
+        if (error) throw error
+        toast.success('✅ تم تحديث المنتج')
       } else {
-        await supabase.from('products').insert([form])
+        const { data, error } = await supabase.from('products').insert([payload]).select('id').single()
+        if (error) throw error
+        productId = data.id
+        
+        // إنشاء سجلات مخزون للمنتج الجديد في جميع الفروع
+        const { data: allBranches } = await supabase.from('branches').select('id')
+        if (allBranches && allBranches.length > 0) {
+          const inventoryRows = allBranches.map((b: any) => ({
+            branch_id: b.id,
+            product_id: productId,
+            actual_stock: 0,
+            buffer_limit: 0
+          }))
+          const { error: invError } = await supabase.from('branch_inventory').insert(inventoryRows)
+          if (invError) console.error('Failed to create branch inventory:', invError)
+        }
+        
+        toast.success('✅ تم إضافة المنتج للكتالوج المركزي')
       }
       onSave()
     } catch (err: any) {
-      alert('خطأ: ' + err.message)
+      toast.error('خطأ: ' + (err.message || 'فشل الحفظ'))
     } finally {
       setLoading(false)
     }
@@ -247,29 +271,45 @@ function ProductCatalogModal({ product, categories, branches, onClose, onSave }:
         </div>
 
         <div className="form-group">
-          <label className="form-label">رابط الصورة</label>
-          <input className="form-input" value={form.image_url} onChange={e => setForm({...form, image_url: e.target.value})} placeholder="https://..." />
+          <label className="form-label">الصورة (رابط أو رفع من الجهاز)</label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input className="form-input" style={{ flex: 1 }} value={form.image_url} onChange={e => setForm({...form, image_url: e.target.value})} placeholder="https://..." />
+            <label className="btn btn-outline" style={{ cursor: 'pointer', margin: 0, height: '42px', display: 'flex', alignItems: 'center' }}>
+              <ImageIcon size={16} /> رفع
+              <input type="file" style={{ display: 'none' }} accept="image/*" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setLoading(true);
+                try {
+                  const ext = file.name.split('.').pop();
+                  const filename = `${Date.now()}.${ext}`;
+                  const { error } = await supabase.storage.from('images').upload(filename, file);
+                  if (error) {
+                    // Fallback if 'images' bucket doesn't exist, try 'public'
+                    const { error: err2 } = await supabase.storage.from('public').upload(filename, file);
+                    if (err2) throw err2;
+                    const { data } = supabase.storage.from('public').getPublicUrl(filename);
+                    setForm(p => ({...p, image_url: data.publicUrl}));
+                  } else {
+                    const { data } = supabase.storage.from('images').getPublicUrl(filename);
+                    setForm(p => ({...p, image_url: data.publicUrl}));
+                  }
+                } catch(err: any) {
+                  alert('فشل رفع الصورة: ' + err.message);
+                } finally {
+                  setLoading(false);
+                }
+              }} />
+            </label>
+          </div>
+          {form.image_url && <img src={form.image_url} alt="" style={{ marginTop: 8, width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--gray200)' }} />}
         </div>
 
-        <div className="form-group" style={{ marginBottom: 24 }}>
-          <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span><Package size={16} /> الفروع المسموح لها</span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button type="button" className="btn btn-ghost btn-sm" style={{ fontSize: 10 }} onClick={() => setForm({...form, allowed_branches: branches.map(b => b.id)})}>تحديد الكل</button>
-              <button type="button" className="btn btn-ghost btn-sm" style={{ fontSize: 10 }} onClick={() => setForm({...form, allowed_branches: []})}>مسح</button>
-            </div>
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-            {branches.map((b: any) => (
-              <button 
-                key={b.id}
-                onClick={() => toggleBranch(b.id)}
-                className={(form.allowed_branches || []).includes(b.id) ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'}
-              >
-                {b.name}
-              </button>
-            ))}
-          </div>
+        <div className="form-group" style={{ marginBottom: 10 }}>
+          <p style={{ fontSize: 12, color: 'var(--gray500)', fontWeight: 600, padding: '8px 12px', background: 'var(--g50)', borderRadius: 8 }}>
+            <Package size={14} style={{ marginLeft: 6 }} />
+            المنتج سيكون متاحاً في جميع الفروع تلقائياً مع مخزون 0. كل فرع يدير مخزونه بنفسه.
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>

@@ -45,3 +45,18 @@ dist-ssr
 **/ios/Flutter/app.zip
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
+
+# Ignore built executables and large binaries
+*.exe
+*.dll
+*.so
+*.zip
+*.7z
+*.rar
+*.tar.gz
+test/Branch_POS/data/
+test/Branch_POS/flutter_windows.dll
+image/
+**/__pycache__/
+*.pyc
+.omc/

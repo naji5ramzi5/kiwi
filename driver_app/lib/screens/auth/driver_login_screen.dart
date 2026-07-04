@@ -79,9 +79,13 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
           String? avatarUrl;
           
           if (_avatarFile != null) {
-            final fileName = '${res.user!.id}/avatar.jpg';
-            await supabase.storage.from('avatars').upload(fileName, _avatarFile!);
-            avatarUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
+            try {
+              final fileName = '${res.user!.id}/avatar.jpg';
+              await supabase.storage.from('avatars').upload(fileName, _avatarFile!);
+              avatarUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
+            } catch (e) {
+              print('Warning: Failed to upload avatar. Bucket might not exist. $e');
+            }
           }
 
           // Create profile entry
@@ -99,14 +103,40 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
           Get.snackbar('نجاح', 'تم إنشاء الحساب بنجاح، بانتظار موافقة الإدارة!', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
         }
       } else {
-        await supabase.auth.signInWithPassword(
+        final res = await supabase.auth.signInWithPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        
+        if (res.user != null) {
+          final profileData = await supabase.from('profiles').select('role').eq('id', res.user!.id).maybeSingle();
+          if (profileData == null || profileData['role'] != 'driver') {
+            await supabase.auth.signOut();
+            Get.snackbar('خطأ', 'هذا الحساب ليس حساب مندوب. يرجى مراجعة الإدارة.', backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
+            setState(() => isLoading = false);
+            return;
+          }
+        }
       }
-      Get.offAll(() => const DriverApp());
+      Get.offAll(() => const AuthWrapper());
+    } on AuthException catch (e) {
+      String msg = e.message;
+      if (msg.contains('Invalid login credentials') || msg.contains('invalid_credentials')) {
+        msg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+      } else if (msg.contains('Email not confirmed')) {
+        msg = 'يرجى تأكيد بريدك الإلكتروني أولاً أو تواصل مع الدعم';
+      } else if (msg.contains('User not found')) {
+        msg = 'لا يوجد حساب بهذا البريد، يرجى إنشاء حساب جديد';
+      } else if (msg.contains('already registered') || msg.contains('already been registered')) {
+        msg = 'هذا البريد مسجل بالفعل، يرجى تسجيل الدخول';
+      } else if (msg.contains('Password should be')) {
+        msg = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+      }
+      Get.snackbar('خطأ في الدخول', msg, backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
+      print('Auth Error: $e');
     } catch (e) {
-      Get.snackbar('خطأ', 'البيانات غير صحيحة أو يوجد خلل في الاتصال', backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
+      Get.snackbar('خطأ', 'حدث خطأ غير متوقع، تأكد من الاتصال بالإنترنت', backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
+      print('Auth Error: $e');
     } finally {
       setState(() => isLoading = false);
     }
@@ -146,13 +176,22 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
                       Hero(
                         tag: 'app_logo',
                         child: Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
                             boxShadow: [BoxShadow(color: const Color(0xFF10b981).withOpacity(0.2), blurRadius: 25, offset: const Offset(0, 10))],
                           ),
-                          child: const Icon(LucideIcons.truck, size: 50, color: Color(0xFF10b981)),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(70),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 70,
+                              height: 70,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Icon(LucideIcons.truck, size: 50, color: Color(0xFF10b981)),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),

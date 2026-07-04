@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/app_theme.dart';
+import '../../controllers/auth_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
@@ -14,6 +15,7 @@ class SettlementScreen extends StatefulWidget {
 
 class _SettlementScreenState extends State<SettlementScreen> {
   final supabase = Supabase.instance.client;
+  final AuthController authController = Get.find<AuthController>();
   bool isLoading = true;
   Map<String, dynamic> stats = {
     'total_sales': 0.0,
@@ -23,7 +25,8 @@ class _SettlementScreenState extends State<SettlementScreen> {
   };
 
   @override
-  void onInit() {
+  void initState() {
+    super.initState();
     fetchDailyStats();
   }
 
@@ -37,7 +40,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
       final salesResponse = await supabase
           .from('orders')
           .select('total_amount')
-          .eq('branch_id', 1)
+          .eq('branch_id', authController.currentBranchId.value)
           .eq('status', 'delivered')
           .gte('created_at', startOfDay);
       
@@ -50,7 +53,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
       final purchasesResponse = await supabase
           .from('purchases')
           .select('total_value')
-          .eq('branch_id', 1)
+          .eq('branch_id', authController.currentBranchId.value)
           .gte('created_at', startOfDay);
       
       double purchases = 0;
@@ -76,7 +79,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
   Future<void> closeRegister() async {
     try {
       await supabase.from('daily_settlements').insert({
-        'branch_id': 1,
+        'branch_id': authController.currentBranchId.value,
         'total_sales': stats['total_sales'],
         'total_purchases': stats['total_purchases'],
         'total_damaged': stats['total_damaged'],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:flutter/services.dart';
 import 'theme/app_theme.dart';
 import 'translations/app_translations.dart';
@@ -7,14 +8,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
-import 'screens/main_screen.dart';
+import 'screens/splash_screen.dart';
 import 'controllers/home_controller.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/cart_controller.dart';
+import 'controllers/theme_controller.dart';
 
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize local storage
+    await GetStorage.init();
 
     // Initialize Firebase
     await Firebase.initializeApp(
@@ -28,6 +33,7 @@ void main() async {
     );
 
     // Register Controllers BEFORE running app
+    Get.put(ThemeController());
     Get.put(AuthController());
     Get.put(HomeController());
     Get.put(CartController());
@@ -42,7 +48,7 @@ void main() async {
       ),
     );
 
-    runApp(const FreshCustomerApp());
+    runApp(const KiwiCustomerApp());
   } catch (e) {
     // Basic error view if initialization fails
     runApp(MaterialApp(home: Scaffold(body: Center(child: Text('Error: $e')))));
@@ -63,19 +69,24 @@ Future<void> _setupFCM() async {
   } catch (_) {}
 }
 
-class FreshCustomerApp extends StatelessWidget {
-  const FreshCustomerApp({super.key});
+class KiwiCustomerApp extends StatelessWidget {
+  const KiwiCustomerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Fresh',
+    final ThemeController themeController = Get.find<ThemeController>();
+    
+    return Obx(() => GetMaterialApp(
+      title: 'Kiwi',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeController.isDarkMode.value ? ThemeMode.dark : ThemeMode.light,
       translations: AppTranslations(),
       locale: const Locale('ar', 'IQ'),
       fallbackLocale: const Locale('en', 'US'),
-      home: const MainScreen(),
-    );
+      home: const SplashScreen(),
+    ));
   }
 }
+

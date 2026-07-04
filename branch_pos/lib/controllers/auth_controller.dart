@@ -36,8 +36,32 @@ class AuthController extends GetxController {
 
       if (response != null && response.isNotEmpty) {
         final branch = response.first;
-        currentBranchId.value = branch['id'];
-        currentBranchName.value = branch['name'];
+        final branchId = branch['id'];
+        final branchName = branch['name'];
+
+        final cleanId = branchId.toString().replaceAll('-', '');
+        final email = 'branch_${cleanId.substring(0, 10)}@freshapp.com';
+        final password = 'FreshPOS_' + cleanId.substring(0, 8) + '!';
+
+        AuthResponse authRes;
+        try {
+          authRes = await supabase.auth.signInWithPassword(email: email, password: password);
+        } catch (_) {
+          authRes = await supabase.auth.signUp(email: email, password: password);
+        }
+
+        if (authRes.user != null) {
+          await supabase.from('profiles').upsert({
+            'id': authRes.user!.id,
+            'role': 'branch_manager',
+            'full_name': 'مدير $branchName',
+            'branch_id': branchId,
+            'phone': '+964770${cleanId.substring(0, 7)}',
+          });
+        }
+
+        currentBranchId.value = branchId;
+        currentBranchName.value = branchName;
         
         // Save code for future runs
         final prefs = await SharedPreferences.getInstance();
@@ -76,6 +100,9 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('access_code');
+    try {
+      await supabase.auth.signOut();
+    } catch (_) {}
     isLoggedIn.value = false;
   }
 }

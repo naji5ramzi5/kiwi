@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/image_viewer.dart';
 import '../../controllers/cart_controller.dart';
-import 'dart:ui';
+import '../../controllers/home_controller.dart';
+import '../../controllers/favorites_controller.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -20,232 +20,372 @@ class ProductDetailsScreen extends StatefulWidget {
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _quantity = 1;
   final CartController cartController = Get.find<CartController>();
+  final HomeController homeController = Get.find<HomeController>();
   bool _isLiked = false;
+
+  Widget _buildQtyButton(IconData icon, VoidCallback onTap, {bool isPrimary = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: isPrimary ? Colors.green : const Color(0xFFE8E8E8),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 16, color: isPrimary ? Colors.white : Colors.black54),
+      ),
+    );
+  }
+
+  String formatPrice(dynamic price) {
+    if (price == null) return '0';
+    if (price is num) {
+      return price.toInt().toString();
+    }
+    final parsed = double.tryParse(price.toString());
+    if (parsed != null) {
+      return parsed.toInt().toString();
+    }
+    return price.toString();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double overlap = 25;
+    final double curveRadius = 45;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    final themeTextSecColor = isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary;
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildSliverAppBar(context),
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Badge and Category
-                      Row(
+      backgroundColor: bgColor,
+      body: SafeArea(
+        top: false,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Product Image with curved bottom
+                  ClipPath(
+                    clipper: _CurvedBottomClipper(curveHeight: curveRadius, overlap: overlap),
+                    child: Container(
+                      height: screenHeight * 0.50,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: const Text(
-                              'طازج يومياً',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
+                            color: isDark ? const Color(0xFF0F2D1A) : const Color(0xFFF0FDF4),
+                            child: Hero(
+                              tag: widget.product['id'],
+                              child: CachedNetworkImage(
+                                imageUrl: widget.product['image'],
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: isDark ? const Color(0xFF1C2B1E) : const Color(0xFFF0FDF4),
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 40, height: 40,
+                                      child: CircularProgressIndicator(color: Colors.green, strokeWidth: 2),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            widget.product['category'] ?? 'خضروات وفواكه',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[400], fontWeight: FontWeight.w600),
+                          // Gradient overlay for readability
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.black.withOpacity(0.4),
+                                    Colors.transparent,
+                                    Colors.transparent,
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Back Button - RIGHT SIDE (RTL)
+                          Positioned(
+                            top: 50,
+                            right: 20,
+                            child: GestureDetector(
+                              onTap: () => Get.back(),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.surfaceDark.withOpacity(0.8) : Colors.white.withOpacity(0.9),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                ),
+                                child: const Icon(Icons.arrow_back_ios_rounded, size: 20, color: AppTheme.primary),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // Title and Heart
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    ),
+                  ),
+                  // Curved overlapping white content container
+                  Transform.translate(
+                    offset: Offset(0, -overlap),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(curveRadius)),
+                      ),
+                      padding: EdgeInsets.fromLTRB(24, overlap + 20, 24, 120),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              widget.product['title'],
-                              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, letterSpacing: -0.5),
-                            ),
+                          // Title and Heart
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.product['title'],
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900,
+                                        color: themeTextColor,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                    ),
+
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () async {
+                                      // Share product using system share
+                                      final text = 'تسوق ${widget.product['title']} من Kiwi!';
+                                      try {
+                                        await Share.share(text);
+                                      } catch (_) {
+                                        Get.snackbar('مشاركة', 'تم نسخ الرابط', backgroundColor: AppTheme.primary, colorText: Colors.white, snackPosition: SnackPosition.TOP, margin: const EdgeInsets.all(16));
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? AppTheme.surfaceDark : Colors.white,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.3 : 0.08), blurRadius: 8, offset: const Offset(0, 2))],
+                                      ),
+                                      child: Icon(LucideIcons.share2, color: AppTheme.primary, size: 22),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() => _isLiked = !_isLiked);
+                                      // Toggle favorite via FavoritesController
+                                      final favController = Get.find<FavoritesController>();
+                                      favController.toggleFavorite(widget.product['id'].toString());
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? AppTheme.surfaceDark : Colors.white,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          )
+                                        ],
+                                      ),
+                                      child: Obx(() {
+                                        final favController = Get.find<FavoritesController>();
+                                        final isFav = favController.isFavorite(widget.product['id'].toString());
+                                        return Icon(
+                                          isFav ? Icons.favorite : Icons.favorite_border,
+                                          color: isFav ? Colors.red : Colors.grey.shade400,
+                                          size: 22,
+                                        );
+                                      }),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          _buildGlassIconButton(
-                            icon: _isLiked ? LucideIcons.heart : LucideIcons.heart,
-                            color: _isLiked ? Colors.red : AppTheme.textSecondary,
-                            onPressed: () => setState(() => _isLiked = !_isLiked),
+                          const SizedBox(height: 20),
+
+                          // Price and Qty controller
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${formatPrice(widget.product['price'])}',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w900,
+                                          color: isDark ? const Color(0xFF34D399) : AppTheme.primaryDark,
+                                          fontFamily: 'Cairo',
+                                        ),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'د.ع',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: themeTextSecColor.withOpacity(0.6),
+                                          fontFamily: 'Cairo',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    'لـ 1 ${widget.product['unit'] ?? 'كغ'}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: themeTextSecColor.withOpacity(0.6),
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.grey.shade800 : const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: Row(
+                                  children: [
+                                    _buildQtyButton(LucideIcons.minus, () {
+                                      if (_quantity > 1) setState(() => _quantity--);
+                                    }),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                                      child: Text(
+                                        '$_quantity',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: themeTextColor,
+                                          fontFamily: 'Cairo',
+                                        ),
+                                      ),
+                                    ),
+                                    _buildQtyButton(LucideIcons.plus, () {
+                                      setState(() => _quantity++);
+                                    }, isPrimary: true),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      
-                      // Price
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
+                          const SizedBox(height: 24),
+
                           Text(
-                            '${widget.product['price']}',
-                            style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: AppTheme.primaryDark),
-                          ),
-                          const SizedBox(width: 4),
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 8.0),
-                            child: Text('د.ع', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryDark)),
-                          ),
-                          const SizedBox(width: 8),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Text(
-                              '/ ${widget.product['unit']}',
-                              style: TextStyle(fontSize: 16, color: Colors.grey[400], fontWeight: FontWeight.w600),
+                            'التفاصيل',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: themeTextColor,
+                              fontFamily: 'Cairo',
                             ),
                           ),
+                          const SizedBox(height: 12),
+
+                          Text(
+                            widget.product['title'] != null
+                                ? 'منتج ${widget.product['title']} طازج ومختار بعناية فائقة، غني بالمواد الغذائية والفيتامينات الهامة، يصلك طازجاً من المزرعة مباشرة.'
+                                : 'خضروات طازجة ومختارة بعناية فائقة من المزرعة مباشرة إلى مطبخك. غنية بالمواد الغذائية والفيتامينات الهامة لصحة عائلتك.',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              color: themeTextSecColor,
+                              height: 1.6,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const SizedBox(height: 20),
+
+                          // Fresh products header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'منتجات طازجة أخرى',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: themeTextColor,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => Get.back(),
+                                child: const Text(
+                                  'عرض الكل',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildHorizontalProductList(),
                         ],
                       ),
-                      
-                      const SizedBox(height: 40),
-                      
-                      // Section Tabs (Apple Style)
-                      const Text(
-                        'وصف المنتج',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'هذا المنتج يأتيكم مباشرة من مزارع "فرش" المختارة بعناية. يتم الفحص والتعبئة تحت إشراف خبرائنا لضمان وصولها لمطبخكم بأفضل جودة وقيمة غذائية. مثالي لتحضير الوجبات الصحية واللذيذة.',
-                        style: TextStyle(fontSize: 15, height: 1.8, color: Colors.grey[600], fontWeight: FontWeight.w500),
-                      ),
-                      
-                      const SizedBox(height: 40),
-                      
-                      // Features
-                      Row(
-                        children: [
-                          _buildFeatureCard(LucideIcons.leaf, 'عضوي 100%'),
-                          const SizedBox(width: 12),
-                          _buildFeatureCard(LucideIcons.truck, 'توصيل سريع'),
-                          const SizedBox(width: 12),
-                          _buildFeatureCard(LucideIcons.shieldCheck, 'ضمان الجودة'),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 48),
-                      
-                      const Text(
-                        'قد يعجبك أيضاً',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildSimilarProducts(),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ],
-          ),
-          
-          // Fixed Bottom Bar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildAppleBottomBar(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard(IconData icon, String label) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: AppTheme.background,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey[100]!),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AppTheme.primary, size: 24),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGlassIconButton({required IconData icon, required Color color, required VoidCallback onPressed}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
-          ),
-          child: IconButton(
-            icon: Icon(icon, color: color, size: 20),
-            onPressed: onPressed,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSliverAppBar(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 450,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: Colors.white,
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: _buildGlassIconButton(
-          icon: LucideIcons.arrowRight,
-          color: AppTheme.textPrimary,
-          onPressed: () => Get.back(),
-        ),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            GestureDetector(
-              onTap: () => Get.to(() => ImageViewer(imageUrl: widget.product['image'], tag: widget.product['id'])),
-              child: Hero(
-                tag: widget.product['id'],
-                child: CachedNetworkImage(
-                  imageUrl: widget.product['image'],
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey[200]!,
-                    highlightColor: Colors.white,
-                    child: Container(color: Colors.white),
-                  ),
-                ),
+                ],
               ),
             ),
-            // Shadow overlay for the title when scrolled
+
+            // Floating Bottom Bar
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              height: 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.white.withOpacity(0.8), Colors.white],
-                  ),
-                ),
-              ),
+              child: _buildBottomCheckoutBar(),
             ),
           ],
         ),
@@ -253,173 +393,186 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
-  Widget _buildAppleBottomBar(BuildContext context) {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.85),
-            border: Border(top: BorderSide(color: Colors.grey[100]!)),
-          ),
-          child: Row(
-            children: [
-              // Quantity Selector
-              Container(
-                height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: AppTheme.background,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    _buildQtyBtn(LucideIcons.minus, () => setState(() => _quantity = _quantity > 1 ? _quantity - 1 : 1)),
-                    SizedBox(
-                      width: 40,
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: Text('$_quantity', key: ValueKey(_quantity), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                        ),
-                      ),
-                    ),
-                    _buildQtyBtn(LucideIcons.plus, () => setState(() => _quantity++)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Add to Cart Button
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    for (int i = 0; i < _quantity; i++) cartController.addToCart(widget.product);
-                    _showSuccessDialog();
-                  },
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'إضافة للسلة',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildHorizontalProductList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
 
-  Widget _buildQtyBtn(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-        child: Icon(icon, size: 18, color: AppTheme.textPrimary),
-      ),
-    );
-  }
-
-  void _showSuccessDialog() {
-    Get.dialog(
-      BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          backgroundColor: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), shape: BoxShape.circle),
-                  child: const Icon(LucideIcons.check, size: 40, color: AppTheme.primary),
-                ),
-                const SizedBox(height: 24),
-                const Text('تمت الإضافة!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 12),
-                Text('تمت إضافة ${widget.product['title']} إلى سلة مشترياتك بنجاح', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[500], height: 1.5)),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () => Get.back(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    elevation: 0,
-                  ),
-                  child: const Text('متابعة التسوق', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSimilarProducts() {
+    final related = homeController.allProducts.where((p) => p['id'] != widget.product['id']).take(4).toList();
+    
     return SizedBox(
-      height: 220,
+      height: 170,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: 4,
+        itemCount: related.length,
         itemBuilder: (context, index) {
-          return Container(
-            width: 160,
-            margin: const EdgeInsets.only(left: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.grey[50]!),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: CachedNetworkImage(
-                      imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=300&q=80',
-                      fit: BoxFit.cover,
+          final item = related[index];
+          final productData = {
+            'id': item['id'],
+            'title': item['name'],
+            'price': item['price'],
+            'image': item['image_url'],
+            'category': item['category'],
+            'unit': item['unit'] ?? 'حبة',
+          };
+
+          return GestureDetector(
+            onTap: () {
+              Get.off(() => ProductDetailsScreen(product: productData), preventDuplicates: false);
+            },
+            child: Container(
+              width: 130,
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.surfaceDark : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade100),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Container(
                       width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.green.withOpacity(0.1) : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: CachedNetworkImage(
+                          imageUrl: item['image_url'],
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('منتج مشابه', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold), maxLines: 1),
-                      const SizedBox(height: 4),
-                      Text('1,250 د.ع', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.primaryDark)),
-                    ],
+                  const SizedBox(height: 6),
+                  Text(
+                    item['name'],
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: themeTextColor, fontFamily: 'Cairo'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  Text(
+                    '${formatPrice(item['price'])} د.ع',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: isDark ? const Color(0xFF34D399) : AppTheme.primaryDark, fontFamily: 'Cairo'),
+                  ),
+                ],
+              ),
             ),
           );
         },
       ),
     );
   }
+
+  Widget _buildBottomCheckoutBar() {
+    final double totalPrice = widget.product['price'] * _quantity;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeTextSecColor = isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.surfaceDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.04),
+            blurRadius: 15,
+            offset: const Offset(0, -4),
+          )
+        ],
+        border: Border(top: BorderSide(color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade100)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Add to cart (on the right in RTL, which is first child)
+          GestureDetector(
+            onTap: () {
+              int stock = widget.product['stock'] ?? 10;
+              if (stock == 0) return;
+              cartController.addToCart(widget.product, qty: _quantity);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              decoration: BoxDecoration(
+                color: (widget.product['stock'] == 0) ? Colors.grey : AppTheme.primary,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  if (widget.product['stock'] != 0)
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    (widget.product['stock'] == 0) ? LucideIcons.xCircle : LucideIcons.shoppingBag, 
+                    color: Colors.white, 
+                    size: 18
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    (widget.product['stock'] == 0) ? 'نفدت الكمية' : 'إضافة إلى السلة',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'السعر الإجمالي',
+                style: TextStyle(fontSize: 12, color: themeTextSecColor, fontFamily: 'Cairo', fontWeight: FontWeight.w600),
+              ),
+              Text(
+                '${formatPrice(totalPrice)} د.ع',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: isDark ? const Color(0xFF34D399) : Colors.green, fontFamily: 'Cairo'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurvedBottomClipper extends CustomClipper<Path> {
+  final double curveHeight;
+  final double overlap;
+
+  _CurvedBottomClipper({this.curveHeight = 45, this.overlap = 25});
+
+  @override
+  Path getClip(Size size) {
+    final path = Path()
+      ..lineTo(0, size.height - curveHeight)
+      ..quadraticBezierTo(
+        size.width * 0.5,
+        size.height - curveHeight + overlap,
+        size.width,
+        size.height - curveHeight,
+      )
+      ..lineTo(size.width, 0)
+      ..close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

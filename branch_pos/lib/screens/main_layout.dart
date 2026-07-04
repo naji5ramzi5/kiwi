@@ -3,11 +3,15 @@ import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/app_theme.dart';
 import '../controllers/dashboard_controller.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/inventory_controller.dart';
 import 'orders/delivery_orders_screen.dart';
 import 'inventory/inventory_screen.dart';
+import 'cashier_screen.dart';
 import 'purchases/purchases_screen.dart';
 import 'finance/settlement_screen.dart';
 import 'settings/hardware_settings_screen.dart';
+import 'stock_entry.dart';
 
 class MainLayout extends StatelessWidget {
   const MainLayout({super.key});
@@ -15,6 +19,8 @@ class MainLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final DashboardController controller = Get.put(DashboardController());
+    final AuthController authController = Get.find<AuthController>();
+    Get.put(InventoryController()); // Add dependency injection for Inventory
 
     return Scaffold(
       body: Row(
@@ -25,24 +31,40 @@ class MainLayout extends StatelessWidget {
             color: AppTheme.sidebar,
             child: Column(
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 // App Logo
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary,
-                          borderRadius: BorderRadius.circular(12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              LucideIcons.store,
+                              color: AppTheme.primary,
+                              size: 22,
+                            ),
+                          ),
                         ),
-                        child: const Icon(LucideIcons.leaf, color: Colors.white, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'FRESH POS',
-                        style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1),
+                      const Expanded(
+                        child: Text(
+                          'Kiwi Fresh',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1),
+                        ),
                       ),
                     ],
                   ),
@@ -50,17 +72,18 @@ class MainLayout extends StatelessWidget {
                 const SizedBox(height: 48),
                 
                 // Navigation Items
-                _buildNavItem(0, LucideIcons.shoppingBag, 'طلبات التوصيل', controller),
-                _buildNavItem(1, LucideIcons.monitor, 'شاشة الكاشير', controller),
+                _buildNavItem(0, LucideIcons.monitor, 'شاشة الكاشير', controller),
+                _buildNavItem(1, LucideIcons.shoppingBag, 'طلبات التوصيل', controller),
                 _buildNavItem(2, LucideIcons.package, 'إدارة المخزون', controller),
-                _buildNavItem(3, LucideIcons.truck, 'المشتريات', controller),
-                _buildNavItem(4, LucideIcons.barChart3, 'الإحصائيات', controller),
-                _buildNavItem(5, LucideIcons.settings, 'إعدادات الأجهزة', controller),
+                _buildNavItem(3, LucideIcons.box, 'إدخال المخزون', controller),
+                _buildNavItem(4, LucideIcons.truck, 'المشتريات', controller),
+                _buildNavItem(5, LucideIcons.barChart3, 'الإحصائيات', controller),
+                _buildNavItem(6, LucideIcons.settings, 'إعدادات الأجهزة', controller),
                 
                 const Spacer(),
                 
                 // Branch Info & Logout
-                Container(
+                Obx(() => Container(
                   padding: const EdgeInsets.all(24),
                   color: Colors.white.withOpacity(0.03),
                   child: Row(
@@ -70,22 +93,27 @@ class MainLayout extends StatelessWidget {
                         child: const Icon(LucideIcons.store, color: AppTheme.primary, size: 20),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('فرع الكرادة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                            Text('مسؤول الفرع', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                            Text(
+                              authController.currentBranchName.value, 
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Text('مسؤول الفرع', style: TextStyle(color: Colors.grey, fontSize: 11)),
                           ],
                         ),
                       ),
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () => authController.logout(),
                         icon: const Icon(LucideIcons.logOut, color: Colors.grey, size: 18),
                       ),
                     ],
                   ),
-                ),
+                )),
               ],
             ),
           ),
@@ -95,17 +123,21 @@ class MainLayout extends StatelessWidget {
             child: Obx(() {
               switch (controller.selectedIndex.value) {
                 case 0:
+                  return const CashierScreen();
+                case 1:
                   return const DeliveryOrdersScreen();
                 case 2:
                   return const InventoryScreen();
                 case 3:
-                  return const PurchasesScreen();
+                  return const StockEntryScreen();
                 case 4:
-                  return const SettlementScreen();
+                  return const PurchasesScreen();
                 case 5:
+                  return const SettlementScreen();
+                case 6:
                   return const HardwareSettingsScreen();
                 default:
-                  return Center(
+                  return const Center(
                     child: Text(
                       'جاري العمل على هذه الشاشة...',
                       style: TextStyle(color: AppTheme.textSecondary, fontSize: 18),
@@ -146,13 +178,13 @@ class MainLayout extends StatelessWidget {
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
-              if (index == 0) // New Order Badge for Delivery
+              if (index == 1) // Order badge for delivery orders
                 const Spacer(),
-              if (index == 0)
+              if (index == 1)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
-                  child: const Text('3', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: const Text('', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
             ],
           ),
@@ -160,4 +192,5 @@ class MainLayout extends StatelessWidget {
       );
     });
   }
+
 }

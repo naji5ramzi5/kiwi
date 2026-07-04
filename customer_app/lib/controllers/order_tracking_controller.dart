@@ -48,7 +48,8 @@ class OrderTrackingController extends GetxController {
             ),
             callback: (payload) {
               print('Order Updated: ${payload.newRecord}');
-              orderData.value = {...orderData.value, ...payload.newRecord};
+              final merged = <String, dynamic>{...orderData, ...payload.newRecord};
+              orderData.assignAll(merged);
             })
         .subscribe();
   }

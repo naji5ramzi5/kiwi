@@ -9,9 +9,9 @@ import 'screens/auth/driver_login_screen.dart';
 import 'screens/driver_main_screen.dart';
 import 'screens/approval_waiting_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -20,6 +20,27 @@ void main() async {
     url: 'https://pftjlvtdzokbzuioqfug.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDg0NjgsImV4cCI6MjA5NDE4NDQ2OH0.3ujKn2bxihvFfhfeIXPVNDjxjfqpWsXJq4bpaPNsQOM',
   );
+
+  try {
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission();
+    final fcmToken = await messaging.getToken();
+    if (fcmToken != null && Supabase.instance.client.auth.currentUser != null) {
+      await Supabase.instance.client.from('profiles').update({'fcm_token': fcmToken}).eq('id', Supabase.instance.client.auth.currentUser!.id);
+    }
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      Get.snackbar(
+        message.notification?.title ?? 'إشعار جديد',
+        message.notification?.body ?? '',
+        backgroundColor: const Color(0xFF10b981),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+      );
+    });
+  } catch (e) {
+    debugPrint('FCM init error: $e');
+  }
 
   runApp(const DriverApp());
 }
@@ -71,16 +92,27 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkApprovalStatus() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null) {
-      final response = await Supabase.instance.client
-          .from('profiles')
-          .select('is_approved')
-          .eq('id', user.id)
-          .single();
-      
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        final response = await Supabase.instance.client
+            .from('profiles')
+            .select('is_approved')
+            .eq('id', user.id)
+            .maybeSingle();
+        
+        setState(() {
+          isApproved = response?['is_approved'] ?? false;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking approval status: $e');
       setState(() {
-        isApproved = response['is_approved'] ?? false;
         isLoading = false;
       });
     }
@@ -88,7 +120,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    return isApproved! ? const DriverMainScreen() : const ApprovalWaitingScreen();
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    if (isApproved == true) {
+      return const DriverMainScreen();
+    } else {
+      return const ApprovalWaitingScreen();
+    }
   }
 }

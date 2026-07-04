@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../theme/app_theme.dart';
 import '../../../controllers/home_controller.dart';
+import '../../story_viewer_screen.dart';
 
 // Static fallback stories
 const List<Map<String, String>> _staticStories = [
@@ -68,25 +69,36 @@ class StoriesSection extends StatelessWidget {
           itemBuilder: (context, index) {
             final story = displayStories[index];
             final isFirst = index == 0; // Highlight first story
-            return _buildStoryItem(story, isFirst, isDark);
+            return _buildStoryItem(story, isFirst, isDark, onTap: () {
+              if (dbStories.isNotEmpty) {
+                Get.to(
+                  () => StoryViewerScreen(
+                    groups: dbStories.toList(),
+                    initialGroupIndex: index,
+                  ),
+                  fullscreenDialog: true,
+                  transition: Transition.fadeIn,
+                );
+              } else {
+                Get.snackbar(
+                  '🥝 لا توجد قصص حالياً',
+                  'تابعنا! العروض والقصص الجديدة ستظهر هنا',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: AppTheme.primary,
+                  colorText: Colors.white,
+                  duration: const Duration(seconds: 2),
+                );
+              }
+            });
           },
         ),
       );
     });
   }
 
-  Widget _buildStoryItem(Map<String, String> story, bool isActive, bool isDark) {
+  Widget _buildStoryItem(Map<String, String> story, bool isActive, bool isDark, {required VoidCallback onTap}) {
     return GestureDetector(
-      onTap: () {
-        Get.snackbar(
-          '🔔 قريباً',
-          'نظام القصص والعروض سيتم تفعيله قريباً',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppTheme.primary,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
-      },
+      onTap: onTap,
       child: Container(
         width: 76,
         margin: const EdgeInsets.symmetric(horizontal: 6),

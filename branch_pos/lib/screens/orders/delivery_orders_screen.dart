@@ -172,10 +172,10 @@ class _DeliveryOrdersScreenState extends State<DeliveryOrdersScreen> {
                   ),
                   const SizedBox(width: 12),
                   _buildActionButton(
-                    'تم التحضير / جاهز', 
+                    'قبول / جاري التحضير', 
                     LucideIcons.packageCheck, 
                     AppTheme.secondary, 
-                    () => controller.updateStatus(selectedOrder!['id'], 'shipped')
+                    () => controller.updateStatus(selectedOrder!['id'], 'preparing')
                   ),
                 ],
               ),

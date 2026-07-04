@@ -253,15 +253,6 @@ class _SearchScreenState extends State<SearchScreen> {
                   final p = filtered[index];
                   final imageUrl = p['image_url'] ?? 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80';
 
-                  final productData = {
-                    'id': p['id'],
-                    'title': p['name'],
-                    'price': p['price'],
-                    'image': imageUrl,
-                    'category': p['category'],
-                    'unit': p['unit'] ?? 'حبة',
-                  };
-
                   int quantity = 0;
                   final dynamic biData = p['branch_inventory'] ?? p['inventory'];
                   if (biData != null) {
@@ -274,6 +265,16 @@ class _SearchScreenState extends State<SearchScreen> {
                       quantity = (stockVal is num) ? stockVal.toInt() : (double.tryParse(stockVal.toString())?.toInt() ?? 0);
                     }
                   }
+
+                  final productData = {
+                    'id': p['id'],
+                    'title': p['name'],
+                    'price': p['price'],
+                    'image': imageUrl,
+                    'category': p['category'],
+                    'unit': p['unit'] ?? 'حبة',
+                    'stock': quantity,
+                  };
 
                   final bool isAvailable = quantity > 0;
                   final double rating = p['rating']?.toDouble() ?? 4.8;

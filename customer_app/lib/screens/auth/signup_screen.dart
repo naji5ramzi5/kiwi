@@ -117,11 +117,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     passwordController.text,
                   );
                   if (success) {
-                    if (Get.previousRoute.isNotEmpty && Get.previousRoute != '/signup') {
-                      Get.back();
-                    } else {
-                      Get.offAll(() => const MainScreen());
-                    }
+                    Get.offAll(() => const MainScreen());
                   }
                 },
                 style: ElevatedButton.styleFrom(

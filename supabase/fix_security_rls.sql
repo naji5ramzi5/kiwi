@@ -204,7 +204,52 @@ CREATE POLICY "customer_active_driver_select" ON public.drivers
 CREATE POLICY "ratings_read" ON public.driver_ratings
   FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "customer_rate_own" ON public.driver_ratings
-  FOR INSERT WITH CHECK (customer_id = auth.uid());
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+-- ─── 13ب. جداول إضافية (مطابقة للمخطط الفعلي) ────────────────
+
+-- addresses: كل مستخدم يدير عناوينه فقط
+CREATE POLICY "own_addresses" ON public.addresses FOR ALL
+  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- product_ratings: القراءة للجميع، والزبون يقيّم باسمه فقط
+CREATE POLICY "product_ratings_read" ON public.product_ratings
+  FOR SELECT USING (true);
+CREATE POLICY "product_ratings_insert_own" ON public.product_ratings
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "product_ratings_update_own" ON public.product_ratings
+  FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- order_chat: أطراف الطلب فقط (الزبون/السائق/الموظفون)
+CREATE POLICY "order_chat_participants_select" ON public.order_chat
+  FOR SELECT USING (
+    public.is_staff() OR EXISTS (
+      SELECT 1 FROM public.orders o WHERE o.id = order_chat.order_id
+      AND (o.customer_id = auth.uid() OR o.driver_id = auth.uid())
+    ));
+CREATE POLICY "order_chat_participants_insert" ON public.order_chat
+  FOR INSERT WITH CHECK (
+    sender_id = auth.uid() AND (
+      public.is_staff() OR EXISTS (
+        SELECT 1 FROM public.orders o WHERE o.id = order_chat.order_id
+        AND (o.customer_id = auth.uid() OR o.driver_id = auth.uid())
+      )));
+
+-- user_fcm_tokens: كل مستخدم يدير رموزه فقط
+CREATE POLICY "own_user_fcm_tokens" ON public.user_fcm_tokens FOR ALL
+  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+-- push_notifications: قراءة للمسجلين (الإرسال للأدمن عبر القسم 4)
+CREATE POLICY "push_notifications_read" ON public.push_notifications
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- discount_codes: الزبون يقرأ ليتحقق من الكود (الإدارة للموظفين بالقسم 14)
+CREATE POLICY "discount_codes_read" ON public.discount_codes
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- system_settings: قراءة للمسجلين (نسب الأرباح ورسوم النظام)
+CREATE POLICY "system_settings_read" ON public.system_settings
+  FOR SELECT USING (auth.role() = 'authenticated');
 
 -- ─── 14. جداول التشغيل والمالية: الموظفون فقط ───────────────
 -- (مدير الفرع مقيّد بفرعه إن وُجد عمود branch_id)

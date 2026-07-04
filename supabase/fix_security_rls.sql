@@ -169,11 +169,18 @@ CREATE POLICY "staff_notifications_insert" ON public.notifications
   FOR INSERT WITH CHECK (public.is_staff());
 
 -- ─── 11. favorites (خاصة بصاحبها) ───────────────────────────
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='favorites') THEN
-    -- الجدول يستخدم customer_id (كما في favorites_controller.dart)
-    EXECUTE 'CREATE POLICY "own_favorites" ON public.favorites FOR ALL
-      USING (customer_id = auth.uid()) WITH CHECK (customer_id = auth.uid())';
+-- يكتشف اسم عمود المالك تلقائياً (customer_id أو user_id)
+DO $$
+DECLARE owner_col TEXT;
+BEGIN
+  SELECT column_name INTO owner_col
+  FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='favorites'
+    AND column_name IN ('customer_id','user_id')
+  LIMIT 1;
+  IF owner_col IS NOT NULL THEN
+    EXECUTE format('CREATE POLICY "own_favorites" ON public.favorites FOR ALL
+      USING (%I = auth.uid()) WITH CHECK (%I = auth.uid())', owner_col, owner_col);
   END IF;
 END $$;
 

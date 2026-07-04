@@ -1,1 +1,56 @@
+name: Build Customer APK
 
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "customer_app/**"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: customer_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/kiwi-customer.apk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiwi-customer-apk
+          path: customer_app/build/app/outputs/flutter-apk/kiwi-customer.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: customer-apk-latest
+          name: "Kiwi Customer App (آخر نسخة)"
+          body: "نسخة تجريبية من تطبيق العميل — تُبنى تلقائياً من آخر تحديث على main"
+          files: customer_app/build/app/outputs/flutter-apk/kiwi-customer.apk

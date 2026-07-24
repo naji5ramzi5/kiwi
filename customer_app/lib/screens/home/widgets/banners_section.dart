@@ -7,23 +7,24 @@ import '../../../theme/app_theme.dart';
 import '../../../controllers/home_controller.dart';
 
 // Static fallback banners - always shown even without DB data
-const List<Map<String, String>> _staticBanners = [
+// Use function to resolve .tr at build time
+List<Map<String, String>> _getStaticBanners() => [
   {
     'imageUrl': 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=900&q=80',
-    'title': 'خضروات طازجة يومياً',
-    'subtitle': 'مباشرة من المزارع إلى بيتك',
+    'title': 'banner_fresh_veg_title'.tr,
+    'subtitle': 'banner_fresh_veg_subtitle'.tr,
     'color': '0xFF16A34A',
   },
   {
     'imageUrl': 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=80',
-    'title': 'توصيل سريع خلال ساعة',
-    'subtitle': 'اطلب الآن واستلم في أسرع وقت',
+    'title': 'banner_fast_delivery_title'.tr,
+    'subtitle': 'banner_fast_delivery_subtitle'.tr,
     'color': '0xFF0369A1',
   },
   {
     'imageUrl': 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=900&q=80',
-    'title': 'عروض يومية حصرية',
-    'subtitle': 'خصومات تصل إلى 40% على المنتجات المختارة',
+    'title': 'banner_daily_offers_title'.tr,
+    'subtitle': 'banner_daily_offers_subtitle'.tr,
     'color': '0xFFB45309',
   },
 ];
@@ -51,7 +52,7 @@ class _BannersSectionState extends State<BannersSection> {
                     color: null,
                   ))
               .toList()
-          : _staticBanners
+          : _getStaticBanners()
               .map((b) => _BannerItem(
                     imageUrl: b['imageUrl'] ?? '',
                     title: b['title'] ?? '',
@@ -156,8 +157,8 @@ class _BannersSectionState extends State<BannersSection> {
                     color: AppTheme.primary,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    '🔥 عرض خاص',
+                  child: Text(
+                    'banner_special_offer'.tr,
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.white,
@@ -199,8 +200,8 @@ class _BannersSectionState extends State<BannersSection> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'اطلب الآن',
+                  child: Text(
+                    'banner_order_now'.tr,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,

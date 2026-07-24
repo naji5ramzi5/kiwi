@@ -19,6 +19,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
 
   @override
+  void dispose() {
+    phoneController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
@@ -32,19 +39,11 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Back button
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  icon: Icon(LucideIcons.arrowRight, color: themeTextColor),
-                  onPressed: () => Get.back(),
-                ),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
               Center(
                 child: Container(
-                  width: 120,
-                  height: 120,
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
                     boxShadow: [
                       BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 6)),
@@ -54,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Container(
                       color: Colors.white,
                       child: Padding(
-                        padding: const EdgeInsets.all(22),
+                        padding: const EdgeInsets.all(14),
                         child: Image.asset(
                           'assets/images/kwi.png',
                           fit: BoxFit.contain,
@@ -73,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'مرحباً بك مجدداً في Kiwi',
+                'welcome_back'.tr,
                 style: TextStyle(fontSize: 14, color: themeTextSecColor),
                 textAlign: TextAlign.center,
               ),
@@ -103,8 +102,34 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton(
-                  onPressed: () {},
-                  child: const Text('نسيت كلمة المرور؟', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                  onPressed: () async {
+                    final email = phoneController.text.trim();
+                    if (email.isEmpty) {
+                      Get.snackbar(
+                        'forgot_password'.tr,
+                        'enter_phone_reset'.tr,
+                        snackPosition: SnackPosition.TOP,
+                        backgroundColor: Colors.orange,
+                        colorText: Colors.white,
+                        margin: const EdgeInsets.all(16),
+                      );
+                      return;
+                    }
+                    try {
+                      await authController.resetPassword(email);
+                      Get.snackbar(
+                        'sent'.tr,
+                        'reset_link_sent'.tr,
+                        snackPosition: SnackPosition.TOP,
+                        backgroundColor: Colors.green,
+                        colorText: Colors.white,
+                        margin: const EdgeInsets.all(16),
+                      );
+                    } catch (_) {
+                      // Error snackbar is shown by the controller
+                    }
+                  },
+                  child: Text('forgot_password_q'.tr, style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
                 ),
               ),
               
@@ -140,10 +165,10 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('ليس لديك حساب؟ ', style: TextStyle(color: themeTextSecColor)),
+                  Text('no_account'.tr, style: TextStyle(color: themeTextSecColor)),
                   GestureDetector(
                     onTap: () => Get.to(() => const SignupScreen()),
-                    child: const Text('إنشاء حساب', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                    child: Text('create_account'.tr, style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

@@ -4,15 +4,11 @@ import {
   FileText, 
   Plus, 
   Search, 
-  Calendar, 
   User, 
   DollarSign, 
   Package,
-  ArrowUpRight,
   MoreVertical,
-  X,
-  CheckCircle2,
-  AlertCircle
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -43,19 +39,16 @@ const Purchases = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState('');
   
   // New Purchase Form State
   const [supplierName, setSupplierName] = useState('');
   const [cart, setCart] = useState<PurchaseItem[]>([]);
   const [saving, setSaving] = useState(false);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
-
-  useEffect(() => {
-    fetchPurchases();
-    fetchProducts();
-    fetchBranches();
-  }, []);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const fetchBranches = async () => {
     const { data } = await supabase.from('branches').select('id, name');
@@ -86,6 +79,14 @@ const Purchases = () => {
     setProducts(data || []);
   };
 
+  useEffect(() => {
+    void (async () => {
+      await fetchPurchases();
+      await fetchProducts();
+      await fetchBranches();
+    })();
+  }, []);
+
   const addToCart = (product: Product) => {
     const existing = cart.find(item => item.product_id === product.id);
     if (existing) {
@@ -115,6 +116,10 @@ const Purchases = () => {
   };
 
   const totalAmount = cart.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+
+  const filteredPurchases = purchases.filter(p => !search || p.supplier_name.includes(search));
+  const totalPages = Math.max(1, Math.ceil(filteredPurchases.length / PAGE_SIZE));
+  const pagedPurchases = filteredPurchases.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const savePurchase = async () => {
     if (!supplierName || cart.length === 0 || !selectedBranchId) {
@@ -159,8 +164,8 @@ const Purchases = () => {
       setCart([]);
       setSupplierName('');
       fetchPurchases();
-    } catch (err: any) {
-      toast.error('خطأ في الحفظ: ' + err.message);
+    } catch (err: unknown) {
+      toast.error('خطأ في الحفظ: ' + ((err as Error).message));
     } finally {
       setSaving(false);
     }
@@ -182,6 +187,18 @@ const Purchases = () => {
           <Plus size={20} />
           إضافة فاتورة شراء
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm mb-6">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+        <input
+          type="text"
+          placeholder="بحث بالمورد..."
+          className="w-full pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       {/* Stats Cards */}
@@ -246,13 +263,13 @@ const Purchases = () => {
                   </td>
                 </tr>
               ) : (
-                purchases.map(p => (
+                pagedPurchases.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-mono text-gray-400">#{p.id.substring(0, 8)}</td>
                     <td className="px-6 py-4 font-bold text-gray-900">{p.supplier_name}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{(p as any).branches?.name || 'مستودع مركزي'}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{((p as Record<string, unknown> & { branches?: Record<string, unknown> }).branches?.name as string) || 'مستودع مركزي'}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{new Date(p.created_at).toLocaleDateString('ar-IQ')}</td>
-                    <td className="px-6 py-4 font-black text-emerald-700">{((p as any).total_value ?? p.total_amount ?? 0).toLocaleString()} د.ع</td>
+                    <td className="px-6 py-4 font-black text-emerald-700">{(((p as Record<string, unknown>).total_value as number) ?? p.total_amount ?? 0).toLocaleString()} د.ع</td>
                     <td className="px-6 py-4 text-center">
                       <button className="p-2 text-gray-400 hover:text-gray-900"><MoreVertical size={18} /></button>
                     </td>
@@ -263,6 +280,17 @@ const Purchases = () => {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 24 }}>
+          <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>السابق</button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button key={i} className={`btn btn-sm ${page === i + 1 ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(i + 1)}>{i + 1}</button>
+          ))}
+          <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>التالي</button>
+        </div>
+      )}
 
       {/* Add Purchase Modal */}
       {showModal && (

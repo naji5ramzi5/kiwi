@@ -10,6 +10,8 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 20
 
   useEffect(() => {
     fetchBranches()
@@ -98,6 +100,8 @@ export default function Inventory() {
   const filtered = inventory.filter(item => 
     item.products?.name.toLowerCase().includes(search.toLowerCase())
   )
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="animate-in">
@@ -144,6 +148,7 @@ export default function Inventory() {
       {loading ? (
         <div className="empty-state"><div className="loader"></div></div>
       ) : (
+        <>
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div className="table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -158,7 +163,7 @@ export default function Inventory() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item) => {
+                {paged.map((item) => {
                   return (
                     <InventoryRow 
                       key={item.id} 
@@ -179,6 +184,18 @@ export default function Inventory() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 24 }}>
+            <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>السابق</button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button key={i} className={`btn btn-sm ${page === i + 1 ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(i + 1)}>{i + 1}</button>
+            ))}
+            <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>التالي</button>
+          </div>
+        )}
+        </>
       )}
 
       {wasteModal && (

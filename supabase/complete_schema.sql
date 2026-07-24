@@ -158,6 +158,19 @@ CREATE TABLE IF NOT EXISTS public.partner_settlements (
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS fcm_token TEXT;
 ALTER TABLE IF EXISTS public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
 
+-- order status history (audit trail)
+CREATE TABLE IF NOT EXISTS public.order_status_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE,
+  old_status TEXT,
+  new_status TEXT,
+  changed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  changed_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_status_history_order_id
+  ON public.order_status_history(order_id);
+
 -- ─── 2. Insert default system settings ──────────────────────
 INSERT INTO public.system_settings (key, value) VALUES
   ('dev_partner_ratio', '0.35'),

@@ -10,6 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 
+String orderShort(String id) => id.length >= 5 ? id.substring(0, 5) : id;
+
 class DeliveryMapScreen extends StatefulWidget {
   final Map<String, dynamic> order;
   const DeliveryMapScreen({super.key, required this.order});
@@ -138,6 +140,18 @@ class _DeliveryMapScreenState extends State<DeliveryMapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.freshenterprise.driver',
               ),
+              PolylineLayer(
+                polylines: <Polyline>[
+                  if (_driverLocation != null)
+                    Polyline(
+                      points: [_driverLocation!, _customerLocation],
+                      strokeWidth: 4,
+                      color: const Color(0xFF3B82F6).withOpacity(0.7),
+                      borderColor: Colors.white,
+                      borderStrokeWidth: 2,
+                    ),
+                ],
+              ),
               MarkerLayer(
                 markers: [
                   if (_driverLocation != null)
@@ -251,7 +265,7 @@ class _DeliveryMapScreenState extends State<DeliveryMapScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('طلب #${widget.order['id'].toString().substring(0, 5).toUpperCase()}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1F2937))),
+                          Text('طلب #${orderShort(widget.order['id'].toString()).toUpperCase()}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1F2937))),
                           const SizedBox(height: 4),
                           Text(isDelivering ? 'جاري التوصيل' : 'جاهز للاستلام من الفرع', style: TextStyle(color: isDelivering ? const Color(0xFF10b981) : Colors.blue, fontWeight: FontWeight.bold)),
                         ],
@@ -293,7 +307,7 @@ class _DeliveryMapScreenState extends State<DeliveryMapScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         flex: 1,
                         child: OutlinedButton(
@@ -305,6 +319,27 @@ class _DeliveryMapScreenState extends State<DeliveryMapScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           child: const Icon(LucideIcons.phoneCall, size: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 1,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            final phone = widget.order['customer_phone']?.toString() ?? '';
+                            if (phone.isNotEmpty) {
+                              launchUrl(Uri.parse('https://wa.me/${phone.replaceAll(RegExp(r'[^0-9]'), '')}'), mode: LaunchMode.externalApplication);
+                            } else {
+                              Get.snackbar('تنبيه', 'لا يوجد رقم هاتف للعميل', backgroundColor: Colors.orange, colorText: Colors.white, margin: const EdgeInsets.all(16));
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            foregroundColor: const Color(0xFF25D366),
+                            side: const BorderSide(color: Color(0xFF25D366)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Icon(LucideIcons.messageCircle, size: 20),
                         ),
                       ),
                     ],

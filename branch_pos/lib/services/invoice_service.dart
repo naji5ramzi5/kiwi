@@ -7,32 +7,50 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/invoice.dart';
+import '../models/invoice_settings.dart';
 
 class InvoiceService {
   static const _arabicFont = 'Tajawal';
 
+  Future<InvoiceSettings> _loadSettings() => InvoiceSettings.load();
+
   Future<Uint8List> generatePdf(Invoice invoice) async {
     final font = await PdfGoogleFonts.tajawalRegular();
     final fontBold = await PdfGoogleFonts.tajawalBold();
-
+    final settings = await _loadSettings();
     final doc = pw.Document();
+
+    final double pageWidth = settings.paperSize == '58mm' ? 58.0 : 80.0;
+    final pageFormat = PdfPageFormat(pageWidth, 0, marginAll: 8);
 
     doc.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.roll80,  // 80mm thermal receipt
+        pageFormat: pageFormat,
         margin: const pw.EdgeInsets.all(8),
         build: (context) => [
-          // Header
+          // Store Header
           pw.Center(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Text('Fresh Market', style: pw.TextStyle(font: fontBold, fontSize: 20)),
+                pw.Text(settings.storeName, style: pw.TextStyle(font: fontBold, fontSize: 18)),
+                if (settings.storePhone.isNotEmpty)
+                  pw.Text('هاتف: ${settings.storePhone}', style: pw.TextStyle(font: font, fontSize: 9)),
+                if (settings.storeAddress.isNotEmpty)
+                  pw.Text(settings.storeAddress, style: pw.TextStyle(font: font, fontSize: 9)),
+                pw.SizedBox(height: 6),
                 pw.Text(invoice.branchName, style: pw.TextStyle(font: font, fontSize: 12)),
                 pw.SizedBox(height: 4),
-                pw.Text('رقم الفاتورة: ${invoice.id.substring(0, 8)}', style: pw.TextStyle(font: font, fontSize: 10)),
-                pw.Text('التاريخ: ${_formatDate(invoice.createdAt)}', style: pw.TextStyle(font: font, fontSize: 10)),
-                pw.Text('الكاشير: ${invoice.cashierName ?? "---"}', style: pw.TextStyle(font: font, fontSize: 10)),
+                pw.Text('رقم الفاتورة: ${invoice.id.length > 8 ? invoice.id.substring(0, 8) : invoice.id}',
+                    style: pw.TextStyle(font: font, fontSize: 10)),
+                pw.Text('التاريخ: ${_formatDate(invoice.createdAt)}',
+                    style: pw.TextStyle(font: font, fontSize: 10)),
+                if (invoice.cashierName != null)
+                  pw.Text('الكاشير: ${invoice.cashierName}',
+                      style: pw.TextStyle(font: font, fontSize: 10)),
+                if (settings.showCustomerInfo && invoice.customerName != null && invoice.customerName!.isNotEmpty)
+                  pw.Text('العميل: ${invoice.customerName}',
+                      style: pw.TextStyle(font: font, fontSize: 10)),
                 pw.Divider(thickness: 0.5),
               ],
             ),
@@ -89,8 +107,7 @@ class InvoiceService {
           pw.Text('طريقة الدفع: ${invoice.paymentMethod}', style: pw.TextStyle(font: font, fontSize: 10)),
 
           pw.Divider(thickness: 0.5),
-          pw.Center(child: pw.Text('شكراً لتسوقك مع Fresh!', style: pw.TextStyle(font: fontBold, fontSize: 10))),
-          pw.Center(child: pw.Text('www.fresh.iq', style: pw.TextStyle(font: font, fontSize: 8))),
+          pw.Center(child: pw.Text(settings.footerText, style: pw.TextStyle(font: fontBold, fontSize: 10))),
         ],
       ),
     );
@@ -102,7 +119,7 @@ class InvoiceService {
     final pdf = await generatePdf(invoice);
     await Printing.layoutPdf(
       onLayout: (format) async => pdf,
-      name: 'invoice_${invoice.id.substring(0, 8)}',
+      name: 'invoice_${invoice.id.length > 8 ? invoice.id.substring(0, 8) : invoice.id}',
     );
   }
 
@@ -129,8 +146,6 @@ class InvoiceService {
         final matching = printers.where((p) => p.name == savedPrinterName);
         if (matching.isNotEmpty) return matching.first;
       }
-
-      // Prefer a thermal printer if available
       final thermal = printers.where((p) =>
           p.name.toLowerCase().contains('thermal') ||
           p.name.toLowerCase().contains('pos') ||
@@ -144,7 +159,7 @@ class InvoiceService {
     final pdf = await generatePdf(invoice);
     await Printing.sharePdf(
       bytes: pdf,
-      filename: 'invoice_${invoice.id.substring(0, 8)}.pdf',
+      filename: 'invoice_${invoice.id.length > 8 ? invoice.id.substring(0, 8) : invoice.id}.pdf',
     );
   }
 

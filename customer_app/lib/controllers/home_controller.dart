@@ -15,7 +15,7 @@ class HomeController extends GetxController {
   var banners = <Map<String, dynamic>>[].obs;
   var storyGroups = <Map<String, dynamic>>[].obs;
   var categories = <Map<String, dynamic>>[].obs;
-  
+
   var isLoadingProducts = true.obs;
   var isLoadingBranches = true.obs;
   var isLoadingBanners = true.obs;
@@ -27,10 +27,19 @@ class HomeController extends GetxController {
   var userAddress = ''.obs;
   var isInDeliveryZone = true.obs;
 
+  // Delivery zone config for the selected branch
+  var deliveryFee = 2500.0.obs;
+  var minOrderAmount = 0.0.obs;
+  var isLoadingDeliveryZone = false.obs;
+
   @override
   void onInit() {
     super.onInit();
-    debounce(searchQuery, (_) => filterProducts(), time: const Duration(milliseconds: 300));
+    debounce(
+      searchQuery,
+      (_) => filterProducts(),
+      time: const Duration(milliseconds: 300),
+    );
 
     fetchBanners();
     fetchStoryGroups();
@@ -56,10 +65,23 @@ class HomeController extends GetxController {
     await fetchProducts();
   }
 
+  Future<void> refreshAll() async {
+    await Future.wait([
+      fetchProducts(),
+      fetchBanners(),
+      fetchStoryGroups(),
+      fetchCategories(),
+    ]);
+  }
+
   Future<String> reverseGeocode(double lat, double lng) async {
     try {
       final client = HttpClient();
-      final request = await client.getUrl(Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&accept-language=ar'));
+      final request = await client.getUrl(
+        Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lng&accept-language=ar',
+        ),
+      );
       request.headers.set(HttpHeaders.userAgentHeader, 'KiwiApp/1.0');
       final response = await request.close();
       if (response.statusCode == 200) {
@@ -67,8 +89,16 @@ class HomeController extends GetxController {
         final json = jsonDecode(content);
         final address = json['address'];
         if (address != null) {
-          final road = address['road'] ?? address['suburb'] ?? address['neighbourhood'] ?? '';
-          final city = address['city'] ?? address['town'] ?? address['governorate'] ?? 'بغداد';
+          final road =
+              address['road'] ??
+              address['suburb'] ??
+              address['neighbourhood'] ??
+              '';
+          final city =
+              address['city'] ??
+              address['town'] ??
+              address['governorate'] ??
+              'baghdad'.tr;
           if (road.isNotEmpty) {
             return '$city، $road';
           }
@@ -91,19 +121,28 @@ class HomeController extends GetxController {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-        
-        final resolvedAddr = await reverseGeocode(position.latitude, position.longitude);
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+
+        final resolvedAddr = await reverseGeocode(
+          position.latitude,
+          position.longitude,
+        );
         if (resolvedAddr.isNotEmpty) {
           userAddress.value = resolvedAddr;
         }
 
         // Fetch active delivery zones
-        final zones = await supabase.from('delivery_zones').select().eq('is_active', true);
-        
+        final zones = await supabase
+            .from('delivery_zones')
+            .select()
+            .eq('is_active', true);
+
         String? matchedBranchId;
-        
+
         // Check Point-in-Polygon
         if (zones.isNotEmpty) {
           final userLatLng = mt.LatLng(position.latitude, position.longitude);
@@ -121,34 +160,48 @@ class HomeController extends GetxController {
                     double lat = point[1].toDouble();
                     polygon.add(mt.LatLng(lat, lng));
                   }
-                  if (mt.PolygonUtil.containsLocation(userLatLng, polygon, false)) {
+                  if (mt.PolygonUtil.containsLocation(
+                    userLatLng,
+                    polygon,
+                    false,
+                  )) {
                     matchedBranchId = zone['branch_id'];
                     break; // found the zone
                   }
-                  } catch (e) {
-                    print('Error parsing polygon coords: $e');
-                  }
+                } catch (e) {
+                  print('Error parsing polygon coords: $e');
+                }
               }
             }
           }
         }
 
-        final allBranches = await supabase.from('branches').select().eq('status', 'نشط');
+        final allBranches = await supabase
+            .from('branches')
+            .select()
+            .eq('status', 'نشط');
         branches.value = List<Map<String, dynamic>>.from(allBranches);
 
         if (matchedBranchId != null) {
-           final matched = branches.firstWhereOrNull((b) => b['id'] == matchedBranchId);
-           if (matched != null) {
-             selectedBranch.value = matched;
-             isInDeliveryZone.value = true;
-           }
+          final matched = branches.firstWhereOrNull(
+            (b) => b['id'] == matchedBranchId,
+          );
+          if (matched != null) {
+            selectedBranch.value = matched;
+            isInDeliveryZone.value = true;
+            fetchDeliveryZone();
+          }
         } else {
-           isInDeliveryZone.value = false;
-           // Default to first branch if out of zone
-           if (branches.isNotEmpty) selectedBranch.value = branches.first;
+          isInDeliveryZone.value = false;
+          // Default to first branch if out of zone
+          if (branches.isNotEmpty) {
+            selectedBranch.value = branches.first;
+            fetchDeliveryZone();
+          }
         }
       } else {
         await fetchAllBranches();
+        fetchDeliveryZone();
       }
     } catch (e) {
       print('Error in smart selection: $e');
@@ -156,7 +209,11 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> updateUserLocation(double lat, double lng, String address) async {
+  Future<void> updateUserLocation(
+    double lat,
+    double lng,
+    String address,
+  ) async {
     try {
       isLocating(true);
       isLoadingBranches(true);
@@ -164,10 +221,13 @@ class HomeController extends GetxController {
       userAddress.value = address;
 
       // Fetch active delivery zones
-      final zones = await supabase.from('delivery_zones').select().eq('is_active', true);
-      
+      final zones = await supabase
+          .from('delivery_zones')
+          .select()
+          .eq('is_active', true);
+
       String? matchedBranchId;
-      
+
       // Check Point-in-Polygon
       if (zones.isNotEmpty) {
         final userLatLng = mt.LatLng(lat, lng);
@@ -183,7 +243,11 @@ class HomeController extends GetxController {
                   double l = point[1].toDouble();
                   polygon.add(mt.LatLng(l, lon));
                 }
-                if (mt.PolygonUtil.containsLocation(userLatLng, polygon, false)) {
+                if (mt.PolygonUtil.containsLocation(
+                  userLatLng,
+                  polygon,
+                  false,
+                )) {
                   matchedBranchId = zone['branch_id'];
                   break; // found the zone
                 }
@@ -195,24 +259,32 @@ class HomeController extends GetxController {
         }
       }
 
-      final allBranches = await supabase.from('branches').select().eq('status', 'نشط');
+      final allBranches = await supabase
+          .from('branches')
+          .select()
+          .eq('status', 'نشط');
       branches.value = List<Map<String, dynamic>>.from(allBranches);
 
       if (matchedBranchId != null) {
-         final matched = branches.firstWhereOrNull((b) => b['id'] == matchedBranchId);
-         if (matched != null) {
-           selectedBranch.value = matched;
-           isInDeliveryZone.value = true;
-         }
-      } else {
-         isInDeliveryZone.value = false;
-         // Default to first branch if out of zone
-         if (branches.isNotEmpty) selectedBranch.value = branches.first;
-      }
-      
-      // Fetch products for the new branch
-      await fetchProducts();
+        final matched = branches.firstWhereOrNull(
+          (b) => b['id'] == matchedBranchId,
+        );
+          if (matched != null) {
+            selectedBranch.value = matched;
+            isInDeliveryZone.value = true;
+            fetchDeliveryZone();
+          }
+        } else {
+          isInDeliveryZone.value = false;
+          // Default to first branch if out of zone
+          if (branches.isNotEmpty) {
+            selectedBranch.value = branches.first;
+            fetchDeliveryZone();
+          }
+        }
 
+        // Fetch products for the new branch
+        await fetchProducts();
     } catch (e) {
       print('Error updating manual location: $e');
     } finally {
@@ -223,7 +295,10 @@ class HomeController extends GetxController {
 
   Future<void> fetchAllBranches() async {
     try {
-      final response = await supabase.from('branches').select().eq('status', 'نشط');
+      final response = await supabase
+          .from('branches')
+          .select()
+          .eq('status', 'نشط');
       branches.value = List<Map<String, dynamic>>.from(response);
       if (branches.isNotEmpty && selectedBranch.value == null) {
         selectedBranch.value = branches.first;
@@ -275,14 +350,14 @@ class HomeController extends GetxController {
 
   Future<void> fetchProducts() async {
     if (selectedBranch.value == null) return;
-    
+
     try {
       isLoadingProducts(true);
       final response = await supabase
           .from('products')
           .select('*, branch_inventory!inner(actual_stock, branch_id)')
           .eq('branch_inventory.branch_id', selectedBranch.value!['id']);
-      
+
       if (response.isNotEmpty) {
         allProducts.value = List<Map<String, dynamic>>.from(response);
         filterProducts();
@@ -300,6 +375,37 @@ class HomeController extends GetxController {
   void changeBranch(Map<String, dynamic> branch) {
     selectedBranch.value = branch;
     fetchProducts();
+    fetchDeliveryZone();
+  }
+
+  /// Fetches the active delivery zone for the currently selected branch and
+  /// exposes [deliveryFee] and [minOrderAmount]. Falls back to defaults if no
+  /// matching zone is found.
+  Future<void> fetchDeliveryZone() async {
+    final branchId = selectedBranch.value?['id'];
+    if (branchId == null) return;
+    try {
+      isLoadingDeliveryZone(true);
+      final response = await supabase
+          .from('delivery_zones')
+          .select()
+          .eq('branch_id', branchId)
+          .eq('is_active', true)
+          .limit(1);
+      if (response.isNotEmpty) {
+        final zone = response.first as Map<String, dynamic>;
+        deliveryFee.value = (zone['delivery_fee'] as num?)?.toDouble() ?? 2500.0;
+        minOrderAmount.value =
+            (zone['min_order'] as num?)?.toDouble() ?? 0.0;
+      } else {
+        deliveryFee.value = 2500.0;
+        minOrderAmount.value = 0.0;
+      }
+    } catch (e) {
+      print('Error fetching delivery zone: $e');
+    } finally {
+      isLoadingDeliveryZone(false);
+    }
   }
 
   Future<void> fetchCategories() async {

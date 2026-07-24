@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
@@ -19,7 +20,7 @@ class SupportScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text('الدعم الفني', style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontFamily: 'Cairo', fontSize: 20)),
+        title: Text('technical_support'.tr, style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontFamily: 'Cairo', fontSize: 20)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         iconTheme: IconThemeData(color: textColor),
@@ -36,14 +37,14 @@ class SupportScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF22C55E), Color(0xFF86EFAC)],
+                  colors: [AppTheme.primary, AppTheme.primaryVeryLight],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFF22C55E).withOpacity(0.3),
+                    color: AppTheme.primary.withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -69,13 +70,13 @@ class SupportScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'كيف يمكننا مساعدتك؟',
+                  Text(
+                    'how_can_we_help'.tr,
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Cairo'),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'نحن هنا لخدمتك على مدار الساعة طوال أيام الأسبوع',
+                    'here_to_help'.tr,
                     style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8), fontFamily: 'Cairo'),
                     textAlign: TextAlign.center,
                   ),
@@ -90,7 +91,7 @@ class SupportScreen extends StatelessWidget {
 
             // Contact Methods
             Text(
-              'طرق التواصل',
+              'contact_methods'.tr,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor, fontFamily: 'Cairo'),
             ),
             const SizedBox(height: 12),
@@ -98,7 +99,7 @@ class SupportScreen extends StatelessWidget {
               context, cardBg, textColor, textSecColor, isDark,
               icon: Icons.phone,
               color: Colors.blue,
-              title: 'اتصال هاتفي',
+              title: 'phone_call'.tr,
               subtitle: supportPhone,
               onTap: () => launchUrl(Uri.parse('tel://$supportPhone')),
             ),
@@ -107,7 +108,7 @@ class SupportScreen extends StatelessWidget {
               context, cardBg, textColor, textSecColor, isDark,
               icon: Icons.email,
               color: Colors.orange,
-              title: 'البريد الإلكتروني',
+              title: 'email'.tr,
               subtitle: 'support@kiwi.iq',
               onTap: () => launchUrl(Uri.parse('mailto:support@kiwi.iq')),
             ),
@@ -132,15 +133,15 @@ class SupportScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'معلومات التطبيق',
+                    'app_info'.tr,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: textColor, fontFamily: 'Cairo'),
                   ),
                   const SizedBox(height: 10),
-                  _buildInfoRow(context, 'الإصدار', '1.0.0'),
+                  _buildInfoRow(context, 'version'.tr, '1.0.0'),
                   const SizedBox(height: 6),
-                  _buildInfoRow(context, 'آخر تحديث', 'يونيو 2026'),
+                  _buildInfoRow(context, 'last_update'.tr, 'update_date'.tr),
                   const SizedBox(height: 6),
-                  _buildInfoRow(context, 'المطور', 'Kiwi Team'),
+                  _buildInfoRow(context, 'developer'.tr, 'Kiwi Team'),
                 ],
               ),
             ),
@@ -161,8 +162,8 @@ class SupportScreen extends StatelessWidget {
                   Icon(LucideIcons.clock, size: 20, color: AppTheme.primary),
                   const SizedBox(width: 10),
                   Text(
-                    'الدعم الفني متاح 24/7',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF16A34A), fontFamily: 'Cairo'),
+                    'support_24_7'.tr,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryDark, fontFamily: 'Cairo'),
                   ),
                 ],
               ),
@@ -175,19 +176,19 @@ class SupportScreen extends StatelessWidget {
 
   Widget _buildWhatsAppCard(BuildContext context, Color cardBg, Color textColor, bool isDark) {
     return GestureDetector(
-      onTap: () => launchUrl(Uri.parse('https://wa.me/$supportPhone?text=مرحباً، أحتاج إلى المساعدة في تطبيق Kiwi.')),
+      onTap: () => launchUrl(Uri.parse('https://wa.me/$supportPhone?text=${'whatsapp_greeting'.tr}')),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF22C55E), Color(0xFF86EFAC)],
+            colors: [AppTheme.primary, AppTheme.primaryVeryLight],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF22C55E).withOpacity(0.3),
+              color: AppTheme.primary.withOpacity(0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -213,13 +214,13 @@ class SupportScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'تواصل مع الدعم الفني',
+                  Text(
+                    'contact_support'.tr,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Cairo'),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'الرد خلال دقائق عبر واتساب',
+                    'reply_within_minutes'.tr,
                     style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8), fontFamily: 'Cairo'),
                   ),
                 ],

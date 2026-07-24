@@ -5,9 +5,13 @@ import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
+import 'config/app_config.dart';
 import 'screens/auth/driver_login_screen.dart';
 import 'screens/driver_main_screen.dart';
 import 'screens/approval_waiting_screen.dart';
+
+/// Global notifier: when set to true, DriverMainScreen switches to orders tab and refreshes.
+final ValueNotifier<bool> fcmNavigateToOrders = ValueNotifier<bool>(false);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,18 +21,36 @@ Future<void> main() async {
   );
 
   await Supabase.initialize(
-    url: 'https://pftjlvtdzokbzuioqfug.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDg0NjgsImV4cCI6MjA5NDE4NDQ2OH0.3ujKn2bxihvFfhfeIXPVNDjxjfqpWsXJq4bpaPNsQOM',
+    url: AppConfig.supabaseUrl,
+    anonKey: AppConfig.supabaseAnonKey,
   );
 
   try {
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission();
-    final fcmToken = await messaging.getToken();
-    if (fcmToken != null && Supabase.instance.client.auth.currentUser != null) {
-      await Supabase.instance.client.from('profiles').update({'fcm_token': fcmToken}).eq('id', Supabase.instance.client.auth.currentUser!.id);
+
+    Future<void> saveToken(String token) async {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        await Supabase.instance.client
+            .from('profiles')
+            .update({'fcm_token': token})
+            .eq('id', user.id);
+      }
     }
+
+    final fcmToken = await messaging.getToken();
+    if (fcmToken != null) {
+      await saveToken(fcmToken);
+    }
+
+    messaging.onTokenRefresh.listen((token) async {
+      await saveToken(token);
+    });
+
+    // Foreground: show snackbar and trigger refresh
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      fcmNavigateToOrders.value = true;
       Get.snackbar(
         message.notification?.title ?? 'إشعار جديد',
         message.notification?.body ?? '',
@@ -38,6 +60,17 @@ Future<void> main() async {
         margin: const EdgeInsets.all(16),
       );
     });
+
+    // Background tap: navigate to orders tab
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      fcmNavigateToOrders.value = true;
+    });
+
+    // Cold start from notification
+    final initialMessage = await messaging.getInitialMessage();
+    if (initialMessage != null) {
+      fcmNavigateToOrders.value = true;
+    }
   } catch (e) {
     debugPrint('FCM init error: $e');
   }

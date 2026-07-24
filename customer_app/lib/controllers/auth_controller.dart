@@ -81,7 +81,7 @@ class AuthController extends GetxController {
   bool _validatePhone(String phone) {
     final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.length < 10 || digits.length > 15) {
-      _showError('رقم الهاتف غير صحيح', 'يرجى إدخال رقم هاتف عراقي صحيح (11 رقم)');
+      _showError('invalid_phone_title'.tr, 'invalid_phone_msg'.tr);
       return false;
     }
     return true;
@@ -93,11 +93,11 @@ class AuthController extends GetxController {
 
       final trimmed = phone.trim();
       if (trimmed.isEmpty) {
-        _showError('رقم الهاتف مطلوب', 'الرجاء إدخال رقم الهاتف');
+        _showError('phone_required'.tr, 'please_enter_phone'.tr);
         return false;
       }
       if (password.length < 6) {
-        _showError('كلمة المرور قصيرة', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+        _showError('password_short'.tr, 'password_too_short'.tr);
         return false;
       }
       if (!_validatePhone(trimmed)) return false;
@@ -113,8 +113,8 @@ class AuthController extends GetxController {
       if (res.user != null) {
         await fetchUserProfile();
         Get.snackbar(
-          'أهلاً بك!',
-          'تم تسجيل الدخول بنجاح',
+          'welcome'.tr,
+          'login_success'.tr,
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.green.withOpacity(0.9),
           colorText: Colors.white,
@@ -127,19 +127,19 @@ class AuthController extends GetxController {
       debugPrint('[Auth] Login AuthException: ${e.message}');
       String msg = e.message;
       if (msg.contains('Invalid login credentials') || msg.contains('invalid_credentials')) {
-        msg = 'رقم الهاتف أو كلمة المرور غير صحيحة';
+        msg = 'invalid_credentials'.tr;
       } else if (msg.contains('User not found')) {
-        msg = 'لا يوجد حساب بهذا الرقم، يرجى إنشاء حساب جديد';
+        msg = 'no_account_found'.tr;
       } else if (msg.contains('Email not confirmed')) {
-        msg = 'يرجى تأكيد بريدك الإلكتروني أولاً أو تواصل مع الدعم';
+        msg = 'email_not_confirmed'.tr;
       } else if (msg.contains('Email address is invalid') || msg.contains('invalid email')) {
-        msg = 'صيغة رقم الهاتف غير صحيحة، يرجى التحقق';
+        msg = 'invalid_phone_format'.tr;
       }
-      _showError('خطأ في الدخول', msg);
+      _showError('login_error'.tr, msg);
       return false;
     } catch (e) {
       debugPrint('[Auth] Login unexpected error: $e');
-      _showError('خطأ', 'حدث خطأ غير متوقع، تأكد من الاتصال بالإنترنت');
+      _showError('error'.tr, 'unexpected_error'.tr);
       return false;
     } finally {
       isLoading(false);
@@ -152,15 +152,15 @@ class AuthController extends GetxController {
 
       final trimmedName = name.trim();
       if (trimmedName.isEmpty || trimmedName.length < 2) {
-        _showError('الاسم مطلوب', 'الرجاء إدخال اسمك الكامل (حرفين على الأقل)');
+        _showError('name_required'.tr, 'name_too_short'.tr);
         return false;
       }
       if (phone.trim().isEmpty) {
-        _showError('رقم الهاتف مطلوب', 'الرجاء إدخال رقم الهاتف');
+        _showError('phone_required'.tr, 'please_enter_phone'.tr);
         return false;
       }
       if (password.length < 6) {
-        _showError('كلمة المرور قصيرة', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+        _showError('password_short'.tr, 'password_too_short'.tr);
         return false;
       }
       if (!_validatePhone(phone.trim())) return false;
@@ -220,8 +220,8 @@ class AuthController extends GetxController {
 
         await fetchUserProfile();
         Get.snackbar(
-          'مرحباً ${trimmedName.split(' ').first}!',
-          'تم إنشاء حسابك بنجاح',
+          'hello_user'.trParams({'name': trimmedName.split(' ').first}),
+          'account_created'.tr,
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.green.withOpacity(0.9),
           colorText: Colors.white,
@@ -232,8 +232,8 @@ class AuthController extends GetxController {
 
       debugPrint('[Auth] Signup returned null user');
       Get.snackbar(
-        'تحقق من بريدك',
-        'تم إرسال رابط تأكيد، أو تواصل مع الدعم لتفعيل حسابك',
+        'check_email'.tr,
+        'verification_sent'.tr,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.amber.shade700.withOpacity(0.9),
         colorText: Colors.white,
@@ -244,17 +244,17 @@ class AuthController extends GetxController {
       debugPrint('[Auth] Signup AuthException: ${e.message}');
       String msg = e.message;
       if (msg.contains('already registered') || msg.contains('already been registered')) {
-        msg = 'هذا الرقم مسجل بالفعل، يرجى تسجيل الدخول';
+        msg = 'phone_already_registered'.tr;
       } else if (msg.contains('Password should be')) {
-        msg = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+        msg = 'password_too_short'.tr;
       } else if (msg.contains('Email address is invalid') || msg.contains('invalid email')) {
-        msg = 'صيغة رقم الهاتف غير صحيحة، يرجى التحقق';
+        msg = 'invalid_phone_format'.tr;
       }
-      _showError('خطأ في التسجيل', msg);
+      _showError('signup_error'.tr, msg);
       return false;
     } catch (e) {
       debugPrint('[Auth] Signup unexpected error: $e');
-      _showError('خطأ', 'حدث خطأ غير متوقع، تأكد من الاتصال بالإنترنت');
+      _showError('error'.tr, 'unexpected_error'.tr);
       return false;
     } finally {
       isLoading(false);
@@ -271,13 +271,32 @@ class AuthController extends GetxController {
       return true;
     } catch (e) {
       debugPrint('updateProfile error: $e');
-      Get.snackbar('خطأ', 'حدث خطأ أثناء تحديث البيانات، تأكد من الاتصال بالإنترنت',
+      Get.snackbar('error'.tr, 'profile_update_error'.tr,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.red.shade600,
         colorText: Colors.white,
       );
       return false;
     }
+  }
+
+  Future<void> resetPassword(String email) async {
+    try {
+      await supabase.auth.resetPasswordForEmail(email);
+    } on AuthException catch (e) {
+      debugPrint('[Auth] Reset password AuthException: ${e.message}');
+      _showError('error'.tr, e.message);
+      rethrow;
+    } catch (e) {
+      debugPrint('[Auth] Reset password error: $e');
+      _showError('error'.tr, 'unexpected_error'.tr);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    await supabase.auth.signOut();
+    userProfile.clear();
   }
 
   Future<void> logout() async {

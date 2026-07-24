@@ -16,6 +16,8 @@ class ApprovalWaitingScreen extends StatefulWidget {
 class _ApprovalWaitingScreenState extends State<ApprovalWaitingScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  RealtimeChannel? _approvalChannel;
+  bool _disposed = false;
 
   @override
   void initState() {
@@ -27,18 +29,23 @@ class _ApprovalWaitingScreenState extends State<ApprovalWaitingScreen> with Sing
 
   @override
   void dispose() {
+    _disposed = true;
     _controller.dispose();
+    if (_approvalChannel != null) {
+      Supabase.instance.client.removeChannel(_approvalChannel!);
+    }
     super.dispose();
   }
 
   void _checkApprovalPeriodically() async {
     final supabase = Supabase.instance.client;
-    supabase.channel('public:profiles').onPostgresChanges(
+    _approvalChannel = supabase.channel('public:profiles').onPostgresChanges(
       event: PostgresChangeEvent.update,
       schema: 'public',
       table: 'profiles',
       filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'id', value: supabase.auth.currentUser!.id),
       callback: (payload) {
+        if (_disposed) return;
         if (payload.newRecord['is_approved'] == true) {
           Get.offAll(() => const DriverApp());
         }

@@ -66,13 +66,13 @@ class _MainScreenState extends State<MainScreen> {
                 Container(
                   width: 44, height: 44,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF047857)]),
+                    gradient: const LinearGradient(colors: [AppTheme.emerald, AppTheme.emeraldDark]),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(LucideIcons.leaf, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
-                const Text('Kiwi', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF064E3B))),
+                const Text('Kiwi', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.emeraldDeep)),
               ],
             ),
           ),
@@ -96,7 +96,7 @@ class _MainScreenState extends State<MainScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF10B981).withOpacity(0.08) : Colors.transparent,
+          color: isSelected ? AppTheme.emerald.withOpacity(0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -106,7 +106,7 @@ class _MainScreenState extends State<MainScreen> {
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Icon(icon, color: isSelected ? const Color(0xFF047857) : Colors.grey[400], size: 22),
+                  Icon(icon, color: isSelected ? AppTheme.emeraldDark : Colors.grey[400], size: 22),
                   if (isCart && count > 0)
                     Positioned(
                       top: -6, right: -8,
@@ -125,7 +125,7 @@ class _MainScreenState extends State<MainScreen> {
               );
             }),
             const SizedBox(width: 16),
-            Text(label, style: TextStyle(color: isSelected ? const Color(0xFF064E3B) : AppTheme.textSecondary, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, fontSize: 15)),
+            Text(label, style: TextStyle(color: isSelected ? AppTheme.emeraldDeep : AppTheme.textSecondary, fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, fontSize: 15)),
           ],
         ),
       ),
@@ -136,31 +136,34 @@ class _MainScreenState extends State<MainScreen> {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final double width = MediaQuery.of(context).size.width;
 
-    return Container(
-      margin: EdgeInsets.fromLTRB(width * 0.05, 0, width * 0.05, width * 0.06),
-      height: width * 0.18,
-      padding: EdgeInsets.symmetric(horizontal: width * 0.02),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(width * 0.09),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.1),
-            blurRadius: width * 0.05,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(0, Icons.home_rounded, 'الرئيسية', width),
-          _buildNavItem(1, Icons.category_rounded, 'الأقسام', width),
-          _buildNavItem(2, Icons.shopping_cart_rounded, 'السلة', width, isCart: true),
-          _buildNavItem(3, Icons.person_rounded, 'حسابي', width),
-        ],
-      ),
-    );
+    return Obx(() {
+      nav.localeVersion.value;
+      return Container(
+        margin: EdgeInsets.fromLTRB(width * 0.05, 0, width * 0.05, width * 0.06),
+        height: width * 0.18,
+        padding: EdgeInsets.symmetric(horizontal: width * 0.02),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(width * 0.09),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.1),
+              blurRadius: width * 0.05,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(0, Icons.home_rounded, 'home'.tr, width),
+            _buildNavItem(1, Icons.category_rounded, 'categories'.tr, width),
+            _buildNavItem(2, Icons.shopping_cart_rounded, 'cart'.tr, width, isCart: true),
+            _buildNavItem(3, Icons.person_rounded, 'profile'.tr, width),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildNavItem(int index, IconData icon, String label, double screenWidth, {bool isCart = false}) {

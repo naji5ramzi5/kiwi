@@ -1,54 +1,97 @@
-import { useState } from 'react'
-import { Search, Eye, Phone, MapPin, ShoppingCart, Star } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Phone, MapPin, ShoppingCart, Star, Users, Loader2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 interface Customer {
-  id: number; name: string; phone: string; address: string;
-  orders: number; totalSpent: number; joined: string; lastOrder: string;
+  id: string
+  full_name: string
+  phone: string
+  email: string
+  created_at: string
 }
 
-const CUSTOMERS: Customer[] = [
-  { id: 1, name: 'أحمد محمد الكعبي', phone: '07801234567', address: 'الكرادة، ش 14 رمضان', orders: 23, totalSpent: 425000, joined: '2024-01-15', lastOrder: 'اليوم' },
-  { id: 2, name: 'سارة عبدالله الحسيني', phone: '07709876543', address: 'الزيتون، حي النهضة', orders: 17, totalSpent: 312000, joined: '2024-02-20', lastOrder: 'أمس' },
-  { id: 3, name: 'محمد علي العبيدي', phone: '07811234567', address: 'الرشيد، مقابل الجسر', orders: 8, totalSpent: 145000, joined: '2024-03-10', lastOrder: '3 أيام' },
-  { id: 4, name: 'فاطمة كاظم الموسوي', phone: '07712345678', address: 'الكرادة، حي العمال', orders: 31, totalSpent: 587000, joined: '2023-12-01', lastOrder: 'اليوم' },
-  { id: 5, name: 'يوسف إبراهيم الجبوري', phone: '07801111222', address: 'المنصور، خلف البنك', orders: 12, totalSpent: 218000, joined: '2024-01-30', lastOrder: '5 أيام' },
-  { id: 6, name: 'رنا أحمد الراوي', phone: '07709999888', address: 'الكرادة، ش الفلسطين', orders: 5, totalSpent: 89000, joined: '2024-04-05', lastOrder: 'أسبوع' },
-  { id: 7, name: 'عمر حسين الشمري', phone: '07811111333', address: 'الزيتون، قرب السوق', orders: 19, totalSpent: 356000, joined: '2024-02-14', lastOrder: 'أمس' },
-]
-
 export default function Customers() {
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const filtered = CUSTOMERS.filter(c => c.name.includes(search) || c.phone.includes(search))
-  const totalSpent = CUSTOMERS.reduce((a, c) => a + c.totalSpent, 0)
-  const avgOrders = Math.round(CUSTOMERS.reduce((a, c) => a + c.orders, 0) / CUSTOMERS.length)
+  const [totalCount, setTotalCount] = useState(0)
+
+  useEffect(() => {
+    fetchCustomers()
+  }, [])
+
+  async function fetchCustomers() {
+    try {
+      setLoading(true)
+
+      const { data, error, count } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone, email, created_at', { count: 'exact' })
+        .eq('role', 'customer')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setCustomers((data || []) as Customer[])
+      setTotalCount(count || 0)
+    } catch (err) {
+      console.error('Error fetching customers:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filtered = customers.filter(c => {
+    const name = (c.full_name || '').toLowerCase()
+    const phone = (c.phone || '').toLowerCase()
+    const searchStr = (search || '').toLowerCase()
+    return name.includes(searchStr) || phone.includes(searchStr)
+  })
+
+  const PAGE_SIZE = 20
+  const [page, setPage] = useState(0)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages - 1)
+  const paged = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
+
+  useEffect(() => { setPage(0) }, [search])
 
   return (
     <div>
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: 22 }}>
         <div className="stat-card">
-          <div className="stat-icon-wrap" style={{ background: '#8b5cf618' }}><Star size={22} style={{ color: '#8b5cf6' }} /></div>
+          <div className="stat-icon-wrap" style={{ background: '#8b5cf618' }}><Users size={22} style={{ color: '#8b5cf6' }} /></div>
           <div className="stat-label">إجمالي العملاء</div>
-          <div className="stat-value">1,427</div>
-          <div className="stat-sub stat-up">+37 هذا الأسبوع</div>
+          <div className="stat-value">{totalCount.toLocaleString('ar-IQ')}</div>
+          <div className="stat-sub">عميل مسجل</div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon-wrap" style={{ background: '#22c55e18' }}><ShoppingCart size={22} style={{ color: '#22c55e' }} /></div>
-          <div className="stat-label">متوسط الطلبات / عميل</div>
-          <div className="stat-value">{avgOrders}</div>
-          <div className="stat-sub">طلب</div>
+          <div className="stat-icon-wrap" style={{ background: '#22c55e18' }}><Star size={22} style={{ color: '#22c55e' }} /></div>
+          <div className="stat-label">عملاء هذا الشهر</div>
+          <div className="stat-value">
+            {customers.filter(c => {
+              const d = new Date(c.created_at)
+              const now = new Date()
+              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+            }).length}
+          </div>
+          <div className="stat-sub">عميل جديد</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon-wrap" style={{ background: '#3b82f618' }}><Phone size={22} style={{ color: '#3b82f6' }} /></div>
-          <div className="stat-label">عملاء نشطون هذا الأسبوع</div>
-          <div className="stat-value">284</div>
-          <div className="stat-sub stat-up">+12%</div>
+          <div className="stat-label">عملاء لديهم هاتف</div>
+          <div className="stat-value">
+            {customers.filter(c => c.phone && c.phone.trim().length > 0).length}
+          </div>
+          <div className="stat-sub">مسجل رقم</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon-wrap" style={{ background: '#f59e0b18' }}><MapPin size={22} style={{ color: '#f59e0b' }} /></div>
-          <div className="stat-label">متوسط الإنفاق / عميل</div>
-          <div className="stat-value">{Math.round(totalSpent / CUSTOMERS.length / 1000)}k</div>
-          <div className="stat-sub">د.ع</div>
+          <div className="stat-label">آخر تسجيل</div>
+          <div className="stat-value" style={{ fontSize: 18 }}>
+            {customers.length > 0 ? new Date(customers[0].created_at).toLocaleDateString('ar-IQ') : '-'}
+          </div>
+          <div className="stat-sub">آخر عميل</div>
         </div>
       </div>
 
@@ -59,43 +102,52 @@ export default function Customers() {
       </div>
 
       {/* Table */}
-      <div className="card">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr><th>#</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>الطلبات</th><th>إجمالي الإنفاق</th><th>آخر طلب</th><th>انضم في</th></tr>
-            </thead>
-            <tbody>
-              {filtered.map((c, i) => (
-                <tr key={c.id}>
-                  <td style={{ fontSize: 12, color: 'var(--gray400)' }}>{i + 1}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="avatar avatar-sm">{c.name[0]}</div>
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: 12, color: 'var(--gray500)', direction: 'ltr', textAlign: 'right' }}>{c.phone}</td>
-                  <td style={{ fontSize: 12 }}><MapPin size={11} style={{ display: 'inline', marginLeft: 3, color: 'var(--gray400)' }} />{c.address}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <ShoppingCart size={12} style={{ color: 'var(--g500)' }} />
-                      <span style={{ fontWeight: 700, color: 'var(--gray900)' }}>{c.orders}</span>
-                    </div>
-                  </td>
-                  <td style={{ fontWeight: 700, color: 'var(--g700)' }}>{c.totalSpent.toLocaleString('ar-IQ')} <span style={{ fontSize: 10, fontWeight: 400 }}>د.ع</span></td>
-                  <td>
-                    <span className={`badge ${c.lastOrder === 'اليوم' ? 'badge-green' : c.lastOrder === 'أمس' ? 'badge-blue' : 'badge-gray'}`} style={{ fontSize: 10 }}>
-                      {c.lastOrder}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: 11, color: 'var(--gray400)' }}>{c.joined}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="card"><div className="empty-state"><div className="loader"></div></div></div>
+      ) : (
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>العميل</th><th>الهاتف</th><th>البريد</th><th>انضم في</th></tr>
+              </thead>
+              <tbody>
+                {paged.map((c, i) => (
+                  <tr key={c.id}>
+                    <td style={{ fontSize: 12, color: 'var(--gray400)' }}>{safePage * PAGE_SIZE + i + 1}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="avatar avatar-sm">{(c.full_name || '?')[0]}</div>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{c.full_name || 'بدون اسم'}</span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 12, color: 'var(--gray500)', direction: 'ltr', textAlign: 'right' }}>{c.phone || '-'}</td>
+                    <td style={{ fontSize: 12, color: 'var(--gray500)' }}>{c.email || '-'}</td>
+                    <td style={{ fontSize: 11, color: 'var(--gray400)' }}>{new Date(c.created_at).toLocaleDateString('ar-IQ')}</td>
+                  </tr>
+                ))}
+                {paged.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--gray400)' }}>
+                      <Users size={36} style={{ marginBottom: 12, opacity: 0.3 }} />
+                      <p>لا يوجد عملاء</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '16px 0' }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0}>السابق</button>
+              <span style={{ fontSize: 13, color: 'var(--gray500)' }}>صفحة {safePage + 1} من {totalPages}</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={safePage >= totalPages - 1}>التالي</button>
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   )
 }

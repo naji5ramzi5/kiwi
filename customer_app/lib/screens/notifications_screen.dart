@@ -47,16 +47,16 @@ class NotificationItem {
     if (t.contains('إلغاء') || t.contains('ملغي') || t.contains('رفض')) return Colors.red;
     if (t.contains('عرض') || t.contains('خصم') || t.contains('هدية')) return Colors.orange;
     if (t.contains('قيّم') || t.contains('تقييم')) return Colors.amber;
-    return const Color(0xFF10B981);
+    return AppTheme.emerald;
   }
 
   String get relativeTime {
     final diff = DateTime.now().difference(createdAt);
-    if (diff.inMinutes < 1) return 'الآن';
-    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return 'منذ ${diff.inHours} ساعة';
-    if (diff.inDays == 1) return 'أمس';
-    if (diff.inDays < 7) return 'منذ ${diff.inDays} أيام';
+    if (diff.inMinutes < 1) return 'time_now'.tr;
+    if (diff.inMinutes < 60) return 'minutes_ago'.trParams({'minutes': diff.inMinutes.toString()});
+    if (diff.inHours < 24) return 'hours_ago'.trParams({'hours': diff.inHours.toString()});
+    if (diff.inDays == 1) return 'time_yesterday'.tr;
+    if (diff.inDays < 7) return 'days_ago'.trParams({'days': diff.inDays.toString()});
     return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
   }
 }
@@ -154,12 +154,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _clearAll() {
     Get.defaultDialog(
-      title: 'مسح الإشعارات',
+      title: 'clear_notifications'.tr,
       titleStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 18),
-      middleText: 'هل أنت متأكد من مسح جميع الإشعارات؟',
+      middleText: 'clear_all_confirm'.tr,
       middleTextStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 15),
-      textConfirm: 'مسح الكل',
-      textCancel: 'إلغاء',
+      textConfirm: 'clear_all'.tr,
+      textCancel: 'cancel'.tr,
       confirmTextColor: Colors.white,
       buttonColor: Colors.red,
       onConfirm: () async {
@@ -185,7 +185,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: Text('الإشعارات', style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontFamily: 'Cairo', fontSize: 20)),
+        title: Text('notifications'.tr, style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontFamily: 'Cairo', fontSize: 20)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         iconTheme: IconThemeData(color: textColor),
@@ -194,7 +194,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ? TextButton.icon(
                   onPressed: _clearAll,
                   icon: const Icon(Icons.delete_sweep, size: 18, color: Colors.red),
-                  label: const Text('مسح الكل', style: TextStyle(color: Colors.red, fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13)),
+                  label: Text('clear_all'.tr, style: TextStyle(color: Colors.red, fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13)),
                 )
               : const SizedBox.shrink()),
         ],
@@ -220,12 +220,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'لا توجد إشعارات',
+                  'no_notifications'.tr,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor, fontFamily: 'Cairo'),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ستظهر هنا جميع الإشعارات والتحديثات الجديدة',
+                  'notifications_empty'.tr,
                   style: TextStyle(fontSize: 13, color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary, fontFamily: 'Cairo'),
                 ),
               ],

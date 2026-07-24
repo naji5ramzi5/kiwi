@@ -104,7 +104,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
         'reason': 'تلف فرع',
         'type': 'damaged'
       });
-      
+
+      // Decrement actual stock
+      await _decrementStock(branchId, productId, qty);
+
       Get.snackbar('تم', 'تم تسجيل التالف وتحديث المخزون بنجاح');
       fetchInventory();
     } catch (e) {
@@ -115,11 +118,36 @@ class _InventoryScreenState extends State<InventoryScreen> {
           'quantity': qty,
           'reason': 'تلف فرع',
         });
+
+        await _decrementStock(branchId, productId, qty);
+
         Get.snackbar('تم', 'تم تسجيل التالف وتحديث المخزون بنجاح');
         fetchInventory();
       } catch (err) {
         Get.snackbar('خطأ', 'فشل تسجيل التالف: $err');
       }
+    }
+  }
+
+  Future<void> _decrementStock(String branchId, String productId, double qty) async {
+    try {
+      final current = await supabase
+          .from('inventory')
+          .select('stock_quantity')
+          .eq('branch_id', branchId)
+          .eq('product_id', productId)
+          .maybeSingle();
+
+      final currentStock = (current?['stock_quantity'] ?? 0).toDouble();
+      final newStock = (currentStock - qty) < 0 ? 0.0 : currentStock - qty;
+
+      await supabase.from('inventory').upsert({
+        'branch_id': branchId,
+        'product_id': productId,
+        'stock_quantity': newStock,
+      }, onConflict: 'branch_id,product_id');
+    } catch (e) {
+      print('Error decrementing stock for waste: $e');
     }
   }
 
@@ -212,11 +240,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 30)]),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
+        child: Scrollbar(
           child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
+            scrollDirection: Axis.vertical,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
               headingRowColor: WidgetStateProperty.all(AppTheme.primary.withOpacity(0.05)),
               columns: const [
                 DataColumn(label: Text('المنتج', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -265,6 +294,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               }).toList(),
             ),
           ),
+        ),
         ),
       ),
     );

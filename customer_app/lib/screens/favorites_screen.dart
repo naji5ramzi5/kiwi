@@ -33,7 +33,7 @@ class FavoritesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('المفضلة', style: TextStyle(color: themeTextColor, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+        title: Text('favorites'.tr, style: TextStyle(color: themeTextColor, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
         elevation: 0,
         backgroundColor: Colors.transparent,
         actions: [
@@ -43,10 +43,10 @@ class FavoritesScreen extends StatelessWidget {
               icon: Icon(LucideIcons.trash2, color: Colors.red.shade400, size: 20),
               onPressed: () {
                 Get.defaultDialog(
-                  title: 'حذف المفضلة',
-                  middleText: 'هل تريد حذف جميع المنتجات من المفضلة؟',
-                  textConfirm: 'نعم',
-                  textCancel: 'إلغاء',
+                  title: 'delete_favorites'.tr,
+                  middleText: 'delete_all_favorites'.tr,
+                  textConfirm: 'yes'.tr,
+                  textCancel: 'cancel'.tr,
                   confirmTextColor: Colors.white,
                   onConfirm: () async {
                     for (final id in favController.favoriteProductIds.toList()) {
@@ -77,13 +77,13 @@ class FavoritesScreen extends StatelessWidget {
                   child: const Icon(LucideIcons.heart, size: 44, color: Colors.red),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'لا توجد منتجات في المفضلة',
+                Text(
+                  'no_favorites'.tr,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'اضغط على أيقونة القلب لإضافة المنتجات',
+                  'tap_heart_add'.tr,
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade500, fontFamily: 'Cairo'),
                 ),
               ],
@@ -109,7 +109,7 @@ class FavoritesScreen extends StatelessWidget {
                   child: const Icon(LucideIcons.alertCircle, size: 36, color: Colors.amber),
                 ),
                 const SizedBox(height: 16),
-                const Text('بيانات المفضلة قيد التحميل...', style: TextStyle(fontFamily: 'Cairo')),
+                Text('favorites_loading'.tr, style: TextStyle(fontFamily: 'Cairo')),
               ],
             ),
           );
@@ -146,7 +146,7 @@ class FavoritesScreen extends StatelessWidget {
               'price': p['price'],
               'image': imageUrl,
               'category': p['category'],
-              'unit': p['unit'] ?? 'حبة',
+              'unit': p['unit'] ?? 'unit_piece'.tr,
               'stock': favStock,
             };
 
@@ -218,7 +218,7 @@ class FavoritesScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            p['name'] ?? 'منتج',
+                            p['name'] ?? 'product_fallback'.tr,
                             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: themeTextColor, fontFamily: 'Cairo'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -231,11 +231,11 @@ class FavoritesScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${formatPrice(p['price'])} د.ع',
-                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: isDark ? const Color(0xFF34D399) : AppTheme.primaryDark, fontFamily: 'Cairo'),
+                                    '${formatPrice(p['price'])} ${'currency_iqd'.tr}',
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: isDark ? AppTheme.emeraldLight : AppTheme.primaryDark, fontFamily: 'Cairo'),
                                   ),
                                   Text(
-                                    '/ ${p['unit'] ?? 'حبة'}',
+                                    '/ ${p['unit'] ?? 'unit_piece'.tr}',
                                     style: TextStyle(fontSize: 10, color: isDark ? Colors.grey.shade500 : Colors.grey.shade400, fontFamily: 'Cairo'),
                                   ),
                                 ],

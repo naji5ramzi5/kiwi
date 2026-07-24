@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import type { Session } from '@supabase/supabase-js'
+import toast from 'react-hot-toast'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import Dashboard from './pages/Dashboard'
 import Products from './pages/Products'
 import Branches from './pages/Branches'
@@ -22,7 +25,7 @@ import OrderForm from './pages/OrderForm'
 import DeliveryZones from './pages/DeliveryZones'
 
 export default function App() {
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -31,8 +34,14 @@ export default function App() {
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
+      if (event === 'SIGNED_OUT') {
+        toast.success('تم تسجيل الخروج بنجاح')
+      }
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        toast.error('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى')
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -53,6 +62,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <Routes>
         <Route path="/" element={
           <>
@@ -79,6 +89,7 @@ export default function App() {
           <Route path="checkout" element={<OrderForm />} />
         </Route>
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

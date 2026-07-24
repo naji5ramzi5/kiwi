@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, MapPin, ShoppingCart, TrendingUp, Edit2, Key, Shield, ShieldOff, Search, Printer, Leaf } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { ORDER_STATUS } from '../lib/orderStatus'
 import toast from 'react-hot-toast'
 import ZoneMap from '../components/ZoneMap'
 
@@ -32,6 +33,8 @@ export default function Branches() {
   const [modal, setModal] = useState<Partial<Branch> | null | 'new'>(null)
   const [search, setSearch] = useState('')
   const [showCert, setShowCert] = useState<Branch | null>(null)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 10
 
   useEffect(() => {
     fetchBranches()
@@ -51,7 +54,7 @@ export default function Branches() {
 
       const formatted = (branchesData || []).map((branch: any) => {
         const branchOrders = branch.orders || []
-        const completedOrders = branchOrders.filter((o: any) => o.status === 'تم التوصيل' || o.status === 'مكتمل' || o.status === 'delivered')
+        const completedOrders = branchOrders.filter((o: any) => o.status === ORDER_STATUS.DELIVERED || o.status === 'مكتمل')
         const salesSum = completedOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || o.total_price || 0), 0)
         const branchDriversCount = (driversData || []).filter((d: any) => d.branch_id === branch.id).length
 
@@ -123,6 +126,8 @@ export default function Branches() {
   }
 
   const filtered = branches.filter(b => b.name.includes(search))
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const totalOrders = branches.reduce((sum, b) => sum + (b.orders_count || 0), 0)
   const totalSales = branches.reduce((sum, b) => sum + (b.sales_sum || 0), 0)
@@ -177,7 +182,7 @@ export default function Branches() {
         <div className="empty-state"><div className="loader"></div></div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 20 }}>
-          {filtered.map(branch => (
+          {paged.map(branch => (
             <div key={branch.id} className="card hover-scale" style={{ padding: 0 }}>
               <div style={{ padding: 20, borderBottom: '1px solid var(--gray100)', display: 'flex', gap: 16 }}>
                 <div className="brand-icon" style={{ width: 48, height: 48, flexShrink: 0 }}>
@@ -243,6 +248,17 @@ export default function Branches() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 24 }}>
+          <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>السابق</button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button key={i} className={`btn btn-sm ${page === i + 1 ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(i + 1)}>{i + 1}</button>
+          ))}
+          <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>التالي</button>
         </div>
       )}
 
@@ -326,7 +342,7 @@ export default function Branches() {
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #10b981', paddingBottom: 20, marginBottom: 30 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Leaf size={32} color="#10b981" />
-                  <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>FRESH ENTERPRISE</h1>
+                  <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>KIWI</h1>
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: 12, color: '#999' }}>{new Date().toLocaleDateString('ar-IQ')}</div>

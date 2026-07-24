@@ -38,6 +38,19 @@ class Product {
     );
   }
 
+  Product copyWith({double? stockQuantity}) => Product(
+    id: id,
+    name: name,
+    category: category,
+    unit: unit,
+    defaultPrice: defaultPrice,
+    imageUrl: imageUrl,
+    isActive: isActive,
+    isOffer: isOffer,
+    stockQuantity: stockQuantity ?? this.stockQuantity,
+    barcode: barcode,
+  );
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,

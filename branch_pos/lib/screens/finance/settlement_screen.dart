@@ -52,13 +52,13 @@ class _SettlementScreenState extends State<SettlementScreen> {
       // Fetch purchases
       final purchasesResponse = await supabase
           .from('purchases')
-          .select('total_value')
+          .select('total_amount')
           .eq('branch_id', authController.currentBranchId.value)
           .gte('created_at', startOfDay);
-      
+
       double purchases = 0;
       for (var row in purchasesResponse) {
-        purchases += (row['total_value'] as num).toDouble();
+        purchases += (row['total_amount'] as num).toDouble();
       }
 
       setState(() {

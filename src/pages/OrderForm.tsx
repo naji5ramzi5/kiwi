@@ -1,40 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useUserZone } from '../hooks/useUserZone';
 import { sendFcmNotification } from '../lib/fcm';
+import { ORDER_STATUS } from '../lib/orderStatus';
 import { toast } from 'react-hot-toast';
-import { MapPin, Truck, CheckCircle2, X } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface OrderFormProps {
   // Optional: if you want to pass a predefined cart or branch
   branchId?: string;
 }
 
+interface CartItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+const getInitialCart = (): CartItem[] => {
+  const saved = localStorage.getItem('cart');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export default function OrderForm({ branchId }: OrderFormProps = {}) {
+  const initialCart = getInitialCart();
   const [form, setForm] = useState({
     deliveryAddress: '',
     notes: '',
-    // In a real app, you would have cart items; we'll mock a total
-    totalPrice: 0,
+    totalPrice: initialCart.reduce((sum, item) => sum + item.price * item.quantity, 0),
   });
   const [loading, setLoading] = useState(false);
-  const [cartItems, setCartItems] = useState<Array<{ id: string; name: string; quantity: number; price: number }>>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(initialCart);
 
   // Geo-fence hook
-  const { isInsideAnyZone, loading: zoneLoading, error: zoneError, matchingZone } = useUserZone(branchId);
-
-  // Mock: load some fake cart items from localStorage or state
-  useEffect(() => {
-    const saved = localStorage.getItem('cart');
-    if (saved) {
-      try {
-        setCartItems(JSON.parse(saved));
-        // Recalculate total
-        const total = JSON.parse(saved).reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
-        setForm(prev => ({ ...prev, totalPrice: total }));
-      } catch {}
-    }
-  }, []);
+  const { isInsideAnyZone, loading: zoneLoading, matchingZone } = useUserZone(branchId);
 
   // Calculate total from cart
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -80,13 +87,29 @@ export default function OrderForm({ branchId }: OrderFormProps = {}) {
           branch_id: effectiveBranchId,
           total_price: totalPrice,
           delivery_address: form.deliveryAddress,
-          status: 'جديد', // According to workflow: goes directly to "Out for Delivery"? Actually they bypass "Waiting for Courier". We'll set to 'تحضير' (Preparation) as per statuses in Orders.tsx.
+          status: ORDER_STATUS.PENDING, // New order starts as pending
           // We could also store items in a separate order_items table, but for simplicity we'll just store summary.
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
+
+      // Decrement stock in branch_inventory for each item in the cart
+      try {
+        for (const item of cartItems) {
+          const { error: stockError } = await supabase.rpc('decrement_branch_inventory', {
+            p_branch_id: effectiveBranchId,
+            p_product_id: item.id,
+            p_quantity: item.quantity,
+          });
+          if (stockError) {
+            console.warn('Stock decrement failed for product', item.id, stockError);
+          }
+        }
+      } catch (stockErr) {
+        console.warn('Stock decrement failed:', stockErr);
+      }
 
       // Optionally, clear cart after order
       localStorage.removeItem('cart');
@@ -129,9 +152,9 @@ export default function OrderForm({ branchId }: OrderFormProps = {}) {
       toast.success('تم إنشاء الطلب بنجاح!');
       // Optionally redirect to orders page or show confirmation
       // We'll just show success and reset form.
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error('فشل إنشاء الطلب: ' + (err.message ?? 'خطأ غير معروف'));
+      toast.error('فشل إنشاء الطلب: ' + ((err as Error).message ?? 'خطأ غير معروف'));
     } finally {
       setLoading(false);
     }

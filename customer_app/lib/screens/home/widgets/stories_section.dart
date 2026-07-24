@@ -5,30 +5,30 @@ import '../../../theme/app_theme.dart';
 import '../../../controllers/home_controller.dart';
 import '../../story_viewer_screen.dart';
 
-// Static fallback stories
-const List<Map<String, String>> _staticStories = [
+// Static fallback stories - use function to resolve .tr at build time
+List<Map<String, String>> _getStaticStories() => [
   {
-    'name': 'خضروات',
+    'name': 'story_vegetables'.tr,
     'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80',
     'emoji': '🥦',
   },
   {
-    'name': 'عروض',
+    'name': 'story_offers'.tr,
     'imageUrl': 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?auto=format&fit=crop&w=200&q=80',
     'emoji': '🔥',
   },
   {
-    'name': 'فواكه',
+    'name': 'story_fruits'.tr,
     'imageUrl': 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=200&q=80',
     'emoji': '🍊',
   },
   {
-    'name': 'جديد',
+    'name': 'story_new'.tr,
     'imageUrl': 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=200&q=80',
     'emoji': '✨',
   },
   {
-    'name': 'تمور',
+    'name': 'story_dates'.tr,
     'imageUrl': 'https://images.unsplash.com/photo-1596431989042-49764de3d037?auto=format&fit=crop&w=200&q=80',
     'emoji': '🌴',
   },
@@ -52,12 +52,12 @@ class StoriesSection extends StatelessWidget {
       final List<Map<String, String>> displayStories = dbStories.isNotEmpty
           ? dbStories
               .map((s) => {
-                    'name': (s['name'] ?? s['title'] ?? 'قصة').toString(),
+                    'name': (s['name'] ?? s['title'] ?? 'story_fallback'.tr).toString(),
                     'imageUrl': (s['thumbnail_url'] ?? '').toString(),
                     'emoji': '',
                   })
               .toList()
-          : _staticStories;
+          : _getStaticStories();
 
       return SizedBox(
         height: 105,
@@ -81,8 +81,8 @@ class StoriesSection extends StatelessWidget {
                 );
               } else {
                 Get.snackbar(
-                  '🥝 لا توجد قصص حالياً',
-                  'تابعنا! العروض والقصص الجديدة ستظهر هنا',
+                  'no_stories_title'.tr,
+                  'no_stories_msg'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: AppTheme.primary,
                   colorText: Colors.white,

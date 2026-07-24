@@ -54,7 +54,11 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
 
     final branchId = authController.currentBranchId.value;
     final productId = _selectedProduct!['id'].toString();
-    final quantity = double.parse(_quantityController.text);
+    final quantity = double.tryParse(_quantityController.text);
+    if (quantity == null || quantity <= 0) {
+      Get.snackbar('تنبيه', 'يرجى إدخال كمية صحيحة');
+      return;
+    }
     final unitCost = double.tryParse(_costController.text) ?? 0;
 
     try {

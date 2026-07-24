@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { TrendingUp, DollarSign, Settings, ShieldCheck, HeartPulse, Store } from 'lucide-react'
+import { TrendingUp, DollarSign, Settings, ShieldCheck, HeartPulse, Store, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import DateRangePicker from '../components/DateRangePicker'
 
 interface Settlement {
   id: string;
@@ -21,6 +22,9 @@ export default function Finance() {
   const [loading, setLoading] = useState(true);
   const [ratios, setRatios] = useState({ dev: 0.35, maintenance: 0.10 });
   const [showSettings, setShowSettings] = useState(false);
+  const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const stats = settlements.reduce((acc, curr) => ({
     revenue: acc.revenue + curr.total_revenue,
@@ -73,9 +77,37 @@ export default function Finance() {
           <h1 className="text-2xl font-bold text-gray-900">التقارير المالية والشركاء</h1>
           <p className="text-gray-500">توزيع أرباح النظام (المطور، الصيانة، الفروع)</p>
         </div>
-        <button className="btn btn-outline" onClick={() => setShowSettings(true)} style={{ gap: 8 }}>
-          <Settings size={18} /> إعدادات النسب
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="بحث بالفرع..."
+              className="pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all w-48"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button className="btn btn-outline" onClick={() => setShowSettings(true)} style={{ gap: 8 }}>
+            <Settings size={18} /> إعدادات النسب
+          </button>
+        </div>
+      </div>
+
+      {/* Date Range Filter */}
+      <div style={{ marginBottom: 20, display: 'flex', gap: 12 }}>
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          label="تصفية حسب التاريخ"
+        />
+        {(startDate || endDate) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setStartDate(''); setEndDate('') }}>
+            مسح الفلتر
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -101,7 +133,12 @@ export default function Finance() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {settlements.map((s) => (
+            {settlements.filter(s => {
+              if (search && !s.branches?.name?.includes(search)) return false;
+              if (startDate) { const d = new Date(s.created_at).toISOString().slice(0, 10); if (d < startDate) return false; }
+              if (endDate) { const d = new Date(s.created_at).toISOString().slice(0, 10); if (d > endDate) return false; }
+              return true;
+            }).map((s) => (
               <tr key={s.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 text-sm">{new Date(s.created_at).toLocaleDateString('ar-IQ')}</td>
                 <td className="px-6 py-4 text-sm font-bold">{s.branches?.name}</td>

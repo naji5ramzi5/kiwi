@@ -18,19 +18,20 @@ class TurfHelper {
   /// [polygon] - GeoJSON polygon coordinates (array of linear rings)
   /// Returns true if point is inside polygon, false otherwise
   static bool pointInPolygon(List<double> point, List<List<List<double>>> polygon) {
-    if (point.length != 2) return false;
+    if (point.length != 2 || polygon.isEmpty) return false;
 
     double x = point[0];
     double y = point[1];
 
-    // Handle multiple polygons (MultiPolygon)
-    for (var ring in polygon) {
-      if (_pointInRing(x, y, ring)) {
-        return true;
-      }
+    // Point must be inside the outer ring (first ring)
+    if (!_pointInRing(x, y, polygon[0])) return false;
+
+    // Point must be outside all holes (inner rings)
+    for (int i = 1; i < polygon.length; i++) {
+      if (_pointInRing(x, y, polygon[i])) return false;
     }
 
-    return false;
+    return true;
   }
 
   /// Check if point is inside a single ring (handles holes)

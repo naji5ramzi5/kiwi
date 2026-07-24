@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../controllers/order_tracking_controller.dart';
 import '../theme/app_theme.dart';
 
+const double _urbanSpeedKmh = 30.0;
+
 class OrderTrackingMapScreen extends StatefulWidget {
   final String orderId;
   const OrderTrackingMapScreen({super.key, required this.orderId});
@@ -19,11 +21,14 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
   late final OrderTrackingController controller;
   final MapController _mapController = MapController();
   Map<String, dynamic>? driverProfile;
+  bool _mapInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    controller = Get.put(OrderTrackingController(orderId: widget.orderId));
+    controller = Get.isRegistered<OrderTrackingController>()
+        ? Get.find<OrderTrackingController>()
+        : Get.put(OrderTrackingController(orderId: widget.orderId));
     _fetchDriverProfile();
   }
 
@@ -59,20 +64,59 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
 
         final order = controller.orderData;
         final hasDriver = order['driver_id'] != null;
-        final hasLocation = order['drivers'] != null &&
-            order['drivers']['last_location_lat'] != null;
-        final driverLat = hasLocation
-            ? double.tryParse(order['drivers']['last_location_lat'].toString()) ?? 33.3152
-            : null;
-        final driverLng = hasLocation
-            ? double.tryParse(order['drivers']['last_location_lng'].toString()) ?? 44.3661
-            : null;
+        // Use real-time driver location from controller
+        final driverLat = controller.driverLat.value != 0.0
+            ? controller.driverLat.value
+            : (order['drivers'] != null && order['drivers']['last_location_lat'] != null
+                ? double.tryParse(order['drivers']['last_location_lat'].toString()) ?? 33.3152
+                : null);
+        final driverLng = controller.driverLng.value != 0.0
+            ? controller.driverLng.value
+            : (order['drivers'] != null && order['drivers']['last_location_lng'] != null
+                ? double.tryParse(order['drivers']['last_location_lng'].toString()) ?? 44.3661
+                : null);
         final driverPos = (driverLat != null && driverLng != null)
             ? LatLng(driverLat, driverLng)
             : null;
-        final driverName = driverProfile?['full_name'] ?? 'مندوب التوصيل';
+        final driverName = driverProfile?['full_name'] ?? 'delivery_delegate'.tr;
         final driverPhone = driverProfile?['phone'] ?? '';
         final step = controller.currentStep;
+
+        // Customer location (target)
+        final custLat = (order['customer_lat'] != null)
+            ? (order['customer_lat'] as num).toDouble()
+            : (order['delivery_lat'] != null
+                ? (order['delivery_lat'] as num).toDouble()
+                : 33.3152);
+        final custLng = (order['customer_lng'] != null)
+            ? (order['customer_lng'] as num).toDouble()
+            : (order['delivery_lng'] != null
+                ? (order['delivery_lng'] as num).toDouble()
+                : 44.3661);
+        final customerPos = LatLng(custLat, custLng);
+
+        // ETA calculation: straight-line distance / urban speed
+        String? etaText;
+        if (driverPos != null) {
+          final distanceMeters =
+              const Distance().as(LengthUnit.Meter, driverPos, customerPos);
+          final distanceKm = distanceMeters / 1000.0;
+          final minutes = (distanceKm / _urbanSpeedKmh) * 60.0;
+          if (minutes < 1) {
+            etaText = 'less_than_minute'.tr;
+          } else {
+            final rounded = minutes.round();
+            etaText = 'approximately_minutes'.trParams({'minutes': rounded.toString()});
+          }
+        }
+
+        // Move map to driver on first location
+        if (driverPos != null && !_mapInitialized && controller.driverLat.value != 0.0) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _mapController.move(driverPos!, 15.5);
+          });
+          _mapInitialized = true;
+        }
 
         return Stack(
           children: [
@@ -94,22 +138,52 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                     subdomains: const ['a', 'b', 'c'],
                     userAgentPackageName: 'com.freshenterprise.customer',
                   ),
+                  PolylineLayer(
+                    polylines: <Polyline>[
+                      if (driverPos != null)
+                        Polyline(
+                          points: [driverPos, customerPos],
+                          strokeWidth: 4,
+                          color: AppTheme.emerald.withOpacity(0.7),
+                          borderColor: Colors.white,
+                          borderStrokeWidth: 2,
+                        ),
+                    ],
+                  ),
                   MarkerLayer(
                     markers: [
+                      if (driverPos != null)
+                        Marker(
+                          point: driverPos,
+                          width: 50,
+                          height: 50,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                              ],
+                            ),
+                            child: const Icon(Icons.directions_bike, color: AppTheme.emerald, size: 22),
+                          ),
+                        ),
                       Marker(
-                        point: driverPos,
+                        point: customerPos,
                         width: 50,
                         height: 50,
                         child: Container(
                           padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            boxShadow: [
+                            boxShadow: const [
                               BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
                             ],
+                            border: Border.all(color: const Color(0xFFF59E0B), width: 2),
                           ),
-                          child: const Icon(Icons.directions_bike, color: Color(0xFF10B981), size: 22),
+                          child: const Icon(Icons.home_rounded, color: Color(0xFFF59E0B), size: 20),
                         ),
                       ),
                     ],
@@ -141,13 +215,13 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                         child: Icon(Icons.hourglass_empty, size: 48, color: AppTheme.primary),
                       ),
                       const SizedBox(height: 24),
-                      const Text(
-                        'بانتظار قبول الطلب',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, fontFamily: 'Cairo'),
+                      Text(
+                        'waiting_for_acceptance'.tr,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, fontFamily: 'Cairo'),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'لم يتم تعيين مندوب بعد',
+                        'no_delegate_assigned'.tr,
                         style: TextStyle(fontSize: 14, color: Colors.grey.shade500, fontFamily: 'Cairo'),
                       ),
                     ],
@@ -204,13 +278,87 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                   ),
                   child: Row(
                     children: [
-                      Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                      Container(width: 12, height: 12, decoration: const BoxDecoration(color: AppTheme.emerald, shape: BoxShape.circle)),
                       const SizedBox(width: 10),
-                      const Text('مباشر', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, fontFamily: 'Cairo')),
+                      Text('live'.tr, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, fontFamily: 'Cairo')),
                       const Spacer(),
                       Text(
                         controller.statusText,
                         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.grey.shade600, fontFamily: 'Cairo'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ETA card
+            if (hasDriver && etaText != null)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 64,
+                left: 16, right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emerald.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(color: AppTheme.emerald.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6))],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time_filled, color: Colors.white, size: 22),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'estimated_arrival'.tr,
+                            style: const TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'Cairo'),
+                          ),
+                          Text(
+                            etaText,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Cairo'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Arrival banner
+            if (controller.arrivalBannerVisible.value && hasDriver)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 64,
+                left: 16, right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notifications_active, color: Colors.white, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'delegate_arrived_area'.tr,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Cairo'),
+                            ),
+                            Text(
+                              'get_ready_receive'.tr,
+                              style: const TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'Cairo'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => controller.arrivalBannerVisible(false),
+                        child: const Icon(Icons.close, color: Colors.white, size: 20),
                       ),
                     ],
                   ),
@@ -237,7 +385,7 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                           Container(
                             width: 52, height: 52,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withOpacity(0.1),
+                              color: AppTheme.emerald.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(16),
                               image: DecorationImage(
                                 image: NetworkImage(
@@ -299,13 +447,13 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                               child: Icon(Icons.access_time, size: 32, color: AppTheme.primary),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
-                              'بانتظار قبول الطلب',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, fontFamily: 'Cairo'),
+                            Text(
+                              'waiting_for_acceptance'.tr,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, fontFamily: 'Cairo'),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'لم يتم تعيين مندوب بعد',
+                              'no_delegate_assigned'.tr,
                               style: TextStyle(fontSize: 13, color: Colors.grey.shade500, fontFamily: 'Cairo'),
                             ),
                           ],
@@ -324,7 +472,7 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
   }
 
   Widget _buildSteps(int currentStep, bool hasDriver) {
-    final steps = ['تأكيد', 'تجهيز', 'توصيل', 'وصلنا'];
+    final steps = ['step_confirm'.tr, 'step_preparing'.tr, 'step_delivering'.tr, 'step_arrived'.tr];
     final stepStatus = hasDriver ? currentStep : (currentStep > 0 ? currentStep : 0);
     return Row(
       children: List.generate(steps.length, (index) {
@@ -340,7 +488,7 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                       child: Container(
                         height: 3,
                         decoration: BoxDecoration(
-                          color: index <= stepStatus ? const Color(0xFF10B981) : Colors.grey.shade200,
+                          color: index <= stepStatus ? AppTheme.emerald : Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -350,10 +498,10 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                     width: isCurrent ? 16 : 12,
                     height: isCurrent ? 16 : 12,
                     decoration: BoxDecoration(
-                      color: isActive ? const Color(0xFF10B981) : Colors.grey.shade200,
+                      color: isActive ? AppTheme.emerald : Colors.grey.shade200,
                       shape: BoxShape.circle,
                       boxShadow: isCurrent
-                          ? [BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 8, spreadRadius: 1)]
+                          ? [BoxShadow(color: AppTheme.emerald.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)]
                           : null,
                     ),
                     child: isActive && !isCurrent
@@ -365,7 +513,7 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
                       child: Container(
                         height: 3,
                         decoration: BoxDecoration(
-                          color: index < stepStatus ? const Color(0xFF10B981) : Colors.grey.shade200,
+                          color: index < stepStatus ? AppTheme.emerald : Colors.grey.shade200,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -376,7 +524,7 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
               Text(steps[index], style: TextStyle(
                 fontSize: 10,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                color: isActive ? const Color(0xFF10B981) : Colors.grey.shade400,
+                color: isActive ? AppTheme.emerald : Colors.grey.shade400,
                 fontFamily: 'Cairo',
               )),
             ],
@@ -386,3 +534,4 @@ class _OrderTrackingMapScreenState extends State<OrderTrackingMapScreen> {
     );
   }
 }
+

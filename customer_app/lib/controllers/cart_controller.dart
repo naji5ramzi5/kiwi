@@ -5,14 +5,16 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth_controller.dart';
+import 'home_controller.dart';
 import '../theme/app_theme.dart';
-import 'main_screen_controller.dart';
-
+import '../widgets/added_to_cart_dialog.dart';
 
 class CartController extends GetxController {
   final supabase = Supabase.instance.client;
   final AuthController authController = Get.find<AuthController>();
   final _box = GetStorage();
+
+  final TextEditingController couponTextController = TextEditingController();
 
   var cartItems = <String, Map<String, dynamic>>{}.obs;
   var isPlacingOrder = false.obs;
@@ -20,11 +22,52 @@ class CartController extends GetxController {
   var lastOrderId = ''.obs;
   var activeOrderId = Rxn<String>();
 
+  // Coupon / discount
+  var couponCode = ''.obs;
+  var discountAmount = 0.0.obs;
+  var appliedCoupon = Rxn<Map<String, dynamic>>();
+  var isApplyingCoupon = false.obs;
+  var couponError = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
+    couponTextController.addListener(() {
+      couponCode.value = couponTextController.text;
+    });
     _loadCart();
     refreshActiveOrder();
+    _subscribeToOrderUpdates();
+  }
+
+  @override
+  void onClose() {
+    couponTextController.dispose();
+    super.onClose();
+  }
+
+  /// Subscribe to realtime updates for the customer's orders
+  void _subscribeToOrderUpdates() {
+    final userId = authController.currentUser.value?.id;
+    if (userId == null) return;
+
+    supabase
+        .channel('customer-orders-$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'customer_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            // Refresh active order when any of customer's orders change
+            refreshActiveOrder();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> refreshActiveOrder() async {
@@ -55,17 +98,25 @@ class CartController extends GetxController {
     _box.write('cart_items', cartItems.values.toList());
   }
 
-  void addToCart(Map<String, dynamic> product, {int qty = 1, bool showPopup = true}) {
+  void addToCart(
+    Map<String, dynamic> product, {
+    int qty = 1,
+    bool showPopup = true,
+  }) {
     final String id = product['id'].toString();
-    final int? stock = product['stock'] != null ? (product['stock'] as num).toInt() : null;
+    final int? stock = product['stock'] != null
+        ? (product['stock'] as num).toInt()
+        : null;
 
-    final int currentQty = cartItems.containsKey(id) ? (cartItems[id]!['quantity'] as int? ?? 0) : 0;
+    final int currentQty = cartItems.containsKey(id)
+        ? (cartItems[id]!['quantity'] as int? ?? 0)
+        : 0;
     if (stock != null && currentQty + qty > stock) {
       final int allowed = stock - currentQty;
       if (allowed <= 0) {
         Get.snackbar(
-          'الكمية غير متوفرة',
-          'لا يمكن إضافة المزيد، الكمية المتاحة من هذا المنتج هي $stock فقط',
+          'stock_not_available'.tr,
+          'cannot_add_more_stock'.trParams({'stock': stock.toString()}),
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.orange.shade700,
           colorText: Colors.white,
@@ -75,8 +126,8 @@ class CartController extends GetxController {
       }
       qty = allowed;
       Get.snackbar(
-        'تنبيه',
-        'تمت إضافة الكمية المتاحة فقط ($stock)',
+        'warning'.tr,
+        'added_available_quantity'.trParams({'stock': stock.toString()}),
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.orange.shade700,
         colorText: Colors.white,
@@ -85,7 +136,8 @@ class CartController extends GetxController {
     }
 
     if (cartItems.containsKey(id)) {
-      cartItems[id]!['quantity'] = (cartItems[id]!['quantity'] as int? ?? 0) + qty;
+      cartItems[id]!['quantity'] =
+          (cartItems[id]!['quantity'] as int? ?? 0) + qty;
       if (stock != null) cartItems[id]!['stock'] = stock;
     } else {
       cartItems[id] = {
@@ -93,7 +145,7 @@ class CartController extends GetxController {
         'title': product['title']?.toString() ?? '',
         'price': product['price'] ?? 0,
         'image': product['image']?.toString() ?? '',
-        'unit': product['unit']?.toString() ?? 'كغ',
+        'unit': product['unit']?.toString() ?? 'unit_kg'.tr,
         'quantity': qty,
         if (stock != null) 'stock': stock,
       };
@@ -103,196 +155,7 @@ class CartController extends GetxController {
 
     if (showPopup) {
       final totalPrice = (product['price'] as num? ?? 0) * qty;
-      Get.dialog(
-        Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Get.isDarkMode ? const Color(0xFF1C2B1E) : Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'تمت الإضافة إلى السلة',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: SizedBox(
-                          width: 60,
-                          height: 60,
-                          child: Image.network(
-                            product['image'] ?? '',
-                            fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: AppTheme.primary.withOpacity(0.1),
-                            child: Icon(Icons.shopping_bag, color: AppTheme.primary, size: 28),
-                          ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              product['title'] ?? '',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                                color: Get.isDarkMode ? Colors.white : const Color(0xFF1F2937),
-                                fontFamily: 'Cairo',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  'الكمية: $qty',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                                    fontFamily: 'Cairo',
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  '${formatPrice(totalPrice)} د.ع',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF047857),
-                                    fontFamily: 'Cairo',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Divider(color: Colors.grey.withOpacity(0.2), height: 1),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => Get.back(),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            decoration: BoxDecoration(
-                              color: Get.isDarkMode ? Colors.white.withOpacity(0.08) : const Color(0xFFF0FDF4),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Text(
-                              'متابعة التسوق',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF047857),
-                                fontFamily: 'Cairo',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            Get.back();
-                            Get.find<MainScreenController>().switchTab(2);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF064E3B), Color(0xFF047857)],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF047857).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'الانتقال إلى السلة',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                fontFamily: 'Cairo',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      showAddedToCartDialog(product, qty, formatPrice(totalPrice));
     }
   }
 
@@ -309,7 +172,8 @@ class CartController extends GetxController {
     if (removeAll || (cartItems[id]!['quantity'] as int? ?? 0) <= 1) {
       cartItems.remove(id);
     } else {
-      cartItems[id]!['quantity'] = (cartItems[id]!['quantity'] as int? ?? 0) - 1;
+      cartItems[id]!['quantity'] =
+          (cartItems[id]!['quantity'] as int? ?? 0) - 1;
     }
     cartItems.refresh();
     _saveCart();
@@ -324,14 +188,119 @@ class CartController extends GetxController {
   double get subtotal {
     double total = 0;
     cartItems.forEach((key, value) {
-      total += ((value['price'] as num?)?.toDouble() ?? 0) * ((value['quantity'] as int?) ?? 0);
+      total +=
+          ((value['price'] as num?)?.toDouble() ?? 0) *
+          ((value['quantity'] as int?) ?? 0);
     });
     return total;
   }
 
-  double get deliveryFee => 2500;
+  double get deliveryFee {
+    if (Get.isRegistered<HomeController>()) {
+      final homeController = Get.find<HomeController>();
+      return homeController.deliveryFee.value;
+    }
+    return 2500;
+  }
 
-  double get total => subtotal + deliveryFee;
+  double get minOrderAmount {
+    if (Get.isRegistered<HomeController>()) {
+      final homeController = Get.find<HomeController>();
+      return homeController.minOrderAmount.value;
+    }
+    return 0;
+  }
+
+  bool get isBelowMinOrder =>
+      minOrderAmount > 0 && subtotal < minOrderAmount;
+
+  double get total => subtotal + deliveryFee - discountAmount.value;
+
+  /// Validates and applies a discount coupon from the `discount_codes` table.
+  Future<bool> applyCoupon() async {
+    final code = couponCode.value.trim();
+    if (code.isEmpty) {
+      couponError.value = 'please_enter_coupon'.tr;
+      return false;
+    }
+
+    isApplyingCoupon(true);
+    couponError.value = '';
+    try {
+      final response = await supabase
+          .from('discount_codes')
+          .select()
+          .eq('code', code)
+          .limit(1);
+
+      if (response.isEmpty) {
+        _resetCoupon();
+        couponError.value = 'invalid_coupon'.tr;
+        return false;
+      }
+
+      final coupon = response.first as Map<String, dynamic>;
+
+      final isActive = coupon['is_active'] == true;
+      final expiresAt = coupon['expires_at'];
+      final maxUses = (coupon['max_uses'] as num?)?.toInt() ?? 0;
+      final usedCount = (coupon['used_count'] as num?)?.toInt() ?? 0;
+
+      final isExpired = expiresAt != null &&
+          DateTime.tryParse(expiresAt.toString())?.isBefore(DateTime.now()) ==
+              true;
+      final usageExceeded = maxUses > 0 && usedCount >= maxUses;
+
+      if (!isActive || isExpired || usageExceeded) {
+        _resetCoupon();
+        couponError.value = !isActive
+            ? 'coupon_inactive'.tr
+            : isExpired
+                ? 'coupon_expired'.tr
+                : 'coupon_fully_used'.tr;
+        return false;
+      }
+
+      final minOrder = (coupon['min_order_amount'] as num?)?.toDouble() ?? 0;
+      if (minOrder > 0 && subtotal < minOrder) {
+        _resetCoupon();
+        couponError.value = 'coupon_min_order'.trParams({'minOrder': minOrder.toInt().toString()});
+        return false;
+      }
+
+      final type = coupon['type']?.toString() ?? 'percent';
+      final rawAmount =
+          (coupon['discount_amount'] as num?)?.toDouble() ?? 0;
+
+      double computed;
+      if (type == 'fixed') {
+        computed = rawAmount;
+      } else {
+        computed = subtotal * (rawAmount / 100);
+      }
+      // Never discount below zero
+      computed = computed.clamp(0, subtotal);
+
+      appliedCoupon.value = coupon;
+      discountAmount.value = computed;
+      return true;
+    } catch (e) {
+      _resetCoupon();
+      couponError.value = 'coupon_verify_failed'.tr;
+      return false;
+    } finally {
+      isApplyingCoupon(false);
+    }
+  }
+
+  void removeCoupon() {
+    _resetCoupon();
+  }
+
+  void _resetCoupon() {
+    appliedCoupon.value = null;
+    discountAmount.value = 0;
+  }
 
   int get itemCount {
     int count = 0;
@@ -360,17 +329,33 @@ class CartController extends GetxController {
     }
   }
 
-  Future<bool> placeOrder({required String address, String paymentMethod = 'Cash'}) async {
+  Future<bool> placeOrder({
+    required String address,
+    String paymentMethod = 'Cash',
+  }) async {
     if (!authController.isLoggedIn) {
-      Get.snackbar('تنبيه', 'يجب تسجيل الدخول أولاً');
+      Get.snackbar('warning'.tr, 'must_login_first'.tr);
+      return false;
+    }
+
+    if (isBelowMinOrder) {
+      Get.snackbar(
+        'minimum_order'.tr,
+        'minimum_order_not_met'.trParams({'minOrder': minOrderAmount.toInt().toString(), 'subtotal': subtotal.toInt().toString()}),
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
+      );
       return false;
     }
 
     final hasActive = await getActiveOrderId();
     if (hasActive != null) {
       Get.snackbar(
-        'لديك طلب نشط',
-        'لا يمكنك إنشاء طلب جديد حتى يتم إنهاء الطلب الحالي',
+        'active_order_exists'.tr,
+        'active_order_exists_msg'.tr,
         backgroundColor: Colors.orange.shade700,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -383,18 +368,51 @@ class CartController extends GetxController {
     isPlacingOrder(true);
     final userId = supabase.auth.currentUser!.id;
 
+    // Get the selected branch ID from HomeController
+    String? branchId;
+    if (Get.isRegistered<HomeController>()) {
+      final homeController = Get.find<HomeController>();
+      branchId = homeController.selectedBranch.value?['id']?.toString();
+    }
+
     Future<bool> tryPlaceOrder() async {
       try {
-        final orderResponse = await supabase.from('orders').insert({
+        final orderData = <String, dynamic>{
           'customer_id': userId,
           'total_amount': total,
           'delivery_fee': deliveryFee,
+          'discount_amount': discountAmount.value,
+          'discount_code': appliedCoupon.value?['code'],
           'status': 'pending',
           'delivery_address': address,
           'payment_method': paymentMethod,
-        }).select().single();
+        };
+        // Include branch_id if available
+        if (branchId != null && branchId.isNotEmpty) {
+          orderData['branch_id'] = branchId;
+        }
+        final orderResponse = await supabase
+            .from('orders')
+            .insert(orderData)
+            .select()
+            .single();
 
         final orderId = orderResponse['id'];
+
+        // Increment coupon usage count if a coupon was applied
+        if (appliedCoupon.value != null) {
+          try {
+            final couponId = appliedCoupon.value!['id'];
+            final currentUsed =
+                (appliedCoupon.value!['used_count'] as num?)?.toInt() ?? 0;
+            await supabase
+                .from('discount_codes')
+                .update({'used_count': currentUsed + 1})
+                .eq('id', couponId);
+          } catch (couponErr) {
+            print('Warning: coupon usage increment failed: $couponErr');
+          }
+        }
 
         final List<Map<String, dynamic>> itemsToInsert = [];
         cartItems.forEach((key, item) {
@@ -409,10 +427,39 @@ class CartController extends GetxController {
 
         await supabase.from('order_items').insert(itemsToInsert);
 
+        // Decrement stock in branch_inventory for each item
+        if (branchId != null && branchId.isNotEmpty) {
+          try {
+            for (final item in itemsToInsert) {
+              final productId = item['product_id'];
+              final qty = item['quantity'] as int;
+              await supabase.rpc(
+                'decrement_branch_inventory',
+                params: {
+                  'p_branch_id': branchId,
+                  'p_product_id': productId,
+                  'p_quantity': qty,
+                },
+              );
+            }
+          } catch (stockErr) {
+            print('Warning: stock decrement failed: $stockErr');
+          }
+        }
+
         clearCart();
+        _resetCoupon();
+        couponCode.value = '';
         lastOrderId(orderId.toString());
         await refreshActiveOrder();
-        Get.snackbar('نجاح', 'تم إرسال طلبك بنجاح', backgroundColor: AppTheme.primary, colorText: Colors.white, snackPosition: SnackPosition.TOP, margin: const EdgeInsets.all(16));
+        Get.snackbar(
+          'success'.tr,
+          'order_sent_success'.tr,
+          backgroundColor: AppTheme.primary,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+          margin: const EdgeInsets.all(16),
+        );
         return true;
       } on SocketException {
         throw Exception('network');
@@ -431,44 +478,56 @@ class CartController extends GetxController {
           final errorStr = e.toString();
           if (errorStr.contains('network')) {
             Get.snackbar(
-              'خطأ في الاتصال',
-              'لا يوجد اتصال بالإنترنت. تأكد من اتصالك وحاول مرة أخرى.',
+              'connection_error'.tr,
+              'no_internet'.tr,
               backgroundColor: Colors.red.shade700,
               colorText: Colors.white,
               snackPosition: SnackPosition.TOP,
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 5),
               mainButton: TextButton(
-                onPressed: () => placeOrder(address: address, paymentMethod: paymentMethod),
-                child: const Text('إعادة المحاولة', style: TextStyle(color: Colors.white)),
+                onPressed: () =>
+                    placeOrder(address: address, paymentMethod: paymentMethod),
+                child: Text(
+                  'retry'.tr,
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             );
           } else if (errorStr.contains('server')) {
             Get.snackbar(
-              'خطأ في الطلب',
-              'فشل في إرسال الطلب. حاول مرة أخرى.',
+              'order_error'.tr,
+              'order_send_failed'.tr,
               backgroundColor: Colors.red.shade700,
               colorText: Colors.white,
               snackPosition: SnackPosition.TOP,
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 5),
               mainButton: TextButton(
-                onPressed: () => placeOrder(address: address, paymentMethod: paymentMethod),
-                child: const Text('إعادة المحاولة', style: TextStyle(color: Colors.white)),
+                onPressed: () =>
+                    placeOrder(address: address, paymentMethod: paymentMethod),
+                child: Text(
+                  'retry'.tr,
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             );
           } else {
             Get.snackbar(
-              'خطأ',
-              'فشل في إرسال الطلب: $e',
+              'error'.tr,
+              'order_send_failed_error'.trParams({'error': e.toString()}),
               backgroundColor: Colors.red.shade700,
               colorText: Colors.white,
               snackPosition: SnackPosition.TOP,
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 5),
               mainButton: TextButton(
-                onPressed: () => placeOrder(address: address, paymentMethod: paymentMethod),
-                child: const Text('إعادة المحاولة', style: TextStyle(color: Colors.white)),
+                onPressed: () =>
+                    placeOrder(address: address, paymentMethod: paymentMethod),
+                child: Text(
+                  'retry'.tr,
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             );
           }

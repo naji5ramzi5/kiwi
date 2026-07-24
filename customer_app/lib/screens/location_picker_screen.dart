@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -7,6 +7,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
 import '../theme/app_theme.dart';
+import 'widgets/location_search_bar.dart';
+import 'widgets/location_confirm_button.dart';
+import 'widgets/map_widget.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
@@ -22,7 +25,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   static const LatLng _baghdadCenter = LatLng(33.3128, 44.3615);
   LatLng _cameraTarget = _baghdadCenter;
 
-  String _address = 'اسحب الخريطة لتحديد موقعك';
+  String _address = 'choose_area'.tr;
   bool _isLoadingAddress = false;
   LatLng? _userLocation;
 
@@ -71,8 +74,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         Get.snackbar(
-          'تنبيه',
-          'يرجى تفعيل صلاحية الموقع',
+          'warning'.tr,
+          'enable_location'.tr,
           backgroundColor: Colors.amber.shade800,
           colorText: Colors.white,
           snackPosition: SnackPosition.TOP,
@@ -93,7 +96,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     if (!mounted) return;
     setState(() {
       _isLoadingAddress = true;
-      _address = 'جاري جلب العنوان...';
+      _address = 'fetching_address'.tr;
     });
 
     try {
@@ -125,7 +128,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         if (mounted) {
           setState(() {
             _address =
-                parts.isNotEmpty ? parts.join('، ') : 'شارع غير معروف';
+                parts.isNotEmpty ? parts.join('، ') : 'unknown_street'.tr;
             _isLoadingAddress = false;
           });
         }
@@ -151,7 +154,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           final city = address['city'] ??
               address['town'] ??
               address['governorate'] ??
-              'بغداد';
+              'baghdad'.tr;
           if (mounted) {
             setState(() {
               _address = road.isNotEmpty ? '$city، $road' : city;
@@ -176,7 +179,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     if (query.trim().isEmpty) return;
     setState(() {
       _isLoadingAddress = true;
-      _address = 'جاري البحث...';
+      _address = 'searching'.tr;
     });
     FocusScope.of(context).unfocus();
 
@@ -213,8 +216,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       }
     } catch (_) {
       Get.snackbar(
-        'عذراً',
-        'لم نتمكن من العثور على الموقع',
+        'cancel'.tr,
+        'could_not_get_location'.tr,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -234,66 +237,22 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
-            // Solid background while map loads
             Container(color: isDark ? AppTheme.backgroundDark : AppTheme.background),
-            // Map
             Positioned.fill(
-              child: FlutterMap(
-                options: MapOptions(
-                  initialCenter: _cameraTarget,
-                  initialZoom: 15.0,
-                  onMapEvent: (event) {
-                    if (event is MapEventMoveEnd) {
-                      _cameraTarget = event.camera.center;
-                      _geocodePosition(_cameraTarget);
-                    }
-                  },
-                  onTap: (tapPosition, point) {},
-                ),
-                mapController: _mapController,
-                children: [
-                  TileLayer(
-                    urlTemplate: 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.fresh.customer',
-                  ),
-                  if (_userLocation != null)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _userLocation!,
-                          child: Container(
-                            width: 22,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.25),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Container(
-                                width: 14,
-                                height: 14,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF3B82F6),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0x803B82F6),
-                                      blurRadius: 8,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+              child: LocationMapWidget(
+                mapController: _mapController!,
+                cameraTarget: _cameraTarget,
+                userLocation: _userLocation,
+                onMapEvent: (event) {
+                  if (event is MapEventMoveEnd) {
+                    _cameraTarget = event.camera.center;
+                    _geocodePosition(_cameraTarget);
+                  }
+                },
               ),
             ),
 
-            // Center Pin - Fixed in exact center of screen
+            // Center Pin
             IgnorePointer(
               child: Center(
                 child: Image.asset(
@@ -315,73 +274,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               top: topPadding + 16,
               left: 20,
               right: 20,
-              child: Container(
-                height: 54,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: (isDark ? AppTheme.surfaceDark : Colors.white)
-                      .withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.grey,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        textDirection: TextDirection.rtl,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: _searchAddress,
-                        decoration: InputDecoration(
-                          hintText: 'ابحث عن حي، شارع...',
-                          hintStyle: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 14,
-                            color: isDark
-                                ? AppTheme.textSecondaryDark
-                                : AppTheme.textSecondary,
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 14,
-                          color: isDark
-                              ? AppTheme.textPrimaryDark
-                              : AppTheme.textPrimary,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.search_rounded,
-                        color: AppTheme.primary,
-                      ),
-                      onPressed: () =>
-                          _searchAddress(_searchController.text),
-                    ),
-                  ],
-                ),
+              child: LocationSearchBar(
+                controller: _searchController,
+                onBack: () => Navigator.pop(context),
+                onSearch: () => _searchAddress(_searchController.text),
               ),
             ),
 
-            // Current location FAB — right side, higher, more visible
+            // Current location FAB
             Positioned(
               bottom: 200,
               right: 16,
@@ -417,139 +317,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.surfaceDark : Colors.white,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 20,
-                      offset: const Offset(0, -6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 5,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.grey.shade700
-                              : Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'موقع التوصيل',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo',
-                        color: isDark
-                            ? AppTheme.textPrimaryDark
-                            : AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            color: AppTheme.primary,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _address,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontFamily: 'Cairo',
-                                  height: 1.5,
-                                  color: isDark
-                                      ? AppTheme.textPrimaryDark
-                                      : AppTheme.textPrimary,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (_isLoadingAddress)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 6),
-                                  child: SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<
-                                          Color>(AppTheme.primary),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: (_isLoadingAddress ||
-                                _address == 'جاري جلب العنوان...' ||
-                                _address == 'جاري البحث...')
-                            ? null
-                            : () {
-                                Navigator.pop(context, {
-                                  'latitude': _cameraTarget.latitude,
-                                  'longitude': _cameraTarget.longitude,
-                                  'address': _address,
-                                });
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primary,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor:
-                              AppTheme.primary.withOpacity(0.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'تأكيد الموقع',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              child: LocationConfirmButton(
+                address: _address,
+                isLoading: _isLoadingAddress,
+                cameraTarget: _cameraTarget,
+                onConfirm: () {
+                  Navigator.pop(context, {
+                    'latitude': _cameraTarget.latitude,
+                    'longitude': _cameraTarget.longitude,
+                    'address': _address,
+                  });
+                },
               ),
             ),
           ],

@@ -19,6 +19,14 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController passwordController = TextEditingController();
 
   @override
+  void dispose() {
+    nameController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeTextColor = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
@@ -43,8 +51,8 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 10),
                Center(
                  child: Container(
-                   width: 100,
-                   height: 100,
+                   width: 80,
+                   height: 80,
                    decoration: BoxDecoration(
                      boxShadow: [
                        BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 6)),
@@ -54,7 +62,7 @@ class _SignupScreenState extends State<SignupScreen> {
                      child: Container(
                        color: Colors.white,
                        child: Padding(
-                         padding: const EdgeInsets.all(18),
+                         padding: const EdgeInsets.all(14),
                          child: Image.asset(
                            'assets/images/kwi.png',
                            fit: BoxFit.contain,
@@ -72,7 +80,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'أنشئ حسابك الآن وابدأ التسوق',
+                'signup_subtitle'.tr,
                 style: TextStyle(fontSize: 14, color: themeTextSecColor),
                 textAlign: TextAlign.center,
               ),
@@ -82,7 +90,7 @@ class _SignupScreenState extends State<SignupScreen> {
               _buildTextField(
                 context,
                 label: 'name'.tr,
-                hint: 'أحمد محمود',
+                hint: 'name_placeholder'.tr,
                 icon: LucideIcons.user,
                 controller: nameController,
               ),
@@ -140,10 +148,10 @@ class _SignupScreenState extends State<SignupScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('لديك حساب بالفعل؟ ', style: TextStyle(color: themeTextSecColor)),
+                  Text('already_have_account'.tr, style: TextStyle(color: themeTextSecColor)),
                   GestureDetector(
                     onTap: () => Get.back(),
-                    child: const Text('تسجيل الدخول', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                    child: Text('login'.tr, style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

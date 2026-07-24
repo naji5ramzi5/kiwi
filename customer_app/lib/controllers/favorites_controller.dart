@@ -46,7 +46,7 @@ class FavoritesController extends GetxController {
 
   Future<void> toggleFavorite(String productId) async {
     if (!authController.isLoggedIn) {
-      Get.snackbar('تنبيه', 'يجب تسجيل الدخول لإضافة المنتجات إلى المفضلة');
+      Get.snackbar('warning'.tr, 'must_login_for_favorites'.tr);
       return;
     }
     final userId = supabase.auth.currentUser!.id;
@@ -72,7 +72,7 @@ class FavoritesController extends GetxController {
       } else {
         favoriteProductIds.remove(productId);
       }
-      Get.snackbar('خطأ', 'فشل تحديث المفضلة، حاول مرة أخرى',
+      Get.snackbar('error'.tr, 'favorites_update_failed'.tr,
         backgroundColor: Colors.red,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,

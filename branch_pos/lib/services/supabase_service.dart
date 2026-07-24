@@ -12,25 +12,32 @@ class SupabaseService {
 
   // ─── Products ───────────────────────────────────────────
   Future<List<Product>> getProducts({String? branchId, String? search}) async {
-    // Use LEFT JOIN (not inner) so products show even without inventory record
     dynamic query = supabase
         .from('products')
-        .select('*, inventory(stock_quantity)')
+        .select('*')
         .eq('is_active', true);
 
-    if (branchId != null) {
-      query = query.contains('allowed_branches', [branchId]);
-    }
     if (search != null && search.isNotEmpty) {
       query = query.or('name.ilike.%$search%,barcode.ilike.%$search%');
     }
     final data = await query.order('name');
-    return (data as List).map((e) => Product.fromJson({
-      ...e,
-      'stock_quantity': e['inventory'] != null && (e['inventory'] as List).isNotEmpty
-          ? (e['inventory'] as List).first['stock_quantity']
-          : 0,
-    })).toList();
+    final products = (data as List).map((e) => Product.fromJson(e)).toList();
+
+    if (branchId != null) {
+      try {
+        final inventoryData = await supabase
+            .from('inventory')
+            .select('product_id, stock_quantity')
+            .eq('branch_id', branchId);
+        final stockMap = {for (final inv in inventoryData) inv['product_id']: (inv['stock_quantity'] as num?)?.toDouble() ?? 0};
+        for (int i = 0; i < products.length; i++) {
+          products[i] = products[i].copyWith(stockQuantity: stockMap[products[i].id] ?? 0);
+        }
+      } catch (_) {
+        // Inventory table might not exist yet
+      }
+    }
+    return products;
   }
 
   // ─── Inventory ──────────────────────────────────────────

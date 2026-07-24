@@ -66,7 +66,7 @@ class _SearchScreenState extends State<SearchScreen> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          'البحث عن منتجات',
+          'search_products'.tr,
           style: TextStyle(
             color: themeTextColor,
             fontWeight: FontWeight.bold,
@@ -101,7 +101,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 autofocus: true,
                 style: TextStyle(color: themeTextColor, fontFamily: 'Cairo'),
                 decoration: InputDecoration(
-                  hintText: 'ابحث عن طماطم، تفاح، خضار...',
+                  hintText: 'search_hint_products'.tr,
                   hintStyle: TextStyle(
                     color: themeTextSecColor.withOpacity(0.6),
                     fontFamily: 'Cairo',
@@ -142,7 +142,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(left: 8),
                       child: ChoiceChip(
-                        label: const Text('الكل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                        label: Text('search_all'.tr, style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
                         selected: isSelected,
                         onSelected: (selected) {
                           selectedCategory.value = '';
@@ -217,7 +217,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       Icon(LucideIcons.search, size: 64, color: themeTextSecColor.withOpacity(0.3)),
                       const SizedBox(height: 16),
                       Text(
-                        'لا توجد نتائج مطابقة لبحثك',
+                        'no_search_results'.tr,
                         style: TextStyle(
                           color: themeTextSecColor,
                           fontSize: 16,
@@ -227,7 +227,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'جرّب البحث بكلمات أخرى أو تصفح الأقسام',
+                        'search_try_other'.tr,
                         style: TextStyle(
                           color: themeTextSecColor.withOpacity(0.6),
                           fontSize: 13,
@@ -272,12 +272,11 @@ class _SearchScreenState extends State<SearchScreen> {
                     'price': p['price'],
                     'image': imageUrl,
                     'category': p['category'],
-                    'unit': p['unit'] ?? 'حبة',
+                    'unit': p['unit'] ?? 'unit_piece'.tr,
                     'stock': quantity,
                   };
 
                   final bool isAvailable = quantity > 0;
-                  final double rating = p['rating']?.toDouble() ?? 4.8;
 
                   return Container(
                     decoration: BoxDecoration(
@@ -325,9 +324,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                           color: Colors.black.withOpacity(0.45),
                                           borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
                                         ),
-                                        child: const Center(
+                                        child: Center(
                                           child: Text(
-                                            'نفذت الكمية',
+                                            'out_of_stock'.tr,
                                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'Cairo'),
                                           ),
                                         ),
@@ -343,7 +342,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  p['name'] ?? 'منتج',
+                                  p['name'] ?? 'product_fallback'.tr,
                                   style: TextStyle(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 14,
@@ -354,19 +353,14 @@ class _SearchScreenState extends State<SearchScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.star_rounded, size: 14, color: Colors.orange),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '$rating  |  ${p['category'] ?? ''}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-                                        fontFamily: 'Cairo',
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  'product_no_rating'.tr,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                                    fontFamily: 'Cairo',
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 Row(
@@ -377,11 +371,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.end,
                                         children: [
                                           Text(
-                                            '${formatPrice(p['price'])} د.ع',
+                                            '${formatPrice(p['price'])} ${'currency_iqd'.tr}',
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w900,
-                                              color: isDark ? const Color(0xFF34D399) : AppTheme.primaryDark,
+                                              color: isDark ? AppTheme.emeraldLight : AppTheme.primaryDark,
                                               fontFamily: 'Cairo',
                                             ),
                                           ),
@@ -399,10 +393,10 @@ class _SearchScreenState extends State<SearchScreen> {
                                     ),
                                     GestureDetector(
                                       onTap: !isAvailable ? null : () {
-                                        cartController.addToCart(productData);
+                                        cartController.addToCart(productData, showPopup: false);
                                         Get.snackbar(
-                                          'تمت الإضافة',
-                                          'تم إضافة ${p['name']} إلى السلة 🛒',
+                                          'added_successfully'.tr,
+                                          'product_added_to_cart'.trParams({'name': p['name']?.toString() ?? ''}),
                                           snackPosition: SnackPosition.TOP,
                                           backgroundColor: Colors.green.shade600,
                                           colorText: Colors.white,

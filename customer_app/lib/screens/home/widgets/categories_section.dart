@@ -3,37 +3,37 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../theme/app_theme.dart';
 import '../../../controllers/home_controller.dart';
-import '../../../controllers/main_screen_controller.dart';
+import '../../../screens/categories/categories_screen.dart';
 
-// Static fallback categories
-const List<Map<String, String>> _staticCategories = [
+// Static fallback categories - use function to resolve .tr at build time
+List<Map<String, String>> _getStaticCategories() => [
   {
-    'name': 'خضروات',
+    'name': 'category_vegetables'.tr,
     'image': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80',
     'emoji': '🥦',
   },
   {
-    'name': 'فواكه',
+    'name': 'category_fruits'.tr,
     'image': 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=200&q=80',
     'emoji': '🍎',
   },
   {
-    'name': 'ورقيات',
+    'name': 'category_leafy_greens'.tr,
     'image': 'https://images.unsplash.com/photo-1622312693822-4917a14e9124?auto=format&fit=crop&w=200&q=80',
     'emoji': '🥬',
   },
   {
-    'name': 'تمور',
+    'name': 'category_dates'.tr,
     'image': 'https://images.unsplash.com/photo-1596431989042-49764de3d037?auto=format&fit=crop&w=200&q=80',
     'emoji': '🌴',
   },
   {
-    'name': 'مكسرات',
+    'name': 'category_nuts'.tr,
     'image': 'https://images.unsplash.com/photo-1599598425947-330026296906?auto=format&fit=crop&w=200&q=80',
     'emoji': '🥜',
   },
   {
-    'name': 'بقوليات',
+    'name': 'category_legumes'.tr,
     'image': 'https://images.unsplash.com/photo-1535914254981-b5012eebbd15?auto=format&fit=crop&w=200&q=80',
     'emoji': '🫘',
   },
@@ -59,7 +59,7 @@ class CategoriesSection extends StatelessWidget {
                     'emoji': '',
                   })
               .toList()
-          : _staticCategories;
+          : _getStaticCategories();
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +71,7 @@ class CategoriesSection extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'الأقسام',
+                    'section_categories'.tr,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
@@ -81,10 +81,10 @@ class CategoriesSection extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () {
-                      try {
-                        final MainScreenController nav = Get.find<MainScreenController>();
-                        nav.switchTab(1);
-                      } catch (_) {}
+                      Get.to(
+                        () => CategoriesScreen(),
+                        transition: Transition.fadeIn,
+                      );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -92,8 +92,8 @@ class CategoriesSection extends StatelessWidget {
                         color: AppTheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'عرض الكل',
+                      child: Text(
+                        'see_all'.tr,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -125,7 +125,10 @@ class CategoriesSection extends StatelessWidget {
 
                 return GestureDetector(
                   onTap: () {
-                    Get.find<MainScreenController>().switchTab(1, category: name);
+                    Get.to(
+                      () => CategoriesScreen(initialCategory: name),
+                      transition: Transition.fadeIn,
+                    );
                   },
                   child: Container(
                     width: 85,

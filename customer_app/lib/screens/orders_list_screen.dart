@@ -4,7 +4,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/cart_controller.dart';
+import '../controllers/home_controller.dart';
 import 'order_details_screen.dart';
+import 'cart/cart_screen.dart';
 
 class OrdersListScreen extends StatefulWidget {
   final String? filterStatus;
@@ -49,6 +52,62 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     }
   }
 
+  Future<void> _reorder(String orderId) async {
+    try {
+      final items = await supabase
+          .from('order_items')
+          .select('product_id, quantity, unit_price, product_name')
+          .eq('order_id', orderId);
+
+      if (items.isEmpty) {
+        Get.snackbar('none'.tr, 'no_products_to_reorder'.tr,
+          backgroundColor: Colors.orange, colorText: Colors.white, snackPosition: SnackPosition.TOP, margin: const EdgeInsets.all(16));
+        return;
+      }
+
+      // Ensure a branch is selected so stock checks work
+      final home = Get.isRegistered<HomeController>() ? Get.find<HomeController>() : null;
+      if (home != null && home.selectedBranch.value == null) {
+        try {
+          final branch = await supabase
+              .from('branches')
+              .select()
+              .eq('status', 'نشط')
+              .limit(1)
+              .maybeSingle();
+          if (branch != null) home.selectedBranch.value = branch;
+        } catch (_) {}
+      }
+
+      final cart = Get.isRegistered<CartController>()
+          ? Get.find<CartController>()
+          : Get.put(CartController());
+
+      int added = 0;
+      for (final item in List<Map<String, dynamic>>.from(items)) {
+        final productId = item['product_id']?.toString() ?? '';
+        if (productId.isEmpty) continue;
+        cart.addToCart({
+          'id': productId,
+          'title': item['product_name']?.toString() ?? '',
+          'price': item['unit_price'] ?? 0,
+          'image': '',
+          'unit': item['unit']?.toString() ?? 'unit_kg'.tr,
+        }, qty: (item['quantity'] as num? ?? 1).toInt(), showPopup: false);
+        added++;
+      }
+
+      if (added > 0) {
+        Get.snackbar('added'.tr, 'products_added_to_cart'.trParams({'count': added.toString()}),
+          backgroundColor: AppTheme.primary, colorText: Colors.white, snackPosition: SnackPosition.TOP, margin: const EdgeInsets.all(16));
+        Get.to(() => const CartScreen(), transition: Transition.fadeIn);
+      }
+    } catch (e) {
+      Get.snackbar('error'.tr, 'reorder_failed'.tr,
+        backgroundColor: Colors.red, colorText: Colors.white, snackPosition: SnackPosition.TOP, margin: const EdgeInsets.all(16));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -57,11 +116,11 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
 
     String title;
     if (widget.filterStatus == 'cancelled') {
-      title = 'الطلبات الملغية';
+      title = 'cancelled_orders'.tr;
     } else if (widget.filterStatus == 'delivered') {
-      title = 'الطلبات السابقة';
+      title = 'previous_orders'.tr;
     } else {
-      title = 'طلباتي';
+      title = 'my_orders'.tr;
     }
 
     return Scaffold(
@@ -82,7 +141,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               children: [
                 Icon(LucideIcons.packageX, size: 64, color: textSecColor.withOpacity(0.5)),
                 const SizedBox(height: 16),
-                Text('لا توجد طلبات', style: TextStyle(fontSize: 18, color: textSecColor, fontFamily: 'Cairo')),
+                Text('no_orders'.tr, style: TextStyle(fontSize: 18, color: textSecColor, fontFamily: 'Cairo')),
               ],
             ),
           );
@@ -107,23 +166,23 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               switch (status) {
                 case 'delivered':
                   statusColor = AppTheme.primary;
-                  statusText = 'تم التسليم';
+                  statusText = 'delivered'.tr;
                   break;
                 case 'cancelled':
                   statusColor = Colors.red;
-                  statusText = 'ملغي';
+                  statusText = 'cancelled'.tr;
                   break;
                 case 'pending':
                   statusColor = Colors.amber;
-                  statusText = 'قيد الانتظار';
+                  statusText = 'pending'.tr;
                   break;
                 case 'preparing':
                   statusColor = Colors.orange;
-                  statusText = 'جاري التحضير';
+                  statusText = 'preparing'.tr;
                   break;
                 case 'shipped':
                   statusColor = Colors.blue;
-                  statusText = 'في الطريق';
+                  statusText = 'on_the_way'.tr;
                   break;
                 default:
                   statusColor = Colors.grey;
@@ -169,7 +228,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                                   ),
                                 ),
                                 const Spacer(),
-                                Text('$total د.ع', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: textColor, fontFamily: 'Cairo')),
+                                Text('$total ${'currency_iqd'.tr}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: textColor, fontFamily: 'Cairo')),
                               ],
                             ),
                             if (dateText.isNotEmpty) ...[
@@ -180,6 +239,23 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                                   const SizedBox(width: 4),
                                   Text(dateText, style: TextStyle(fontSize: 11, color: textSecColor, fontFamily: 'Cairo')),
                                 ],
+                              ),
+                            ],
+                            if (status == 'delivered') ...[
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _reorder(order['id'].toString()),
+                                  icon: const Icon(LucideIcons.refreshCw, size: 14),
+                                  label: Text('reorder'.tr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.primary,
+                                    side: const BorderSide(color: AppTheme.primary),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
                               ),
                             ],
                           ],

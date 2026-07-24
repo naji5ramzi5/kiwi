@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Star, StarHalf, MessageCircle, User, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Star, MessageCircle, User, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Rating {
@@ -27,10 +27,6 @@ export default function Ratings() {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(true);
   const [ratingLoading, setRatingLoading] = useState(false);
-
-  useEffect(() => {
-    fetchDriversWithRatings();
-  }, []);
 
   async function fetchDriversWithRatings() {
     try {
@@ -69,6 +65,10 @@ export default function Ratings() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    void (async () => { await fetchDriversWithRatings(); })();
+  }, []);
 
   async function fetchDriverRatings(driverId: string) {
     setRatingLoading(true);

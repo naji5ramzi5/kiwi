@@ -32,7 +32,7 @@ serve(async (req) => {
         title: 'لقد وصل المندوب! 🚴',
         body: 'المندوب متواجد الآن عند موقعك، يرجى الاستلام.',
         type: 'arrival',
-        data: { order_id }
+        order_id: order_id
       });
     }
 

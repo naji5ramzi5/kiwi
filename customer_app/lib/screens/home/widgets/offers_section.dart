@@ -56,7 +56,7 @@ class OffersSection extends StatelessWidget {
                           child: const Icon(LucideIcons.tag, color: AppTheme.primary, size: 16),
                         ),
                         const SizedBox(width: 10),
-                        const Text('عروض حصرية', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontFamily: 'Cairo')),
+                        Text('section_exclusive_offers'.tr, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontFamily: 'Cairo')),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -110,7 +110,7 @@ class OffersSection extends StatelessWidget {
                       'price': offer['price'],
                       'image': imageUrl,
                       'category': offer['category'],
-                      'unit': offer['unit'] ?? 'حبة',
+                      'unit': offer['unit'] ?? 'unit_piece'.tr,
                       'stock': offerStock,
                     };
                     Get.to(() => ProductDetailsScreen(product: detailsData), transition: Transition.fadeIn);
@@ -156,7 +156,7 @@ class OffersSection extends StatelessWidget {
                                 const SizedBox(height: 6),
                                 if (hasDiscount)
                                   Text(
-                                    '${offer['cost']} د.ع',
+                                    '${offer['cost']} ${'currency_iqd'.tr}',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       color: AppTheme.textSecondary,
@@ -169,7 +169,7 @@ class OffersSection extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      '${offer['price']} د.ع',
+                                      '${offer['price']} ${'currency_iqd'.tr}',
                                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.primaryDark, fontFamily: 'Cairo'),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -184,7 +184,7 @@ class OffersSection extends StatelessWidget {
                                           'price': offer['price'],
                                           'image': imageUrl,
                                           'category': offer['category'],
-                                          'unit': offer['unit'] ?? 'حبة',
+                      'unit': offer['unit'] ?? 'unit_piece'.tr,
                                           'stock': offerStock,
                                         };
                                         cartController.addToCart(productData);

@@ -1,17 +1,35 @@
 import { useEffect, useState } from 'react';
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
+  Download,
   MapPin,
+  MessageCircle,
   MoreVertical,
   Package,
   Phone,
   Printer,
+  Search,
   Truck,
   User,
+  X,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { sendFcmNotification } from '../lib/fcm';
+import toast from 'react-hot-toast';
+import DateRangePicker from '../components/DateRangePicker';
+import {
+  ORDER_STATUS,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_COLORS,
+  ORDER_STATUS_FILTERS,
+  getStatusLabel,
+  getStatusColor,
+} from '../lib/orderStatus';
+
+const PAGE_SIZE = 15;
 
 interface Order {
   id: string;
@@ -26,17 +44,17 @@ interface Order {
   branch_name?: string;
 }
 
-const STATUS_ALL = 'الكل';
-const STATUS_NEW = 'جديد';
-const STATUS_PREPARING = 'تحضير';
-const STATUS_DELIVERING = 'توصيل';
-const STATUS_DELIVERED = 'تم التوصيل';
-const STATUSES = [STATUS_ALL, STATUS_NEW, STATUS_PREPARING, STATUS_DELIVERING, STATUS_DELIVERED];
+const STATUS_ALL = ORDER_STATUS_FILTERS[0];
+const STATUSES = ORDER_STATUS_FILTERS;
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(STATUS_ALL);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   async function fetchOrders() {
     try {
@@ -52,11 +70,11 @@ export default function Orders() {
 
       if (error) throw error;
 
-      const formattedOrders = (data || []).map((order: any) => ({
+      const formattedOrders = (data || []).map((order: Record<string, unknown> & { profiles?: Record<string, unknown>; branches?: Record<string, unknown> }) => ({
         ...order,
-        customer_name: order.profiles?.full_name || 'زبون مجهول',
-        customer_phone: order.profiles?.phone || 'غير مسجل',
-        branch_name: order.branches?.name || 'فرع غير معروف',
+        customer_name: (order.profiles?.full_name as string) || 'زبون مجهول',
+        customer_phone: (order.profiles?.phone as string) || 'غير مسجل',
+        branch_name: (order.branches?.name as string) || 'فرع غير معروف',
       }));
 
       setOrders(formattedOrders);
@@ -68,12 +86,18 @@ export default function Orders() {
   }
 
   useEffect(() => {
-    fetchOrders();
+    void (async () => {
+      await fetchOrders();
+    })();
 
     const channel = supabase
       .channel('orders-channel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchOrders();
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => {
+        toast.success('🛒 طلب جديد وصل!', { duration: 4000, icon: '🔔' });
+        void (async () => { await fetchOrders(); })();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, () => {
+        void (async () => { await fetchOrders(); })();
       })
       .subscribe();
 
@@ -84,6 +108,7 @@ export default function Orders() {
 
   async function updateOrderStatus(orderId: string, newStatus: string) {
     const previousOrders = orders;
+    const oldStatus = orders.find(o => o.id === orderId)?.status ?? null;
     setOrders(current =>
       current.map(order => (order.id === orderId ? { ...order, status: newStatus } : order)),
     );
@@ -94,6 +119,23 @@ export default function Orders() {
       setOrders(previousOrders);
       alert('فشل في تحديث حالة الطلب');
     } else {
+      // Log the status change to the audit trail
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: historyErr } = await supabase
+          .from('order_status_history')
+          .insert({
+            order_id: orderId,
+            old_status: oldStatus,
+            new_status: newStatus,
+            changed_by: user?.id ?? null,
+            changed_at: new Date().toISOString(),
+          });
+        if (historyErr) console.warn('Failed to log status history:', historyErr);
+      } catch (histErr) {
+        console.warn('Failed to log status history:', histErr);
+      }
+
       // Send FCM notification to the customer about status change
       try {
         const order = orders.find(o => o.id === orderId);
@@ -110,37 +152,24 @@ export default function Orders() {
       }
       
       // Notify admin/drivers for certain status changes
-      if (newStatus === 'توصيل') {
+      if (newStatus === ORDER_STATUS.DELIVERING) {
         // In a full implementation, notify available drivers
         console.log('Order ready for delivery, would notify drivers');
       }
     }
   }
 
-  function getStatusColor(status: string) {
-    switch (status) {
-      case STATUS_NEW:
-        return 'bg-blue-100 text-blue-600 border-blue-200';
-      case STATUS_PREPARING:
-        return 'bg-orange-100 text-orange-600 border-orange-200';
-      case STATUS_DELIVERING:
-        return 'bg-purple-100 text-purple-600 border-purple-200';
-      case STATUS_DELIVERED:
-        return 'bg-emerald-100 text-emerald-600 border-emerald-200';
-      default:
-        return 'bg-gray-100 text-gray-600 border-gray-200';
-    }
-  }
-
   function getStatusIcon(status: string) {
     switch (status) {
-      case STATUS_NEW:
+      case ORDER_STATUS.PENDING:
         return <Package size={16} />;
-      case STATUS_PREPARING:
+      case ORDER_STATUS.PREPARING:
         return <Clock size={16} />;
-      case STATUS_DELIVERING:
+      case ORDER_STATUS.PICKED_UP:
         return <Truck size={16} />;
-      case STATUS_DELIVERED:
+      case ORDER_STATUS.DELIVERING:
+        return <Truck size={16} />;
+      case ORDER_STATUS.DELIVERED:
         return <CheckCircle2 size={16} />;
       default:
         return <Package size={16} />;
@@ -187,7 +216,47 @@ export default function Orders() {
     popupWin.close();
   }
 
-  const filteredOrders = filter === STATUS_ALL ? orders : orders.filter(order => order.status === filter);
+  const filteredOrders = orders.filter(order => {
+    if (filter !== STATUS_ALL && order.status !== filter) return false;
+    if (search && !order.customer_name?.includes(search) && !order.customer_phone?.includes(search) && !order.delivery_address?.includes(search)) return false;
+    if (startDate) {
+      const orderDate = new Date(order.created_at).toISOString().slice(0, 10);
+      if (orderDate < startDate) return false;
+    }
+    if (endDate) {
+      const orderDate = new Date(order.created_at).toISOString().slice(0, 10);
+      if (orderDate > endDate) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pagedOrders = filteredOrders.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+
+  // Reset to page 0 when filter/search changes
+  useEffect(() => { void (async () => { setPage(0); })(); }, [filter, search, startDate, endDate]);
+
+  function exportToCSV() {
+    const headers = ['Order ID', 'Customer', 'Phone', 'Status', 'Total', 'Address', 'Date'];
+    const rows = filteredOrders.map(o => [
+      o.id.substring(0, 8),
+      o.customer_name || '',
+      o.customer_phone || '',
+      o.status || '',
+      String(o.total_price || 0),
+      o.delivery_address || '',
+      new Date(o.created_at).toLocaleDateString('ar-IQ'),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
@@ -197,7 +266,26 @@ export default function Orders() {
           <p className="text-gray-500">متابعة وتحديث حالات الطلبات لجميع الفروع</p>
         </div>
 
-        <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="بحث بالاسم أو الهاتف..."
+              className="pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all w-56"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-600 transition-all"
+            title="تصدير CSV"
+          >
+            <Download size={16} />
+            تصدير
+          </button>
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
           {STATUSES.map(status => (
             <button
               key={status}
@@ -206,10 +294,27 @@ export default function Orders() {
                 filter === status ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
-              {status}
+              {status === STATUS_ALL ? STATUS_ALL : getStatusLabel(status)}
             </button>
           ))}
+          </div>
         </div>
+      </div>
+
+      {/* Date Range Filter */}
+      <div style={{ marginBottom: 20, display: 'flex', gap: 12 }}>
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          label="تصفية حسب التاريخ"
+        />
+        {(startDate || endDate) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setStartDate(''); setEndDate('') }}>
+            <X size={14} /> مسح الفلتر
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -224,7 +329,7 @@ export default function Orders() {
               <p className="text-gray-500">لا توجد طلبات في هذا القسم حاليًا</p>
             </div>
           ) : (
-            filteredOrders.map(order => (
+            pagedOrders.map(order => (
               <div
                 key={order.id}
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group"
@@ -238,7 +343,7 @@ export default function Orders() {
                         </span>
                         <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
                           {getStatusIcon(order.status)}
-                          {order.status}
+                          {getStatusLabel(order.status)}
                         </div>
                         <span className="text-xs text-gray-400">
                           {new Date(order.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}
@@ -254,6 +359,16 @@ export default function Orders() {
                             <p className="font-bold text-gray-900">{order.customer_name}</p>
                             <p className="text-sm text-gray-500 flex items-center gap-1">
                               <Phone size={12} /> {order.customer_phone}
+                              {order.customer_phone && order.customer_phone !== 'غير مسجل' && (
+                                <a
+                                  href={`https://wa.me/${order.customer_phone.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-green-500 hover:text-green-600 mr-1"
+                                >
+                                  <MessageCircle size={14} />
+                                </a>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -285,7 +400,7 @@ export default function Orders() {
                         >
                           {STATUSES.filter(status => status !== STATUS_ALL).map(status => (
                             <option key={status} value={status}>
-                              {status}
+                              {getStatusLabel(status)}
                             </option>
                           ))}
                         </select>
@@ -295,6 +410,18 @@ export default function Orders() {
                         >
                           <Printer size={20} />
                         </button>
+                        {order.customer_phone && order.customer_phone !== 'غير مسجل' && (
+                          <button
+                            className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:bg-green-50 hover:text-green-600 transition-colors"
+                            onClick={() => {
+                              const phone = order.customer_phone!.replace(/[^0-9]/g, '');
+                              const msg = encodeURIComponent(`مرحباً! طلبك رقم #${order.id.substring(0, 8)} قيد التجهيز من Kiwi Fresh`);
+                              window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+                            }}
+                          >
+                            <MessageCircle size={20} />
+                          </button>
+                        )}
                         <button className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
                           <MoreVertical size={20} />
                         </button>
@@ -305,6 +432,32 @@ export default function Orders() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && filteredOrders.length > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-4 mt-8">
+          <button
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={safePage === 0}
+            className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronRight size={16} />
+            السابق
+          </button>
+          <span className="text-sm text-gray-500 font-medium">
+            صفحة {safePage + 1} من {totalPages}
+            <span className="text-gray-400 mr-2">({filteredOrders.length} طلب)</span>
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            disabled={safePage >= totalPages - 1}
+            className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            التالي
+            <ChevronLeft size={16} />
+          </button>
         </div>
       )}
     </div>

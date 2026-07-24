@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/theme_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/cart_controller.dart';
 import '../../controllers/favorites_controller.dart';
+import '../../controllers/main_screen_controller.dart';
 import '../order_tracking_map_screen.dart';
 import '../order_details_screen.dart';
 import '../auth/login_screen.dart';
@@ -57,11 +59,11 @@ class ProfileScreen extends StatelessWidget {
                 final isLoggedIn = authController.currentUser.value != null;
                 final profile = authController.userProfile();
                 final name = isLoggedIn
-                    ? (profile['full_name']?.toString() ?? 'مستخدم Kiwi')
-                    : 'مستخدم Kiwi';
+                    ? (profile['full_name']?.toString() ?? 'default_user_name'.tr)
+                    : 'default_user_name'.tr;
                 final phone = isLoggedIn
                     ? (profile['phone']?.toString() ?? '')
-                    : 'سجل دخول للاستمتاع بجميع المزايا';
+                    : 'login_to_enjoy'.tr;
                 final avatarInit =
                     name.isNotEmpty ? name[0].toUpperCase() : 'F';
 
@@ -70,15 +72,15 @@ class ProfileScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: isLoggedIn
-                          ? [const Color(0xFF22C55E), const Color(0xFF86EFAC)]
-                          : [const Color(0xFF16A34A), const Color(0xFF4ADE80)],
+                          ? [AppTheme.primary, AppTheme.primaryVeryLight]
+                          : [AppTheme.primaryDark, AppTheme.primaryBright],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF22C55E).withOpacity(0.3),
+                        color: AppTheme.primary.withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
@@ -119,7 +121,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              isLoggedIn ? phone : 'سجل دخول للاستمتاع بجميع المزايا',
+                              isLoggedIn ? phone : 'login_to_enjoy'.tr,
                               style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.white.withOpacity(0.8),
@@ -167,11 +169,11 @@ class ProfileScreen extends StatelessWidget {
                     return Row(
                       children: [
                         Expanded(
-                          child: _buildStatCard('الطلبات', orderCount.toString(), LucideIcons.shoppingBag, textColor, textSecColor, surfaceColor, isDark),
+                          child: _buildStatCard('stat_orders'.tr, orderCount.toString(), LucideIcons.shoppingBag, textColor, textSecColor, surfaceColor, isDark),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildStatCard('المفضلة', favController.favoriteProductIds.length.toString(), LucideIcons.heart, textColor, textSecColor, surfaceColor, isDark),
+                          child: _buildStatCard('stat_favorites'.tr, favController.favoriteProductIds.length.toString(), LucideIcons.heart, textColor, textSecColor, surfaceColor, isDark),
                         ),
                       ],
                     );
@@ -185,14 +187,14 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _buildMenuCard([
                 _menuItem(LucideIcons.mapPin, 'track_order'.tr, () => _openActiveOrderTracking(context), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
-                _menuItem(LucideIcons.clock, 'طلبات نشطة', () => Get.to(() => OrdersListScreen(), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
-                _menuItem(LucideIcons.packageCheck, 'الطلبات السابقة', () => Get.to(() => OrdersListScreen(filterStatus: 'delivered'), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
-                _menuItem(LucideIcons.xCircle, 'الطلبات الملغية', () => Get.to(() => OrdersListScreen(filterStatus: 'cancelled'), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
+                _menuItem(LucideIcons.clock, 'active_orders'.tr, () => Get.to(() => OrdersListScreen(), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
+                _menuItem(LucideIcons.packageCheck, 'previous_orders'.tr, () => Get.to(() => OrdersListScreen(filterStatus: 'delivered'), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
+                _menuItem(LucideIcons.xCircle, 'cancelled_orders'.tr, () => Get.to(() => OrdersListScreen(filterStatus: 'cancelled'), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
               ], surfaceColor, textColor, textSecColor, bgColor, isDark),
               const SizedBox(height: 24),
 
               // Section: Settings
-              _buildSectionHeader('الإعدادات', LucideIcons.settings, textColor),
+              _buildSectionHeader('settings'.tr, LucideIcons.settings, textColor),
               const SizedBox(height: 12),
               _buildMenuCard([
                 _menuItem(LucideIcons.heart, 'favorites'.tr, () => Get.to(() => FavoritesScreen(), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
@@ -200,12 +202,12 @@ class ProfileScreen extends StatelessWidget {
                   Switch(value: themeController.isDarkMode.value, onChanged: (v) => themeController.toggleTheme(), activeColor: AppTheme.primary),
                   () {}
                 ),
-                _menuItem(LucideIcons.globe, 'language'.tr, () {}, iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor, trailing: const Text('العربية', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontFamily: 'Cairo'))),
+                _buildLanguageToggle(textColor, textSecColor, isDark),
               ], surfaceColor, textColor, textSecColor, bgColor, isDark),
               const SizedBox(height: 24),
 
               // Section: Support
-              _buildSectionHeader('الدعم', LucideIcons.headphones, textColor),
+              _buildSectionHeader('support'.tr, LucideIcons.headphones, textColor),
               const SizedBox(height: 12),
               _buildMenuCard([
                 _menuItem(LucideIcons.headphones, 'support'.tr, () => Get.to(() => const SupportScreen(), transition: Transition.fadeIn), iconBg: bgColor, iconFg: textColor, txtColor: textColor, arrowColor: textSecColor),
@@ -249,7 +251,7 @@ class ProfileScreen extends StatelessWidget {
               // Hidden Delete Account
               Center(
                 child: GestureDetector(
-                  onTap: () {},
+                  onTap: () => _showDeleteAccountDialog(context, authController),
                   child: Text(
                     'delete_account'.tr,
                     style: const TextStyle(
@@ -331,6 +333,7 @@ class ProfileScreen extends StatelessWidget {
       ),
       title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tc, fontFamily: 'Cairo')),
       trailing: trailing ?? Icon(LucideIcons.chevronLeft, size: 18, color: ac),
+      visualDensity: VisualDensity.compact,
     );
   }
 
@@ -355,7 +358,7 @@ class ProfileScreen extends StatelessWidget {
     if (activeId != null) {
       Get.to(() => OrderTrackingMapScreen(orderId: activeId), transition: Transition.fadeIn);
     } else {
-      Get.snackbar('لا يوجد طلب نشط', 'ليس لديك أي طلب قيد التوصيل حالياً',
+      Get.snackbar('no_active_order'.tr, 'no_order_in_delivery'.tr,
         backgroundColor: Colors.orange,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -379,6 +382,110 @@ class ProfileScreen extends StatelessWidget {
       ),
       title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary, fontFamily: 'Cairo')),
       trailing: trailing,
+    );
+  }
+
+  Widget _buildLanguageToggle(Color textColor, Color textSecColor, bool isDark) {
+    return _menuItemWithWidget(
+      LucideIcons.globe,
+      'language'.tr,
+      Obx(() {
+        final isArabic = Get.locale?.languageCode != 'en';
+        return GestureDetector(
+          onTap: () => _toggleLanguage(),
+          child: Container(
+            height: 34,
+            width: 90,
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.primary.withOpacity(0.15) : AppTheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isArabic ? FontWeight.w900 : FontWeight.w600,
+                    color: isArabic ? AppTheme.primary : textSecColor,
+                    fontFamily: 'Cairo',
+                  ),
+                  child: const Text('AR'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Container(
+                    width: 1,
+                    height: 16,
+                    color: textSecColor.withOpacity(0.3),
+                  ),
+                ),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: !isArabic ? FontWeight.w900 : FontWeight.w600,
+                    color: !isArabic ? AppTheme.primary : textSecColor,
+                    fontFamily: 'Cairo',
+                  ),
+                  child: const Text('EN'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+      () => _toggleLanguage(),
+    );
+  }
+
+  void _toggleLanguage() {
+    final isArabic = Get.locale?.languageCode != 'en';
+    if (isArabic) {
+      Get.updateLocale(const Locale('en', 'US'));
+      GetStorage().write('app_locale', 'en');
+    } else {
+      Get.updateLocale(const Locale('ar', 'IQ'));
+      GetStorage().write('app_locale', 'ar');
+    }
+    if (Get.isRegistered<MainScreenController>()) {
+      Get.find<MainScreenController>().refreshLocale();
+    }
+  }
+
+  void _showDeleteAccountDialog(BuildContext context, AuthController authController) {
+    Get.defaultDialog(
+      title: 'delete_account'.tr,
+      middleText: 'delete_account_msg'.tr,
+      textConfirm: 'agree'.tr,
+      textCancel: 'go_back'.tr,
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.red,
+      onConfirm: () async {
+        Get.back();
+        try {
+          await authController.deleteAccount();
+          Get.snackbar(
+            'account_deletion_request'.tr,
+            'logged_out_contact_support'.tr,
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16),
+          );
+          Get.offAll(() => const LoginScreen());
+        } catch (e) {
+          Get.snackbar(
+            'error'.tr,
+            'logout_failed'.trParams({'error': e.toString()}),
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16),
+          );
+        }
+      },
     );
   }
 }

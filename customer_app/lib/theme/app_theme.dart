@@ -6,7 +6,23 @@ class AppTheme {
   static const Color primary = Color(0xFF22C55E); // Green-500 light fresh
   static const Color primaryDark = Color(0xFF16A34A); // Green-600
   static const Color primaryLight = Color(0xFFDCFCE7); // Green-50
-  
+
+  // Additional green shades used for gradients/accents
+  static const Color primaryExtraLight = Color(0xFFBBF7D0); // Green-200
+  static const Color primaryVeryLight = Color(0xFF86EFAC);  // Green-300
+  static const Color primaryBright = Color(0xFF4ADE80);     // Green-400
+  // Emerald family aliases (used for gradient stops / dark accents)
+  static const Color emerald = Color(0xFF10B981);           // Emerald-500
+  static const Color emeraldDark = Color(0xFF047857);       // Emerald-700
+  static const Color emeraldDeep = Color(0xFF064E3B);       // Emerald-900
+  static const Color emeraldLight = Color(0xFF34D399);      // Emerald-400
+
+  // Unified radius scale
+  static const double radiusSm = 12;
+  static const double radiusMd = 16;
+  static const double radiusLg = 20;
+  static const double radiusXl = 28;
+
   // Light Mode Colors
   static const Color background = Color(0xFFF8F9FA); // Kwanzu Light Background
   static const Color surface = Colors.white;

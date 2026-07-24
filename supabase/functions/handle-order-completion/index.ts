@@ -10,10 +10,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 1. Get Ratios from Settings
-    const { data: settings } = await supabase.from('system_settings').select('key, value_decimal');
+    // 1. Get Ratios from Settings (value is stored as JSONB)
+    const { data: settings } = await supabase.from('system_settings').select('key, value');
     const ratios: Record<string, number> = {};
-    settings?.forEach(s => ratios[s.key] = s.value_decimal);
+    settings?.forEach(s => {
+      const v = (s.value as any)?.value_decimal ?? (s.value as any)?.value ?? 0;
+      ratios[s.key] = v;
+    });
 
     const devRatio = ratios['dev_partner_ratio'] || 0.35;
     const maintenanceRatio = ratios['system_maintenance_ratio'] || 0.10;
@@ -41,10 +44,10 @@ serve(async (req) => {
         order_id: order.id,
         branch_id: order.branch_id,
         total_revenue: totalRevenue,
-        dev_profit: devProfit,
+        dev_partner_share: devProfit,
         maintenance_fund: maintenanceFund,
         branch_profit: branchProfit,
-        is_settled: false
+        settled_at: null
       });
 
     if (settlementError) throw settlementError;

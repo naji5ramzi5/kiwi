@@ -131,7 +131,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> with SingleTicker
     if (hex == null || hex.isEmpty) return AppTheme.primary;
     var h = hex.replaceAll('#', '');
     if (h.length == 6) h = 'FF$h';
-    return Color(int.tryParse(h, radix: 16) ?? 0xFF10B981);
+    return Color(int.tryParse(h, radix: 16) ?? 0xFF22C55E);
   }
 
   @override
@@ -160,8 +160,8 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> with SingleTicker
             if (_loading)
               const Center(child: CircularProgressIndicator(color: AppTheme.primary))
             else if (_items.isEmpty)
-              const Center(
-                child: Text('لا يوجد محتوى', style: TextStyle(color: Colors.white, fontFamily: 'Cairo')),
+              Center(
+                child: Text('no_content'.tr, style: TextStyle(color: Colors.white, fontFamily: 'Cairo')),
               )
             else
               _buildItem(_items[_itemIndex]),
@@ -263,7 +263,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> with SingleTicker
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      (_group['name'] ?? _group['title'] ?? 'قصة').toString(),
+                      (_group['name'] ?? _group['title'] ?? 'story_fallback'.tr).toString(),
                       textDirection: TextDirection.rtl,
                       style: const TextStyle(
                         color: Colors.white,

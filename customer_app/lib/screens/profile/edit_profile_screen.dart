@@ -42,7 +42,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final phone = _phoneController.text.trim();
 
     if (name.isEmpty) {
-      Get.snackbar('تنبيه', 'الاسم لا يمكن أن يكون فارغاً',
+      Get.snackbar('warning'.tr, 'name_cannot_be_empty'.tr,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.orange.shade600,
         colorText: Colors.white,
@@ -51,7 +51,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     if (name.length < 2) {
-      Get.snackbar('تنبيه', 'الاسم يجب أن يكون حرفين على الأقل',
+      Get.snackbar('warning'.tr, 'name_min_two_chars'.tr,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.orange.shade600,
         colorText: Colors.white,
@@ -60,7 +60,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     if (phone.isEmpty) {
-      Get.snackbar('تنبيه', 'رقم الهاتف لا يمكن أن يكون فارغاً',
+      Get.snackbar('warning'.tr, 'phone_cannot_be_empty'.tr,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.orange.shade600,
         colorText: Colors.white,
@@ -73,7 +73,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final oldPhone = oldProfile['phone']?.toString() ?? '';
 
     if (name == oldName && phone == oldPhone) {
-      Get.snackbar('تنبيه', 'لم يتم تغيير أي بيانات',
+      Get.snackbar('warning'.tr, 'no_data_changed'.tr,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.orange.shade600,
         colorText: Colors.white,
@@ -87,7 +87,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     if (name != oldName) {
       if (nameChangesLeft <= 0) {
-        Get.snackbar('ممنوع', 'لقد استنفذت عدد مرات تغيير الاسم المسموح بها',
+        Get.snackbar('forbidden'.tr, 'name_change_limit'.tr,
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red.shade600,
           colorText: Colors.white,
@@ -101,7 +101,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     if (phone != oldPhone) {
       if (!phoneCanChange) {
-        Get.snackbar('ممنوع', 'لا يمكن تغيير رقم الهاتف بعد الآن',
+        Get.snackbar('forbidden'.tr, 'phone_cannot_be_changed'.tr,
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red.shade600,
           colorText: Colors.white,
@@ -111,7 +111,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
       final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
       if (digits.length < 10 || digits.length > 15) {
-        Get.snackbar('خطأ', 'رقم الهاتف غير صحيح، يرجى إدخال رقم عراقي صحيح',
+        Get.snackbar('error'.tr, 'invalid_phone'.tr,
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.red.shade600,
           colorText: Colors.white,
@@ -132,7 +132,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isSaving = false);
 
     if (success) {
-      Get.snackbar('تم', 'تم تحديث البيانات بنجاح',
+      Get.snackbar('done'.tr, 'profile_updated'.tr,
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.green.shade600,
         colorText: Colors.white,
@@ -155,9 +155,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('تعديل الحساب', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, fontFamily: 'Cairo')),
+        title: Text('edit_account'.tr, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, fontFamily: 'Cairo')),
         elevation: 0,
         backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_rounded, color: textColor, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -180,13 +184,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildLabel('الاسم الكامل', textSecColor),
+                  _buildLabel('full_name'.tr, textSecColor),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _nameController,
                     style: TextStyle(color: textColor, fontFamily: 'Cairo', fontSize: 15),
                     decoration: _inputDecoration(
-                      hint: 'أدخل اسمك الكامل',
+                      hint: 'enter_full_name'.tr,
                       isDark: isDark,
                       surfaceColor: surfaceColor,
                     ),
@@ -194,8 +198,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 6),
                   Text(
                     nameChangesLeft > 0
-                        ? 'يمكنك تغيير الاسم $nameChangesLeft مرات أخرى'
-                        : 'لا يمكن تغيير الاسم بعد الآن',
+                        ? 'name_changes_remaining'.trParams({'count': nameChangesLeft.toString()})
+                        : 'name_cannot_be_changed'.tr,
                     style: TextStyle(
                       fontSize: 11,
                       color: nameChangesLeft > 0 ? AppTheme.primary : Colors.red.shade400,
@@ -204,14 +208,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildLabel('رقم الهاتف', textSecColor),
+                  _buildLabel('phone_number'.tr, textSecColor),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     style: TextStyle(color: textColor, fontFamily: 'Cairo', fontSize: 15),
                     decoration: _inputDecoration(
-                      hint: 'أدخل رقم الهاتف',
+                      hint: 'enter_phone'.tr,
                       isDark: isDark,
                       surfaceColor: surfaceColor,
                     ),
@@ -219,8 +223,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 6),
                   Text(
                     phoneCanChange
-                        ? 'يمكنك تغيير رقم الهاتف مرة واحدة فقط'
-                        : 'لا يمكن تغيير رقم الهاتف بعد الآن',
+                        ? 'phone_change_once'.tr
+                        : 'phone_cannot_be_changed'.tr,
                     style: TextStyle(
                       fontSize: 11,
                       color: phoneCanChange ? AppTheme.primary : Colors.red.shade400,
@@ -248,8 +252,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         width: 22, height: 22,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
-                    : const Text(
-                        'حفظ التغييرات',
+                    : Text(
+                        'save_changes'.tr,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

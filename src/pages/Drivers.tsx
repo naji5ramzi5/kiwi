@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User, Star } from 'lucide-react';
+import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User, Star, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Driver {
@@ -19,6 +19,7 @@ interface Driver {
 export default function Drivers() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchDrivers();
@@ -70,10 +71,20 @@ export default function Drivers() {
           <h1 className="text-3xl font-black text-gray-900">إدارة فريق التوصيل</h1>
           <p className="text-gray-500">مراجعة ملفات المناديب والموافقة على طلبات الانضمام</p>
         </div>
+        <div className="relative">
+          <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="بحث بالاسم..."
+            className="pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all w-56"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {drivers.map((driver) => (
+        {drivers.filter(d => !search || d.full_name.includes(search) || d.email?.includes(search)).map((driver) => (
           <div key={driver.id} className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-6 transition-all hover:translate-y-[-4px]">
             <div className="flex justify-between items-start mb-6">
               <div className="flex items-center gap-4">

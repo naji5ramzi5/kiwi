@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Package, Image as ImageIcon, X } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Package, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import type { Category, Branch } from '../lib/types'
 
 const UNITS = ['كيلو', 'حبة', 'كرتونة', 'ربطة', 'كيس', 'غرام']
+const PAGE_SIZE = 12
 
 export default function Products() {
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<Array<Record<string, unknown> & { id: string; name: string; category: string; unit: string; default_price: number; image_url: string; is_active: boolean; is_offer: boolean; branch_inventory?: Array<{ branch_id: string; actual_stock: string }> }>>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [branches, setBranches] = useState<Branch[]>([])
+  const [, setBranches] = useState<Branch[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('الكل')
-  const [modal, setModal] = useState<any | null | 'new'>(null)
+  const [modal, setModal] = useState<Record<string, unknown> | null | 'new'>(null)
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     fetchData()
@@ -60,6 +62,13 @@ export default function Products() {
     return matchSearch && matchCat
   })
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages - 1)
+  const paged = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
+
+  // Reset page when filter/search changes
+  useEffect(() => { void (async () => { setPage(0); })(); }, [search, catFilter])
+
   return (
     <div className="animate-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -99,12 +108,13 @@ export default function Products() {
       {loading ? (
         <div className="empty-state"><div className="loader"></div></div>
       ) : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-          {filtered && filtered.map(product => {
+          {paged && paged.map(product => {
             if (!product) return null;
             // حساب المخزون بأمان
             const inv = product.branch_inventory || [];
-            const totalStock = inv.reduce((acc: number, item: any) => acc + (parseFloat(item.actual_stock) || 0), 0);
+            const totalStock = inv.reduce((acc: number, item: { actual_stock: string }) => acc + (parseFloat(item.actual_stock) || 0), 0);
             
             return (
               <div key={product.id} className="card hover-scale" style={{ padding: 0 }}>
@@ -162,13 +172,40 @@ export default function Products() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {!loading && filtered.length > PAGE_SIZE && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 24 }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              style={{ opacity: safePage === 0 ? 0.4 : 1 }}
+            >
+              <ChevronRight size={16} />
+              السابق
+            </button>
+            <span style={{ fontSize: 13, color: 'var(--gray500)', fontWeight: 500 }}>
+              صفحة {safePage + 1} من {totalPages}
+            </span>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={safePage >= totalPages - 1}
+              style={{ opacity: safePage >= totalPages - 1 ? 0.4 : 1 }}
+            >
+              التالي
+              <ChevronLeft size={16} />
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {modal && (
         <ProductCatalogModal 
           product={modal === 'new' ? null : modal} 
           categories={categories}
-          branches={branches}
           onClose={() => setModal(null)}
           onSave={() => { setModal(null); fetchData(); }}
         />
@@ -177,7 +214,14 @@ export default function Products() {
   )
 }
 
-function ProductCatalogModal({ product, categories, branches, onClose, onSave }: any) {
+interface ProductCatalogModalProps {
+  product: Record<string, unknown> | null;
+  categories: Category[];
+  onClose: () => void;
+  onSave: () => void;
+}
+
+function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCatalogModalProps) {
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: product?.name || '',
@@ -216,7 +260,7 @@ function ProductCatalogModal({ product, categories, branches, onClose, onSave }:
         // إنشاء سجلات مخزون للمنتج الجديد في جميع الفروع
         const { data: allBranches } = await supabase.from('branches').select('id')
         if (allBranches && allBranches.length > 0) {
-          const inventoryRows = allBranches.map((b: any) => ({
+          const inventoryRows = allBranches.map((b: { id: string }) => ({
             branch_id: b.id,
             product_id: productId,
             actual_stock: 0,
@@ -229,8 +273,8 @@ function ProductCatalogModal({ product, categories, branches, onClose, onSave }:
         toast.success('✅ تم إضافة المنتج للكتالوج المركزي')
       }
       onSave()
-    } catch (err: any) {
-      toast.error('خطأ: ' + (err.message || 'فشل الحفظ'))
+    } catch (err: unknown) {
+      toast.error('خطأ: ' + ((err as Error).message || 'فشل الحفظ'))
     } finally {
       setLoading(false)
     }
@@ -252,7 +296,7 @@ function ProductCatalogModal({ product, categories, branches, onClose, onSave }:
           <div className="form-group">
             <label className="form-label">التصنيف</label>
             <select className="form-select" value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
-              {categories.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {categories.map((c: Category) => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
         </div>
@@ -294,8 +338,8 @@ function ProductCatalogModal({ product, categories, branches, onClose, onSave }:
                     const { data } = supabase.storage.from('images').getPublicUrl(filename);
                     setForm(p => ({...p, image_url: data.publicUrl}));
                   }
-                } catch(err: any) {
-                  alert('فشل رفع الصورة: ' + err.message);
+                } catch(err: unknown) {
+                  alert('فشل رفع الصورة: ' + ((err as Error).message));
                 } finally {
                   setLoading(false);
                 }

@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { JWT } from "https://esm.sh/google-auth-library@8.7.0"
 
 const FIREBASE_SERVICE_ACCOUNT = {
@@ -9,8 +8,24 @@ const FIREBASE_SERVICE_ACCOUNT = {
 }
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+      },
+    })
+  }
+
   try {
     const { tokens, title, body } = await req.json()
+
+    if (!tokens || !Array.isArray(tokens)) {
+      return new Response(JSON.stringify({ error: 'tokens required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
     // 1. Get Access Token from Google
     const client = new JWT({
@@ -47,9 +62,12 @@ serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 })

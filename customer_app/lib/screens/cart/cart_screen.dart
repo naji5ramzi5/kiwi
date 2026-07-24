@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../../controllers/cart_controller.dart';
@@ -10,6 +9,8 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/main_screen_controller.dart';
 import '../../controllers/home_controller.dart';
 import '../order_details_screen.dart';
+import 'cart_item_widget.dart';
+import 'cart_checkout_panel.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -50,8 +51,8 @@ class _CartScreenState extends State<CartScreen> {
     final homeController = Get.isRegistered<HomeController>() ? Get.find<HomeController>() : null;
     if (homeController != null && !homeController.isInDeliveryZone.value) {
       Get.snackbar(
-        'خارج منطقة التوصيل',
-        'عذراً، موقعك الحالي خارج مناطق التوصيل المتاحة. الرجاء تحديد موقع ضمن النطاق.',
+        'outside_delivery_zone'.tr,
+        'location_outside_msg'.tr,
         backgroundColor: Colors.red.shade700,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -64,8 +65,8 @@ class _CartScreenState extends State<CartScreen> {
     final activeId = await cartController.getActiveOrderId();
     if (activeId != null) {
       Get.snackbar(
-        'لديك طلب نشط',
-        'أنهي الطلب الحالي أولاً قبل إنشاء طلب جديد',
+        'active_order'.tr,
+        'finish_current_order'.tr,
         backgroundColor: Colors.orange.shade700,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -76,7 +77,7 @@ class _CartScreenState extends State<CartScreen> {
             Get.back();
             Get.to(() => OrderDetailsScreen(orderId: activeId), transition: Transition.fadeIn);
           },
-          child: const Text('عرض الطلب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text('view_order'.tr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       );
       return;
@@ -107,10 +108,10 @@ class _CartScreenState extends State<CartScreen> {
     final homeController = Get.isRegistered<HomeController>() ? Get.find<HomeController>() : null;
     final String address = (homeController != null && homeController.userAddress.value.isNotEmpty)
         ? homeController.userAddress.value
-        : (homeController?.selectedBranch.value?['address']?.toString() ?? 'غير محدد');
+        : (homeController?.selectedBranch.value?['address']?.toString() ?? 'unspecified'.tr);
     final success = await cartController.placeOrder(
       address: address,
-      paymentMethod: 'Cash on Delivery',
+      paymentMethod: 'cash_on_delivery'.tr,
     );
     if (success) {
       await cartController.refreshActiveOrder();
@@ -127,8 +128,8 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          'السلة',
+          title: Text(
+          'cart'.tr,
           style: TextStyle(color: themeTextColor, fontFamily: 'Cairo', fontWeight: FontWeight.w900, fontSize: 20),
         ),
         elevation: 0,
@@ -175,12 +176,12 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 28),
           Text(
-            'سلتك فارغة حالياً',
+            'cart_empty'.tr,
             style: TextStyle(fontSize: 24, color: themeTextColor, fontFamily: 'Cairo', fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 10),
           Text(
-            'أضف منتجاتك المفضلة واطلب الآن',
+            'cart_empty_subtitle'.tr,
             style: TextStyle(fontSize: 14, color: themeTextSecColor, fontFamily: 'Cairo'),
           ),
           const SizedBox(height: 36),
@@ -193,13 +194,13 @@ class _CartScreenState extends State<CartScreen> {
               elevation: 0,
               shadowColor: AppTheme.primary.withOpacity(0.4),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(LucideIcons.shoppingBag, size: 18, color: Colors.white),
                 SizedBox(width: 8),
                 Text(
-                  'تسوق الآن',
+                  'shop_now'.tr,
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Cairo', fontSize: 16),
                 ),
               ],
@@ -227,11 +228,47 @@ class _CartScreenState extends State<CartScreen> {
                     return _buildHeaderSummary(isDark);
                   }
                   final item = cartController.cartItems.values.toList()[index - 1];
-                  return _buildCartItem(item, isDark, themeTextColor, themeTextSecColor);
+                  return CartItemWidget(
+                    item: item,
+                    isDark: isDark,
+                    themeTextColor: themeTextColor,
+                    themeTextSecColor: themeTextSecColor,
+                    quantity: cartController.cartItems[item['id']]?['quantity'] ?? item['quantity'],
+                    onRemoveAll: () => cartController.removeFromCart(item['id'], removeAll: true),
+                    onRemove: () => cartController.removeFromCart(item['id']),
+                    onAdd: () => cartController.addToCart(item, showPopup: false),
+                  );
                 },
               ),
             ),
-            _buildCheckoutPanel(isDark, themeTextColor, themeTextSecColor),
+            CartCheckoutPanel(
+              isDark: isDark,
+              themeTextColor: themeTextColor,
+              themeTextSecColor: themeTextSecColor,
+              subtotal: '${cartController.subtotal}',
+              deliveryFee: '${cartController.deliveryFee}',
+              discount: '${cartController.discountAmount.value.toInt()}',
+              total: '${cartController.total}',
+              isPlacingOrder: cartController.isPlacingOrder.value,
+              hasActiveOrder: cartController.hasActiveOrder,
+              onStartCountdown: _startCountdown,
+              couponController: cartController.couponTextController,
+              onApplyCoupon: () async {
+                final ok = await cartController.applyCoupon();
+                if (!ok && cartController.couponError.value.isNotEmpty) {
+                  // error already stored in controller; could surface if needed
+                }
+              },
+              onRemoveCoupon: cartController.removeCoupon,
+              hasCoupon: cartController.appliedCoupon.value != null,
+              isApplyingCoupon: cartController.isApplyingCoupon.value,
+              couponError: cartController.couponError.value,
+              couponLabel: cartController.appliedCoupon.value?['code'] ?? '',
+              belowMinOrder: cartController.isBelowMinOrder,
+              minOrderHint: cartController.minOrderAmount > 0
+                  ? 'min_order_amount'.trParams({'amount': cartController.minOrderAmount.toInt().toString()})
+                  : '',
+            ),
           ],
         ),
         if (cartController.isCountingDown.value)
@@ -276,8 +313,8 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'سيتم تأكيد الطلب تلقائياً',
+                      Text(
+                        'order_auto_confirm'.tr,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
@@ -286,7 +323,7 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                       const SizedBox(height: 4),
                       Obx(() => Text(
-                        'إجمالي الطلب: ${cartController.total} د.ع',
+                        'order_total'.trParams({'total': cartController.total.toString()}),
                         style: TextStyle(
                           fontSize: 13,
                           color: themeTextSecColor,
@@ -305,8 +342,8 @@ class _CartScreenState extends State<CartScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                                 elevation: 0,
                               ),
-                              child: const Text(
-                                'تأكيد الآن',
+                              child: Text(
+                                'confirm_now'.tr,
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -326,9 +363,9 @@ class _CartScreenState extends State<CartScreen> {
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                               ),
-                              child: const Text(
-                                'إلغاء',
-                                style: TextStyle(
+                              child: Text(
+                                'cancel'.tr,
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Cairo',
                                   fontSize: 14,
@@ -374,7 +411,7 @@ class _CartScreenState extends State<CartScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'لديك طلب نشط — يمكنك تعديل السلة ولكن لا يمكن إنشاء طلب جديد حالياً',
+              'active_order_banner'.tr,
               style: const TextStyle(
                 fontSize: 12,
                 color: Colors.white,
@@ -401,212 +438,15 @@ class _CartScreenState extends State<CartScreen> {
           Icon(LucideIcons.shoppingCart, size: 20, color: AppTheme.primary),
           const SizedBox(width: 10),
           Text(
-            '${cartController.itemCount} منتجات في سلتك',
+            'items_in_cart'.trParams({'count': cartController.itemCount.toString()}),
             style: TextStyle(
               fontSize: 14, fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF4ADE80) : AppTheme.primaryDark,
+              color: isDark ? AppTheme.primaryBright : AppTheme.primaryDark,
               fontFamily: 'Cairo',
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCartItem(Map<String, dynamic> item, bool isDark, Color themeTextColor, Color themeTextSecColor) {
-    final String id = item['id'];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: CachedNetworkImage(
-              imageUrl: item['image'],
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: isDark ? Colors.grey[850] : Colors.grey[100]),
-              errorWidget: (_, __, ___) => const Icon(LucideIcons.image, size: 30, color: Colors.grey),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item['title'],
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: themeTextColor, fontFamily: 'Cairo'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => cartController.removeFromCart(id, removeAll: true),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(LucideIcons.x, size: 14, color: Colors.red.shade400),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${item['unit'] ?? 'كغ'}',
-                  style: TextStyle(fontSize: 11, color: themeTextSecColor, fontFamily: 'Cairo'),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${item['price']} د.ع',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: isDark ? const Color(0xFF4ADE80) : AppTheme.primaryDark,
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        _buildQuantityBtn(LucideIcons.minus, onTap: () => cartController.removeFromCart(id)),
-                        const SizedBox(width: 12),
-                        Obx(() => Text(
-                          '${cartController.cartItems[id]?['quantity'] ?? item['quantity']}',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: themeTextColor, fontFamily: 'Cairo'),
-                        )),
-                        const SizedBox(width: 12),
-                        _buildQuantityBtn(LucideIcons.plus, isPrimary: true, onTap: () => cartController.addToCart(item, showPopup: false)),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuantityBtn(IconData icon, {bool isPrimary = false, VoidCallback? onTap}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isPrimary ? AppTheme.primary : (isDark ? Colors.grey.shade800 : AppTheme.background),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(
-          icon,
-          size: 14,
-          color: isPrimary
-              ? Colors.white
-              : (isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckoutPanel(bool isDark, Color themeTextColor, Color themeTextSecColor) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSummaryRow(isDark, themeTextColor, themeTextSecColor, 'المجموع الفرعي', '${cartController.subtotal} د.ع'),
-            const SizedBox(height: 10),
-            _buildSummaryRow(isDark, themeTextColor, themeTextSecColor, 'رسوم التوصيل', '${cartController.deliveryFee} د.ع'),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                children: [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Icon(LucideIcons.leaf, size: 16, color: AppTheme.primary),
-                  ),
-                  Expanded(child: Divider()),
-                ],
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'الإجمالي الكلي',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: themeTextColor, fontFamily: 'Cairo'),
-                ),
-                Text(
-                  '${cartController.total} د.ع',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.primary, fontFamily: 'Cairo'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Obx(() => _OrderConfirmButton(
-              onConfirm: _startCountdown,
-              isLoading: cartController.isPlacingOrder.value,
-              disabled: cartController.hasActiveOrder,
-            )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(bool isDark, Color themeTextColor, Color themeTextSecColor, String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 13, color: themeTextSecColor, fontFamily: 'Cairo', fontWeight: FontWeight.bold),
-        ),
-        Text(
-          value,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: themeTextColor, fontFamily: 'Cairo'),
-        ),
-      ],
     );
   }
 
@@ -623,14 +463,14 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 const Icon(LucideIcons.userX, size: 48, color: AppTheme.textSecondary),
                 const SizedBox(height: 16),
-                const Text(
-                  'يرجى تسجيل الدخول',
+                Text(
+                  'please_sign_in'.tr,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontFamily: 'Cairo'),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'يجب عليك إنشاء حساب أو تسجيل الدخول لإتمام عملية الشراء.',
+                Text(
+                  'sign_in_required'.tr,
                   style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, fontFamily: 'Cairo'),
                   textAlign: TextAlign.center,
                 ),
@@ -646,17 +486,17 @@ class _CartScreenState extends State<CartScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'تسجيل الدخول / إنشاء حساب',
+                  child: Text(
+                    'sign_in_or_create'.tr,
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'إلغاء',
-                    style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                  child: Text(
+                    'cancel'.tr,
+                    style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
                   ),
                 ),
               ],
@@ -664,41 +504,6 @@ class _CartScreenState extends State<CartScreen> {
           ),
         );
       },
-    );
-  }
-}
-
-class _OrderConfirmButton extends StatelessWidget {
-  final VoidCallback onConfirm;
-  final bool isLoading;
-  final bool disabled;
-
-  const _OrderConfirmButton({required this.onConfirm, required this.isLoading, this.disabled = false});
-
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return Container(
-        height: 54,
-        width: double.infinity,
-        decoration: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(18)),
-        child: const Center(child: CircularProgressIndicator(color: Colors.white)),
-      );
-    }
-
-    return ElevatedButton(
-      onPressed: disabled ? null : onConfirm,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: disabled ? Colors.grey : AppTheme.primary,
-        disabledBackgroundColor: Colors.grey.shade300,
-        minimumSize: const Size(double.infinity, 54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        elevation: 0,
-      ),
-      child: Text(
-        disabled ? 'لديك طلب نشط' : 'تأكيد الطلب',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: disabled ? Colors.grey.shade600 : Colors.white, fontFamily: 'Cairo'),
-      ),
     );
   }
 }

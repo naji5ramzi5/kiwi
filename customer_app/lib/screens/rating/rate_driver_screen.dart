@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_theme.dart';
 
@@ -24,28 +25,102 @@ class RateDriverScreen extends StatefulWidget {
 class _RateDriverScreenState extends State<RateDriverScreen> {
   int _rating = 0;
   int _hoverRating = 0;
+  int _branchRating = 0;
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmitting = false;
+
+  // product_id -> rating
+  final Map<String, int> _productRatings = {};
+  List<Map<String, dynamic>> _orderProducts = [];
+  String? _branchId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOrderProducts();
+  }
+
+  Future<void> _loadOrderProducts() async {
+    try {
+      final order = await Supabase.instance.client
+          .from('orders')
+          .select('branch_id, order_items(product_id, product_name, image_url, products(id, name, image, unit))')
+          .eq('id', widget.orderId)
+          .single();
+      _branchId = order['branch_id']?.toString();
+      final items = (order['order_items'] as List? ?? []);
+      final products = <Map<String, dynamic>>[];
+      for (final item in items) {
+        final p = item['products'] is Map ? item['products'] as Map<String, dynamic> : null;
+        final productId = (p?['id'] ?? item['product_id'])?.toString() ?? '';
+        if (productId.isEmpty) continue;
+        products.add({
+          'product_id': productId,
+          'name': (p?['name'] ?? item['product_name'] ?? 'product_fallback'.tr).toString(),
+          'image': (p?['image'] ?? item['image_url'] ?? '').toString(),
+        });
+      }
+      if (mounted) setState(() => _orderProducts = products);
+    } catch (e) {
+      // non-fatal: product rating is optional
+      print('Error loading order products: $e');
+    }
+  }
+
   Future<void> _submitRating() async {
     if (_rating == 0) return;
     setState(() => _isSubmitting = true);
 
     try {
-      final user = Supabase.instance.client.auth.currentUser;
+      final client = Supabase.instance.client;
+      final user = client.auth.currentUser;
       if (user == null) return;
 
-      await Supabase.instance.client.from('driver_ratings').insert({
+      // Driver rating
+      await client.from('driver_ratings').insert({
         'order_id': widget.orderId,
         'driver_id': widget.driverId,
-        'user_id': user.id,
+        'customer_id': user.id,
         'rating': _rating,
-        'comment': _commentController.text.trim(),
+        'review': _commentController.text.trim(),
       });
+
+      // Product ratings
+      for (final p in _orderProducts) {
+        final r = _productRatings[p['product_id']];
+        if (r != null && r > 0) {
+          try {
+            await client.from('product_ratings').insert({
+              'order_id': widget.orderId,
+              'product_id': p['product_id'],
+              'user_id': user.id,
+              if (_branchId != null) 'branch_id': _branchId,
+              'rating': r,
+            });
+          } catch (e) {
+            print('Product rating insert failed: $e');
+          }
+        }
+      }
+
+      // Branch rating
+      if (_branchRating > 0 && _branchId != null) {
+        try {
+          await client.from('branch_ratings').insert({
+            'order_id': widget.orderId,
+            'branch_id': _branchId,
+            'user_id': user.id,
+            'rating': _branchRating,
+          });
+        } catch (e) {
+          print('Branch rating insert failed: $e');
+        }
+      }
 
       if (mounted) {
         Get.snackbar(
-          'شكراً لك!',
-          'تقييمك يساعدنا في تحسين الخدمة',
+          'thank_you'.tr,
+          'rating_helps'.tr,
           backgroundColor: AppTheme.primary,
           colorText: Colors.white,
           snackPosition: SnackPosition.TOP,
@@ -54,8 +129,8 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
       }
     } catch (e) {
       Get.snackbar(
-        'حدث خطأ',
-        'لم نتمكن من حفظ تقييمك',
+        'error_occurred_short'.tr,
+        'rating_save_failed'.tr,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -107,21 +182,21 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.1),
+                        color: AppTheme.emerald.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.check_circle_rounded,
-                        color: Color(0xFF10B981),
+                        color: AppTheme.emerald,
                         size: 48,
                       ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    const Text(
-                      'تم التوصيل بنجاح!',
-                      style: TextStyle(
+                    Text(
+                      'delivery_successful'.tr,
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         fontFamily: 'Cairo',
@@ -131,7 +206,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     const SizedBox(height: 8),
 
                     Text(
-                      'كيف كانت تجربتك مع المندوب؟',
+                      'driver_experience'.tr,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -147,7 +222,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: const Color(0xFF10B981).withOpacity(0.3),
+                          color: AppTheme.emerald.withOpacity(0.3),
                           width: 2,
                         ),
                       ),
@@ -186,7 +261,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     const SizedBox(height: 8),
 
                     Text(
-                      'مندوب توصيل',
+                      'delivery_driver'.tr,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade500,
@@ -227,17 +302,17 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     const SizedBox(height: 8),
 
                     Text(
-                      _rating == 0 ? 'اضغط على نجمة للتقييم' :
-                      _rating == 1 ? 'سيء' :
-                      _rating == 2 ? 'مقبول' :
-                      _rating == 3 ? 'جيد' :
-                      _rating == 4 ? 'جيد جداً' :
-                      'ممتاز',
+                      _rating == 0 ? 'tap_star_rate'.tr :
+                      _rating == 1 ? 'rating_bad'.tr :
+                      _rating == 2 ? 'rating_acceptable'.tr :
+                      _rating == 3 ? 'rating_good'.tr :
+                      _rating == 4 ? 'rating_very_good'.tr :
+                      'rating_excellent'.tr,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: _rating >= 4
-                            ? const Color(0xFF10B981)
+                            ? AppTheme.emerald
                             : _rating >= 2
                                 ? Colors.amber.shade700
                                 : Colors.red.shade400,
@@ -263,7 +338,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                         textDirection: TextDirection.rtl,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: 'أضف تعليقاً (اختياري)',
+                          hintText: 'add_comment'.tr,
                           hintStyle: TextStyle(
                             color: Colors.grey.shade400,
                             fontFamily: 'Cairo',
@@ -281,6 +356,133 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
 
                     const SizedBox(height: 24),
 
+                    // Branch rating
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.surfaceDark : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'branch_rating'.tr,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(5, (index) {
+                              final star = index + 1;
+                              final filled = star <= _branchRating;
+                              return GestureDetector(
+                                onTap: () => setState(() => _branchRating = star),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Icon(
+                                    filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                                    size: 36,
+                                    color: filled ? Colors.amber : Colors.grey.shade300,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Product ratings
+                    if (_orderProducts.isNotEmpty) ...[
+                      Text(
+                        'product_ratings'.tr,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ..._orderProducts.map((p) => Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.surfaceDark : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            if ((p['image'] as String).isNotEmpty)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  p['image'] as String,
+                                  width: 44, height: 44, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 44, height: 44,
+                                    color: AppTheme.primary.withOpacity(0.1),
+                                    child: const Icon(LucideIcons.image, size: 18, color: AppTheme.primary),
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                width: 44, height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(LucideIcons.package, size: 18, color: AppTheme.primary),
+                              ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                p['name'] as String,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Cairo',
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Row(
+                              children: List.generate(5, (index) {
+                                final star = index + 1;
+                                final current = _productRatings[p['product_id']] ?? 0;
+                                final filled = star <= current;
+                                return GestureDetector(
+                                  onTap: () => setState(() => _productRatings[p['product_id']] = star),
+                                  child: Icon(
+                                    filled ? Icons.star_rounded : Icons.star_outline_rounded,
+                                    size: 24,
+                                    color: filled ? Colors.amber : Colors.grey.shade300,
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      )),
+                    ],
+
+                    const SizedBox(height: 24),
+
                     // Submit button
                     SizedBox(
                       width: double.infinity,
@@ -290,10 +492,10 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                             ? _submitRating
                             : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: AppTheme.emerald,
                           foregroundColor: Colors.white,
                           disabledBackgroundColor:
-                              const Color(0xFF10B981).withOpacity(0.4),
+                              AppTheme.emerald.withOpacity(0.4),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -308,9 +510,9 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text(
-                                'إرسال التقييم',
-                                style: TextStyle(
+                            : Text(
+                                'submit_rating'.tr,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
                                   fontFamily: 'Cairo',
@@ -325,7 +527,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     TextButton(
                       onPressed: () => Get.back(result: true),
                       child: Text(
-                        'تخطي',
+                        'skip'.tr,
                         style: TextStyle(
                           color: Colors.grey.shade500,
                           fontFamily: 'Cairo',
@@ -345,3 +547,4 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
     );
   }
 }
+

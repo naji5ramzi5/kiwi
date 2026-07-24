@@ -36,6 +36,8 @@ export default function DeliveryZones() {
   const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingZone, setEditingZone] = useState<Partial<Zone> | null>(null)
+  const [zonePage, setZonePage] = useState(1)
+  const ZONE_PAGE_SIZE = 10
 
   useEffect(() => {
     fetchBranches()
@@ -225,7 +227,8 @@ export default function DeliveryZones() {
                   <div style={{ fontSize: 11, marginTop: 4 }}>ارسم منطقة على الخريطة أو اضغط "منطقة جديدة"</div>
                 </div>
               ) : (
-                zones.map(zone => (
+                <>
+                {zones.slice((zonePage - 1) * ZONE_PAGE_SIZE, zonePage * ZONE_PAGE_SIZE).map(zone => (
                   <div key={zone.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--gray50)', opacity: zone.is_active ? 1 : 0.5 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                       <div style={{ width: 12, height: 12, borderRadius: '50%', background: zone.color || '#10b981', flexShrink: 0 }} />
@@ -249,7 +252,17 @@ export default function DeliveryZones() {
                       </span>
                     </div>
                   </div>
-                ))
+                ))}
+                {Math.ceil(zones.length / ZONE_PAGE_SIZE) > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 4, padding: '12px 0' }}>
+                    <button className="btn btn-ghost btn-sm" disabled={zonePage <= 1} onClick={() => setZonePage(p => p - 1)}>السابق</button>
+                    {Array.from({ length: Math.ceil(zones.length / ZONE_PAGE_SIZE) }, (_, i) => (
+                      <button key={i} className={`btn btn-sm ${zonePage === i + 1 ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setZonePage(i + 1)}>{i + 1}</button>
+                    ))}
+                    <button className="btn btn-ghost btn-sm" disabled={zonePage >= Math.ceil(zones.length / ZONE_PAGE_SIZE)} onClick={() => setZonePage(p => p + 1)}>التالي</button>
+                  </div>
+                )}
+                </>
               )}
             </div>
           </div>

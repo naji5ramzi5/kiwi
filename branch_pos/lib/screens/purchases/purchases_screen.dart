@@ -137,6 +137,12 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   }
 
   @override
+  void dispose() {
+    barcodeController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,

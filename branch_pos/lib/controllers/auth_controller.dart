@@ -27,27 +27,36 @@ class AuthController extends GetxController {
   Future<bool> activateWithCode(String code, {bool silent = false}) async {
     try {
       if (!silent) isLoading(true);
-      
-      // Attempting to select by access_code
+
+      if (code.trim().isEmpty) {
+        if (!silent) {
+          Get.snackbar('تنبيه', 'يرجى إدخال رمز التفعيل',
+              backgroundColor: Colors.orange, colorText: Colors.white);
+        }
+        return false;
+      }
+
       final response = await supabase
           .from('branches')
-          .select()
-          .eq('access_code', code);
+          .select('id, name, access_code')
+          .eq('access_code', code.trim());
 
       if (response != null && response.isNotEmpty) {
         final branch = response.first;
-        final branchId = branch['id'];
-        final branchName = branch['name'];
+        final branchId = branch['id'] as String;
+        final branchName = branch['name'] ?? 'فرع غير معرف';
 
-        final cleanId = branchId.toString().replaceAll('-', '');
+        final cleanId = branchId.replaceAll('-', '');
         final email = 'branch_${cleanId.substring(0, 10)}@freshapp.com';
-        final password = 'FreshPOS_' + cleanId.substring(0, 8) + '!';
+        final password = 'FreshPOS_${cleanId.substring(0, 8)}!';
 
         AuthResponse authRes;
         try {
-          authRes = await supabase.auth.signInWithPassword(email: email, password: password);
+          authRes = await supabase.auth.signInWithPassword(
+              email: email, password: password);
         } catch (_) {
-          authRes = await supabase.auth.signUp(email: email, password: password);
+          authRes =
+              await supabase.auth.signUp(email: email, password: password);
         }
 
         if (authRes.user != null) {
@@ -62,35 +71,58 @@ class AuthController extends GetxController {
 
         currentBranchId.value = branchId;
         currentBranchName.value = branchName;
-        
-        // Save code for future runs
+
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_code', code);
-        
+        await prefs.setString('access_code', code.trim());
+
         isLoggedIn.value = true;
         return true;
       } else {
-        if (!silent) Get.snackbar('تنبيه', 'رمز التفعيل هذا غير موجود في النظام. يرجى التأكد من الرمز الصحيح من لوحة التحكم.', 
-          backgroundColor: Colors.orange, colorText: Colors.white);
+        if (!silent) {
+          Get.snackbar('تنبيه',
+              'رمز التفعيل "$code" غير موجود في النظام. يرجى التأكد من الرمز الصحيح من لوحة التحكم.',
+              backgroundColor: Colors.orange,
+              colorText: Colors.white,
+              duration: const Duration(seconds: 5));
+        }
         return false;
       }
-    } catch (e) {
-      String errorMsg = e.toString();
-      
-      if (errorMsg.contains('access_code')) {
-        errorMsg = "خطأ في قاعدة البيانات: لم يتم العثور على عمود الرمز. \nحل المشكلة: يرجى تشغيل كود SQL في لوحة تحكم Supabase لتحديث المخطط.";
+    } on PostgrestException catch (e) {
+      String errorMsg;
+      if (e.message.contains('relation') && e.message.contains('does not exist')) {
+        errorMsg = 'خطأ: جدول الفروع غير موجود في قاعدة البيانات.';
+      } else if (e.message.contains('column') && e.message.contains('does not exist')) {
+        errorMsg = 'خطأ في هيكل قاعدة البيانات. يرجى التحقق من وجود عمود "access_code" في جدول branches.';
+      } else {
+        errorMsg = 'خطأ في قاعدة البيانات: ${e.message}';
       }
 
-      if (!silent) Get.snackbar('خطأ في الاتصال', errorMsg, 
-        snackPosition: SnackPosition.BOTTOM, 
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 15),
-        mainButton: TextButton(
-          onPressed: () => Get.back(),
-          child: const Text('فهمت', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        )
-      );
+      if (!silent) {
+        Get.snackbar('خطأ', errorMsg,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 8));
+      }
+      return false;
+    } catch (e) {
+      String errorMsg = e.toString();
+
+      if (errorMsg.contains('SocketException') || errorMsg.contains('Connection')) {
+        errorMsg = 'لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة.';
+      } else if (errorMsg.contains('timeout')) {
+        errorMsg = 'انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى.';
+      } else if (errorMsg.contains('API key')) {
+        errorMsg = 'خطأ في مفتاح API. يرجى التحقق من إعدادات الاتصال.';
+      }
+
+      if (!silent) {
+        Get.snackbar('خطأ في الاتصال', errorMsg,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 8));
+      }
       return false;
     } finally {
       if (!silent) isLoading(false);
@@ -104,5 +136,7 @@ class AuthController extends GetxController {
       await supabase.auth.signOut();
     } catch (_) {}
     isLoggedIn.value = false;
+    currentBranchId.value = '';
+    currentBranchName.value = '';
   }
 }

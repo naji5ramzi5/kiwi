@@ -12,6 +12,11 @@ import '../models/invoice_settings.dart';
 class InvoiceService {
   static const _arabicFont = 'Tajawal';
 
+  String _shortId(Invoice invoice) {
+    final id = invoice.id ?? invoice.orderId ?? '';
+    return id.length > 8 ? id.substring(0, 8) : id;
+  }
+
   Future<InvoiceSettings> _loadSettings() => InvoiceSettings.load();
 
   Future<Uint8List> generatePdf(Invoice invoice) async {
@@ -41,7 +46,7 @@ class InvoiceService {
                 pw.SizedBox(height: 6),
                 pw.Text(invoice.branchName, style: pw.TextStyle(font: font, fontSize: 12)),
                 pw.SizedBox(height: 4),
-                pw.Text('رقم الفاتورة: ${invoice.id.length > 8 ? invoice.id.substring(0, 8) : invoice.id}',
+                pw.Text('رقم الفاتورة: ${_shortId(invoice)}',
                     style: pw.TextStyle(font: font, fontSize: 10)),
                 pw.Text('التاريخ: ${_formatDate(invoice.createdAt)}',
                     style: pw.TextStyle(font: font, fontSize: 10)),
@@ -119,7 +124,7 @@ class InvoiceService {
     final pdf = await generatePdf(invoice);
     await Printing.layoutPdf(
       onLayout: (format) async => pdf,
-      name: 'invoice_${invoice.id.length > 8 ? invoice.id.substring(0, 8) : invoice.id}',
+      name: 'invoice_${_shortId(invoice)}',
     );
   }
 
@@ -159,7 +164,7 @@ class InvoiceService {
     final pdf = await generatePdf(invoice);
     await Printing.sharePdf(
       bytes: pdf,
-      filename: 'invoice_${invoice.id.length > 8 ? invoice.id.substring(0, 8) : invoice.id}.pdf',
+      filename: 'invoice_${_shortId(invoice)}.pdf',
     );
   }
 

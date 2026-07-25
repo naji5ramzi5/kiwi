@@ -1,6 +1,6 @@
 class Invoice {
-  final String id;
-  final String orderId;
+  final String? id;
+  final String? orderId;
   final String branchId;
   final String branchName;
   final List<InvoiceItem> items;
@@ -14,8 +14,8 @@ class Invoice {
   final String? cashierName;
 
   Invoice({
-    required this.id,
-    required this.orderId,
+    this.id,
+    this.orderId,
     required this.branchId,
     required this.branchName,
     required this.items,
@@ -32,8 +32,8 @@ class Invoice {
   double get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'order_id': orderId,
+    if (id != null && id!.isNotEmpty) 'id': id,
+    if (orderId != null && orderId!.isNotEmpty) 'order_id': orderId,
     'branch_id': branchId,
     'branch_name': branchName,
     'items': items.map((e) => e.toJson()).toList(),

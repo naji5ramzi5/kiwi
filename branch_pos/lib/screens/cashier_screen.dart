@@ -128,19 +128,6 @@ class _CashierScreenState extends State<CashierScreen> {
       return;
     }
 
-    final confirm = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('تأكيد البيع'),
-        content: Text('المجموع: ${_total.toStringAsFixed(0)} د.ع\nطريقة الدفع: $_paymentMethod'),
-        actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('إلغاء')),
-          ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('تأكيد')),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
     setState(() => _isCheckingOut = true);
     try {
       final order = await _supabase.createOrder(
@@ -154,7 +141,6 @@ class _CashierScreenState extends State<CashierScreen> {
       );
 
       final invoice = Invoice(
-        id: UniqueKey().toString(),
         orderId: order['id'],
         branchId: _auth.currentBranchId.value,
         branchName: _auth.currentBranchName.value,

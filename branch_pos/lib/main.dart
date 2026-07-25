@@ -15,19 +15,21 @@ void main() async {
   await windowManager.ensureInitialized();
 
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(1200, 800),
+    size: Size(1000, 700),
     minimumSize: Size(900, 650),
+    maximumSize: Size(1920, 1080),
     center: true,
     backgroundColor: Colors.white,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
+    windowButtonVisibility: false,
     title: 'Kiwi Fresh - نظام إدارة الفرع',
   );
 
   windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.setAsFrameless();
+    await windowManager.setAlwaysOnTop(false);
     await windowManager.setAlignment(Alignment.center);
-    await windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: false);
+    await windowManager.setSize(const Size(1000, 700));
     await windowManager.show();
     await windowManager.focus();
   });

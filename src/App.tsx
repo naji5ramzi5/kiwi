@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { supabase } from './lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
@@ -63,6 +64,26 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#1f2937',
+            color: '#fff',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontFamily: 'Cairo, sans-serif',
+            padding: '12px 20px',
+          },
+          success: {
+            iconTheme: { primary: '#10b981', secondary: '#fff' },
+          },
+          error: {
+            iconTheme: { primary: '#ef4444', secondary: '#fff' },
+          },
+        }}
+      />
       <ErrorBoundary>
       <Routes>
         <Route path="/" element={

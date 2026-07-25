@@ -9,6 +9,7 @@ import {
   AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']
 
@@ -70,7 +71,7 @@ export default function BranchDetail() {
       type: type
     }])
     if (!error) {
-      alert('تم إرسال الإشعار بنجاح للفرع')
+      toast.success('تم إرسال الإشعار بنجاح للفرع')
       setShowNotifModal(false)
       setNotifText('')
     }

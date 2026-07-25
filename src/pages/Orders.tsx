@@ -117,7 +117,7 @@ export default function Orders() {
 
     if (error) {
       setOrders(previousOrders);
-      alert('فشل في تحديث حالة الطلب');
+      toast.error('فشل في تحديث حالة الطلب');
     } else {
       // Log the status change to the audit trail
       try {

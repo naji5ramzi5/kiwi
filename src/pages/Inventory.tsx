@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Save, Package, AlertTriangle, CheckCircle2, History, ArrowUpRight, ArrowDownRight, RefreshCw, Printer } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 import type { InventoryWithProduct, Branch } from '../lib/types'
 
 export default function Inventory() {
@@ -64,9 +65,9 @@ export default function Inventory() {
       .eq('id', id)
     
     if (error) {
-      alert('خطأ في التحديث: ' + error.message)
+      toast.error('خطأ في التحديث: ' + error.message)
     } else {
-      // تحديث الحالة محلياً لسرعة الاستجابة
+      toast.success('تم تحديث المخزون بنجاح')
       setInventory(prev => prev.map(item => item.id === id ? { ...item, actual_stock, buffer_limit } : item))
     }
     setSaving(null)
@@ -88,9 +89,9 @@ export default function Inventory() {
     }]);
 
     if (error) {
-      alert('فشل تسجيل التالف: ' + error.message);
+      toast.error('فشل تسجيل التالف: ' + error.message);
     } else {
-      alert('تم تسجيل التالف وتحديث المخزون بنجاح ✅');
+      toast.success('تم تسجيل التالف وتحديث المخزون بنجاح');
       fetchInventory();
     }
   }

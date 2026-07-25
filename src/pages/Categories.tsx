@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Tag, Edit2, Trash2, Image as ImageIcon, LayoutGrid, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 import type { Category } from '../lib/types'
 
 export default function Categories() {
@@ -25,7 +26,7 @@ export default function Categories() {
   }
 
   async function saveCategory(form: Partial<Category>) {
-    if (!form.name) return alert('يرجى إدخال اسم التصنيف')
+    if (!form.name) return toast.error('يرجى إدخال اسم التصنيف')
     
     const payload = {
       name: form.name,
@@ -43,8 +44,9 @@ export default function Categories() {
     }
 
     if (error) {
-      alert('خطأ أثناء الحفظ: ' + error.message)
+      toast.error('خطأ أثناء الحفظ: ' + error.message)
     } else {
+      toast.success('تم حفظ التصنيف بنجاح')
       fetchCategories()
       setModal(null)
     }
@@ -53,8 +55,8 @@ export default function Categories() {
   async function deleteCategory(id: string) {
     if (!confirm('هل أنت متأكد؟ سيؤدي هذا لإزالة التصنيف من جميع المنتجات المرتبطة به.')) return
     const { error } = await supabase.from('categories').delete().eq('id', id)
-    if (error) alert('خطأ في الحذف: ' + error.message)
-    else fetchCategories()
+    if (error) toast.error('خطأ في الحذف: ' + error.message)
+    else { toast.success('تم حذف التصنيف'); fetchCategories() }
   }
 
   return (

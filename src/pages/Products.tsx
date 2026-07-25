@@ -49,7 +49,7 @@ export default function Products() {
   async function removeProduct(id: string) {
     if (!confirm('هل أنت متأكد من حذف هذا المنتج من الكتالوج المركزي؟')) return
     const { error } = await supabase.from('products').delete().eq('id', id)
-    if (error) alert('فشل الحذف: ' + error.message)
+    if (error) toast.error('فشل الحذف: ' + error.message)
     else fetchData()
   }
 
@@ -339,7 +339,7 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
                     setForm(p => ({...p, image_url: data.publicUrl}));
                   }
                 } catch(err: unknown) {
-                  alert('فشل رفع الصورة: ' + ((err as Error).message));
+                  toast.error('فشل رفع الصورة: ' + ((err as Error).message));
                 } finally {
                   setLoading(false);
                 }

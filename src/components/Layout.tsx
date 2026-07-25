@@ -245,7 +245,7 @@ export default function Layout() {
                 border: '1px solid var(--gray100)', marginBottom: 8, overflow: 'hidden', zIndex: 1000
               }}>
                 <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)' }}
-                  onClick={() => { setShowUserMenu(false) }}>
+                  onClick={() => { navigate('/profile'); setShowUserMenu(false) }}>
                   <User size={16} /> الملف الشخصي
                 </button>
                 <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)' }}

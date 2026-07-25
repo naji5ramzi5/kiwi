@@ -23,6 +23,7 @@ import Login from './pages/Login'
 import { GeoFenceStatus } from './components/GeoFenceStatus'
 import OrderForm from './pages/OrderForm'
 import DeliveryZones from './pages/DeliveryZones'
+import Profile from './pages/Profile'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="ratings" element={<Ratings />} />
           <Route path="ai-chat" element={<AIChat />} />
           <Route path="checkout" element={<OrderForm />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
       </ErrorBoundary>

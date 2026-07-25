@@ -1,14 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
-  FileText, 
-  Plus, 
-  Search, 
-  User, 
-  DollarSign, 
-  Package,
-  MoreVertical,
-  X
+  FileText, Plus, Search, User, DollarSign, Package,
+  MoreVertical, X, TrendingUp, ShoppingCart
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -31,7 +25,8 @@ interface Purchase {
   supplier_name: string;
   total_amount: number;
   status: string;
-  items_count?: number;
+  total_value?: number;
+  branches?: { name: string };
 }
 
 const Purchases = () => {
@@ -40,22 +35,19 @@ const Purchases = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
-  
-  // New Purchase Form State
   const [supplierName, setSupplierName] = useState('');
   const [cart, setCart] = useState<PurchaseItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [page, setPage] = useState(1);
+  const [productSearch, setProductSearch] = useState('');
   const PAGE_SIZE = 15;
 
   const fetchBranches = async () => {
     const { data } = await supabase.from('branches').select('id, name');
     setBranches(data || []);
-    if (data && data.length > 0) {
-      setSelectedBranchId(data[0].id);
-    }
+    if (data && data.length > 0) setSelectedBranchId(data[0].id);
   };
 
   const fetchPurchases = async () => {
@@ -64,7 +56,6 @@ const Purchases = () => {
         .from('purchases')
         .select('*, branches(name)')
         .order('created_at', { ascending: false });
-
       if (error && error.code !== '42P01') throw error;
       setPurchases(data || []);
     } catch (err) {
@@ -117,19 +108,21 @@ const Purchases = () => {
 
   const totalAmount = cart.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
 
-  const filteredPurchases = purchases.filter(p => !search || p.supplier_name.includes(search));
+  const filteredPurchases = purchases.filter(p => !search || p.supplier_name?.includes(search));
   const totalPages = Math.max(1, Math.ceil(filteredPurchases.length / PAGE_SIZE));
   const pagedPurchases = filteredPurchases.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const filteredProducts = products.filter(p => 
+    !productSearch || p.name.includes(productSearch)
+  );
 
   const savePurchase = async () => {
     if (!supplierName || cart.length === 0 || !selectedBranchId) {
       toast.error('يرجى إدخال اسم المورد واختيار الفرع وأصناف الفاتورة');
       return;
     }
-
     setSaving(true);
     try {
-      // 1. Create Purchase
       const { data: purchase, error: pError } = await supabase
         .from('purchases')
         .insert({
@@ -140,10 +133,8 @@ const Purchases = () => {
         })
         .select()
         .single();
-
       if (pError) throw pError;
 
-      // 2. Create Purchase Items
       const items = cart.map(item => ({
         purchase_id: purchase.id,
         product_id: item.product_id,
@@ -151,14 +142,9 @@ const Purchases = () => {
         unit_cost: item.unit_cost,
         total_cost: item.quantity * item.unit_cost
       }));
-
       const { error: iError } = await supabase.from('purchase_items').insert(items);
       if (iError) throw iError;
 
-      // 3. Update Global Inventory (Assuming a global inventory table or simple increment)
-      // In this system, we'd ideally trigger a DB function, but we can do a simple update here
-      // For each item, update the product stock (if we have a stock field in products)
-      
       toast.success('تم تسجيل فاتورة الشراء وتحديث المخزون');
       setShowModal(false);
       setCart([]);
@@ -172,175 +158,158 @@ const Purchases = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">المشتريات والتوريد</h1>
-          <p className="text-gray-500">إدارة فواتير الموردين وتحديث المخزون المركزي</p>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '24px 32px 0', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h1 className="brand-name" style={{ fontSize: 24, margin: 0 }}>المشتريات والتوريد</h1>
+            <p className="brand-sub" style={{ margin: '4px 0 0' }}>إدارة فواتير الموردين وتحديث المخزون المركزي</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={18} /> إضافة فاتورة شراء
+          </button>
         </div>
 
-        <button 
-          onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-        >
-          <Plus size={20} />
-          إضافة فاتورة شراء
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-sm mb-6">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-        <input
-          type="text"
-          placeholder="بحث بالمورد..."
-          className="w-full pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <DollarSign size={28} />
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">إجمالي المشتريات</p>
-            <h3 className="text-2xl font-black text-gray-900">
-              {purchases.reduce((s, p) => s + p.total_amount, 0).toLocaleString()} <span className="text-xs font-normal">د.ع</span>
-            </h3>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-            <FileText size={28} />
-          </div>
-          <div>
-            <p className="text-gray-500 text-sm">عدد الفواتير</p>
-            <h3 className="text-2xl font-black text-gray-900">{purchases.length} <span className="text-xs font-normal">فاتورة</span></h3>
+        {/* Search + Stats */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'center' }}>
+          <div className="icon-btn" style={{ flex: 1, maxWidth: 300, gap: 8, padding: '0 16px' }}>
+            <Search size={16} />
+            <input 
+              placeholder="بحث بالمورد..." 
+              style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, fontSize: 13 }}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
-            <Package size={28} />
+        {/* Stats Cards */}
+        <div className="stats-grid" style={{ marginBottom: 20 }}>
+          <div className="stat-card stat-green">
+            <div className="stat-icon-wrap" style={{ background: 'var(--g50)' }}><DollarSign color="var(--g600)" /></div>
+            <div className="stat-label">إجمالي المشتريات</div>
+            <div className="stat-value">{purchases.reduce((s, p) => s + (p.total_value || p.total_amount || 0), 0).toLocaleString()} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span></div>
           </div>
-          <div>
-            <p className="text-gray-500 text-sm">الموردين النشطين</p>
-            <h3 className="text-2xl font-black text-gray-900">
-              {new Set(purchases.map(p => p.supplier_name)).size} <span className="text-xs font-normal">مورد</span>
-            </h3>
+          <div className="stat-card stat-blue">
+            <div className="stat-icon-wrap" style={{ background: '#dbeafe' }}><FileText color="#2563eb" /></div>
+            <div className="stat-label">عدد الفواتير</div>
+            <div className="stat-value">{purchases.length} <span style={{ fontSize: 12, fontWeight: 500 }}>فاتورة</span></div>
+          </div>
+          <div className="stat-card stat-amber">
+            <div className="stat-icon-wrap" style={{ background: '#fff7ed' }}><Package color="#ea580c" /></div>
+            <div className="stat-label">الموردين النشطين</div>
+            <div className="stat-value">{new Set(purchases.map(p => p.supplier_name)).size} <span style={{ fontSize: 12, fontWeight: 500 }}>مورد</span></div>
           </div>
         </div>
       </div>
 
-      {/* Purchases Table */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right">
-            <thead className="bg-gray-50/50">
-              <tr className="text-gray-400 text-xs uppercase font-bold">
-                <th className="px-6 py-4">رقم الفاتورة</th>
-                <th className="px-6 py-4">المورد</th>
-                <th className="px-6 py-4">الفرع المستلم</th>
-                <th className="px-6 py-4">التاريخ</th>
-                <th className="px-6 py-4">الإجمالي</th>
-                <th className="px-6 py-4 text-center">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? (
-                <tr><td colSpan={6} className="py-20 text-center"><div className="loader mx-auto"></div></td></tr>
-              ) : purchases.length === 0 ? (
+      {/* Scrollable Table */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '0 32px 24px' }}>
+        <div className="card" style={{ margin: 0 }}>
+          <div className="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={6} className="py-20 text-center text-gray-400">
-                    <FileText size={40} className="mx-auto mb-4 opacity-20" />
-                    لا توجد فواتير مسجلة بعد
-                  </td>
+                  <th>رقم الفاتورة</th>
+                  <th>المورد</th>
+                  <th>الفرع المستلم</th>
+                  <th>التاريخ</th>
+                  <th>الإجمالي</th>
+                  <th style={{ textAlign: 'center' }}>الإجراءات</th>
                 </tr>
-              ) : (
-                pagedPurchases.map(p => (
-                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-mono text-gray-400">#{p.id.substring(0, 8)}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{p.supplier_name}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{((p as Record<string, unknown> & { branches?: Record<string, unknown> }).branches?.name as string) || 'مستودع مركزي'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(p.created_at).toLocaleDateString('ar-IQ')}</td>
-                    <td className="px-6 py-4 font-black text-emerald-700">{(((p as Record<string, unknown>).total_value as number) ?? p.total_amount ?? 0).toLocaleString()} د.ع</td>
-                    <td className="px-6 py-4 text-center">
-                      <button className="p-2 text-gray-400 hover:text-gray-900"><MoreVertical size={18} /></button>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40 }}><div className="loader" style={{ margin: 'auto' }}></div></td></tr>
+                ) : pagedPurchases.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--gray400)', padding: '40px 0' }}>
+                      <FileText size={40} style={{ marginBottom: 12, opacity: 0.2, display: 'block', margin: '0 auto 12px' }} />
+                      لا توجد فواتير مسجلة بعد
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  pagedPurchases.map(p => (
+                    <tr key={p.id}>
+                      <td style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--gray400)' }}>#{p.id.substring(0, 8)}</td>
+                      <td style={{ fontWeight: 700 }}>{p.supplier_name}</td>
+                      <td style={{ fontSize: 13, color: 'var(--gray600)' }}>{p.branches?.name || 'مستودع مركزي'}</td>
+                      <td style={{ fontSize: 13, color: 'var(--gray500)' }}>{new Date(p.created_at).toLocaleDateString('ar-IQ')}</td>
+                      <td style={{ fontWeight: 800, color: 'var(--g700)' }}>{(p.total_value || p.total_amount || 0).toLocaleString()} د.ع</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button className="btn btn-icon btn-ghost btn-sm"><MoreVertical size={18} /></button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 24 }}>
-          <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>السابق</button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button key={i} className={`btn btn-sm ${page === i + 1 ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(i + 1)}>{i + 1}</button>
-          ))}
-          <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>التالي</button>
-        </div>
-      )}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 20 }}>
+            <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>السابق</button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button key={i} className={`btn btn-sm ${page === i + 1 ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPage(i + 1)}>{i + 1}</button>
+            ))}
+            <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>التالي</button>
+          </div>
+        )}
+      </div>
 
       {/* Add Purchase Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 900, height: '85vh', display: 'flex', flexDirection: 'column' }}>
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--gray100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
               <div>
-                <h2 className="text-xl font-black text-gray-900">تسجيل فاتورة توريد جديدة</h2>
-                <p className="text-xs text-gray-500">قم باختيار المنتجات وتحديد الكميات المستلمة</p>
+                <h2 className="modal-title" style={{ margin: 0, fontSize: 18 }}>تسجيل فاتورة توريد جديدة</h2>
+                <p style={{ fontSize: 12, color: 'var(--gray500)', margin: '4px 0 0' }}>اختر المنتجات وحدد الكميات المستلمة</p>
               </div>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white rounded-xl transition-all">
-                <X size={24} className="text-gray-400" />
-              </button>
+              <button onClick={() => setShowModal(false)} className="btn btn-icon btn-ghost"><X size={20} /></button>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
               {/* Products Side */}
-              <div className="flex-1 p-6 overflow-y-auto border-l border-gray-100">
-                <div className="relative mb-6">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <div style={{ flex: 1, padding: 20, overflowY: 'auto', borderLeft: '1px solid var(--gray100)' }}>
+                <div className="icon-btn" style={{ gap: 8, padding: '0 14px', marginBottom: 16 }}>
+                  <Search size={16} />
                   <input 
-                    type="text" 
-                    placeholder="ابحث عن منتج لإضافته للفاتورة..." 
-                    className="w-full pr-10 pl-4 py-3 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500 transition-all"
+                    placeholder="ابحث عن منتج..." 
+                    style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, fontSize: 13 }}
+                    value={productSearch}
+                    onChange={e => setProductSearch(e.target.value)}
                   />
                 </div>
-                
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  {products.map(product => (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                  {filteredProducts.map(product => (
                     <button 
                       key={product.id}
                       onClick={() => addToCart(product)}
-                      className="p-4 bg-white border border-gray-100 rounded-2xl text-right hover:border-emerald-500 hover:shadow-md transition-all group"
+                      className="card"
+                      style={{ padding: 14, textAlign: 'right', cursor: 'pointer', transition: 'all .2s', border: '1px solid var(--gray100)' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--g400)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--gray100)'; e.currentTarget.style.boxShadow = 'none'; }}
                     >
-                      <h4 className="font-bold text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors">{product.name}</h4>
-                      <p className="text-xs text-gray-400">التكلفة الافتراضية: {product.cost?.toLocaleString() || 0} د.ع</p>
+                      <h4 style={{ fontWeight: 700, fontSize: 13, margin: '0 0 4px', color: 'var(--gray900)' }}>{product.name}</h4>
+                      <p style={{ fontSize: 11, color: 'var(--gray400)', margin: 0 }}>التكلفة: {(product.cost || 0).toLocaleString()} د.ع</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Cart Side */}
-              <div className="w-96 bg-gray-50/30 p-6 flex flex-col">
-                <div className="mb-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">الفرع المستهدف</label>
+              <div style={{ width: 320, padding: 20, overflowY: 'auto', background: 'var(--gray50)', flexShrink: 0 }}>
+                <div style={{ marginBottom: 16 }}>
+                  <label className="form-label">الفرع المستهدف</label>
                   <select
                     value={selectedBranchId}
                     onChange={(e) => setSelectedBranchId(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm font-bold text-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
+                    className="form-select"
                   >
                     {branches.map(b => (
                       <option key={b.id} value={b.id}>{b.name}</option>
@@ -348,70 +317,70 @@ const Purchases = () => {
                   </select>
                 </div>
 
-                <div className="mb-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">معلومات المورد</label>
-                  <div className="relative">
-                    <User className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <div style={{ marginBottom: 16 }}>
+                  <label className="form-label">اسم المورد</label>
+                  <div style={{ position: 'relative' }}>
+                    <User size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray400)' }} />
                     <input 
-                      type="text" 
+                      className="form-input"
+                      style={{ paddingRight: 36 }}
                       value={supplierName}
                       onChange={(e) => setSupplierName(e.target.value)}
-                      placeholder="اسم المورد أو الشركة..." 
-                      className="w-full pr-10 pl-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-500 transition-all"
+                      placeholder="اسم المورد أو الشركة..."
                     />
                   </div>
                 </div>
 
-                <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">أصناف الفاتورة ({cart.length})</label>
-                <div className="flex-1 overflow-y-auto space-y-3 mb-6">
+                <label className="form-label">أصناف الفاتورة ({cart.length})</label>
+                <div style={{ maxHeight: 250, overflowY: 'auto', marginBottom: 16 }}>
                   {cart.map(item => (
-                    <div key={item.product_id} className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-bold text-sm text-gray-900">{item.name}</span>
-                        <button onClick={() => removeFromCart(item.product_id)} className="text-red-400 hover:text-red-600"><X size={14} /></button>
+                    <div key={item.product_id} className="card" style={{ padding: 12, marginBottom: 8, border: '1px solid var(--gray100)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>{item.name}</span>
+                        <button onClick={() => removeFromCart(item.product_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                          <X size={14} color="#ef4444" />
+                        </button>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <input 
-                            type="number" 
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.product_id, parseFloat(e.target.value))}
-                            className="w-full p-2 bg-gray-50 border-none rounded-lg text-xs font-bold"
-                          />
-                        </div>
-                        <div className="text-xs text-gray-400">×</div>
-                        <div className="flex-1">
-                          <input 
-                            type="number" 
-                            value={item.unit_cost}
-                            onChange={(e) => {
-                              const newCost = parseFloat(e.target.value);
-                              setCart(cart.map(i => i.product_id === item.product_id ? { ...i, unit_cost: newCost } : i));
-                            }}
-                            className="w-full p-2 bg-gray-50 border-none rounded-lg text-xs font-bold text-emerald-600"
-                          />
-                        </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input 
+                          type="number" 
+                          value={item.quantity}
+                          onChange={(e) => updateQuantity(item.product_id, parseFloat(e.target.value))}
+                          className="form-input"
+                          style={{ flex: 1, padding: '6px 8px', fontSize: 12 }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--gray400)' }}>×</span>
+                        <input 
+                          type="number" 
+                          value={item.unit_cost}
+                          onChange={(e) => {
+                            const newCost = parseFloat(e.target.value);
+                            setCart(cart.map(i => i.product_id === item.product_id ? { ...i, unit_cost: newCost } : i));
+                          }}
+                          className="form-input"
+                          style={{ flex: 1, padding: '6px 8px', fontSize: 12, color: 'var(--g600)' }}
+                        />
                       </div>
                     </div>
                   ))}
                   {cart.length === 0 && (
-                    <div className="py-10 text-center text-gray-300 border-2 border-dashed border-gray-200 rounded-2xl text-sm">
-                      اختر منتجات من القائمة
+                    <div style={{ padding: 30, textAlign: 'center', color: 'var(--gray400)', border: '2px dashed var(--gray200)', borderRadius: 12, fontSize: 13 }}>
+                      <ShoppingCart size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
+                      <div>اختر منتجات من القائمة</div>
                     </div>
                   )}
                 </div>
 
-                <div className="p-4 bg-emerald-600 rounded-2xl text-white">
-                  <div className="flex justify-between items-center mb-1 opacity-80 text-xs">
-                    <span>إجمالي الفاتورة</span>
-                  </div>
-                  <div className="text-2xl font-black">{totalAmount.toLocaleString()} <span className="text-xs font-normal">د.ع</span></div>
+                <div style={{ padding: 16, background: 'var(--g600)', borderRadius: 12, color: 'white', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>إجمالي الفاتورة</div>
+                  <div style={{ fontSize: 24, fontWeight: 900 }}>{totalAmount.toLocaleString()} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span></div>
                 </div>
 
                 <button 
                   onClick={savePurchase}
                   disabled={saving || cart.length === 0}
-                  className="w-full mt-4 bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="btn btn-primary"
+                  style={{ width: '100%', height: 44 }}
                 >
                   {saving ? 'جاري الحفظ...' : 'تثبيت الفاتورة وتوريد المخزون'}
                 </button>

@@ -326,16 +326,16 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
                 setLoading(true);
                 try {
                   const ext = file.name.split('.').pop();
-                  const filename = `${Date.now()}.${ext}`;
-                  const { error } = await supabase.storage.from('images').upload(filename, file);
+                  const filename = `products/${Date.now()}.${ext}`;
+                  const { error } = await supabase.storage.from('kiwi_images').upload(filename, file);
                   if (error) {
-                    // Fallback if 'images' bucket doesn't exist, try 'public'
-                    const { error: err2 } = await supabase.storage.from('public').upload(filename, file);
+                    // Fallback if 'kiwi_images' bucket doesn't exist, try 'images'
+                    const { error: err2 } = await supabase.storage.from('images').upload(filename, file);
                     if (err2) throw err2;
-                    const { data } = supabase.storage.from('public').getPublicUrl(filename);
+                    const { data } = supabase.storage.from('images').getPublicUrl(filename);
                     setForm(p => ({...p, image_url: data.publicUrl}));
                   } else {
-                    const { data } = supabase.storage.from('images').getPublicUrl(filename);
+                    const { data } = supabase.storage.from('kiwi_images').getPublicUrl(filename);
                     setForm(p => ({...p, image_url: data.publicUrl}));
                   }
                 } catch(err: unknown) {

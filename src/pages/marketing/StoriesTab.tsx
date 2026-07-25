@@ -1,8 +1,17 @@
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, Image as ImageIcon, Video, Type } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Trash2, Image as ImageIcon, Video, Type, Upload, Loader } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import type { StoryGroup, StoryItem } from './types'
+
+async function uploadFile(file: File, bucket: string): Promise<string> {
+  const ext = file.name.split('.').pop()
+  const filename = `stories/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const { error } = await supabase.storage.from(bucket).upload(filename, file, { upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filename)
+  return data.publicUrl
+}
 
 export default function StoriesTab() {
   const [stories, setStories] = useState<StoryGroup[]>([])
@@ -54,10 +63,38 @@ export default function StoriesTab() {
     catch (err: unknown) { toast.error('خطأ: ' + ((err as Error).message)) }
   }
 
+  function FileUploadButton({ onUpload, accept, bucket, icon: Icon, label }: { onUpload: (url: string) => void; accept: string; bucket: string; icon: typeof ImageIcon; label: string }) {
+    const [uploading, setUploading] = useState(false)
+    const ref = useRef<HTMLInputElement>(null)
+
+    async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+      const file = e.target.files?.[0]
+      if (!file) return
+      setUploading(true)
+      try {
+        const url = await uploadFile(file, bucket)
+        onUpload(url)
+        toast.success('تم رفع الملف بنجاح')
+      } catch (err: unknown) {
+        toast.error('فشل الرفع: ' + ((err as Error).message))
+      } finally {
+        setUploading(false)
+        if (ref.current) ref.current.value = ''
+      }
+    }
+
+    return (
+      <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', margin: 0 }}>
+        {uploading ? <Loader size={14} className="spin" /> : <Icon size={14} />} {uploading ? 'جاري الرفع...' : label}
+        <input ref={ref} type="file" style={{ display: 'none' }} accept={accept} onChange={handleChange} />
+      </label>
+    )
+  }
+
   return (
     <div>
       <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)', border: '1px solid #a7f3d0', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div><h2 style={{ fontSize: 16, fontWeight: 800, color: '#065f46', margin: 0 }}>قصص التطبيق (Stories)</h2><p style={{ fontSize: 12, color: '#047857', margin: '4px 0 0 0' }}>نظام قصص مثل انستغرام — يمكنك إضافة حتى 7 مجموعات</p></div>
+        <div><h2 style={{ fontSize: 16, fontWeight: 800, color: '#065f46', margin: 0 }}>قصص التطبيق (Stories)</h2><p style={{ fontSize: 12, color: '#047857', margin: '4px 0 0 0' }}>نظام قصص مثل انستغرام — يمكنك إضافة حتى 7 مجموعات • تُحذف تلقائياً بعد 24 ساعة</p></div>
         <button className="btn btn-primary" disabled={stories.length >= 7} onClick={() => { setCurrentStory({ active: true, items: [] }); setShowStoryModal(true); }}><Plus size={16} /> مجموعة جديدة {stories.length}/7</button>
       </div>
       <div style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 20, paddingTop: 8 }}>
@@ -81,14 +118,42 @@ export default function StoriesTab() {
               {currentStory.id && (<button className="btn btn-icon btn-ghost btn-sm" onClick={() => { handleDeleteStory(currentStory.id!); setShowStoryModal(false); }}><Trash2 size={16} color="#ef4444" /></button>)}
             </div>
             <div className="grid-2" style={{ gap: 16 }}>
-              <div className="form-group"><label className="form-label">اسم المجموعة</label><input className="form-input" value={currentStory.title || ''} onChange={e => setCurrentStory(p => ({ ...p, title: e.target.value }))} placeholder="مثال: عروض الصيف" /></div>
-              <div className="form-group"><label className="form-label">رابط صورة الغلاف</label><input className="form-input" value={currentStory.thumbnailUrl || ''} onChange={e => setCurrentStory(p => ({ ...p, thumbnailUrl: e.target.value }))} /></div>
+              <div className="form-group">
+                <label className="form-label">اسم المجموعة</label>
+                <input className="form-input" value={currentStory.title || ''} onChange={e => setCurrentStory(p => ({ ...p, title: e.target.value }))} placeholder="مثال: عروض الصيف" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">صورة الغلاف</label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input className="form-input" style={{ flex: 1 }} value={currentStory.thumbnailUrl || ''} onChange={e => setCurrentStory(p => ({ ...p, thumbnailUrl: e.target.value }))} placeholder="رابط أو ارفع من الجهاز" />
+                  <FileUploadButton
+                    bucket="kiwi_images"
+                    accept="image/*"
+                    icon={Upload}
+                    label="رفع"
+                    onUpload={(url) => setCurrentStory(p => ({ ...p, thumbnailUrl: url }))}
+                  />
+                </div>
+                {currentStory.thumbnailUrl && <img src={currentStory.thumbnailUrl} alt="" style={{ marginTop: 8, width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }} />}
+              </div>
             </div>
             <div style={{ marginTop: 20, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>محتويات القصة</h3>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button className="btn btn-outline btn-sm" onClick={() => setCurrentStory(p => ({ ...p, items: [...(p.items||[]), { id: Date.now().toString(), type: 'image', duration: 5 }] }))}><ImageIcon size={14}/> صورة</button>
-                <button className="btn btn-outline btn-sm" onClick={() => setCurrentStory(p => ({ ...p, items: [...(p.items||[]), { id: Date.now().toString(), type: 'video', duration: 30 }] }))}><Video size={14}/> فيديو</button>
+                <FileUploadButton
+                  bucket="kiwi_images"
+                  accept="image/*"
+                  icon={ImageIcon}
+                  label="صورة"
+                  onUpload={(url) => setCurrentStory(p => ({ ...p, items: [...(p.items||[]), { id: Date.now().toString(), type: 'image', url, duration: 5 }] }))}
+                />
+                <FileUploadButton
+                  bucket="kiwi_videos"
+                  accept="video/*"
+                  icon={Video}
+                  label="فيديو"
+                  onUpload={(url) => setCurrentStory(p => ({ ...p, items: [...(p.items||[]), { id: Date.now().toString(), type: 'video', url, duration: 30 }] }))}
+                />
                 <button className="btn btn-outline btn-sm" onClick={() => setCurrentStory(p => ({ ...p, items: [...(p.items||[]), { id: Date.now().toString(), type: 'text', duration: 5, bgColor: '#10b981', textContent: 'نص القصة' }] }))}><Type size={14}/> نص</button>
               </div>
             </div>
@@ -107,7 +172,10 @@ export default function StoriesTab() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="color" value={item.bgColor || '#10b981'} onChange={e => { const ni = [...(currentStory.items||[])]; ni[idx].bgColor = e.target.value; setCurrentStory({...currentStory, items: ni}); }} style={{ width: 34, height: 34, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }} /><span style={{ fontSize: 11, color: 'var(--gray500)' }}>خلفية</span></div>
                       </div>
                     ) : (
-                      <input className="form-input form-input-sm" value={item.url || ''} onChange={e => { const ni = [...(currentStory.items||[])]; ni[idx].url = e.target.value; setCurrentStory({...currentStory, items: ni}); }} placeholder={`رابط الـ ${item.type === 'video' ? 'فيديو' : 'صورة'}...`} />
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input className="form-input form-input-sm" style={{ flex: 1 }} value={item.url || ''} onChange={e => { const ni = [...(currentStory.items||[])]; ni[idx].url = e.target.value; setCurrentStory({...currentStory, items: ni}); }} placeholder={`رابط الـ ${item.type === 'video' ? 'فيديو' : 'صورة'}...`} />
+                        {item.url && item.type === 'image' && <img src={item.url} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />}
+                      </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}><span style={{ fontSize: 11, color: 'var(--gray500)' }}>مدة العرض (ثواني):</span><input className="form-input form-input-sm" type="number" style={{ width: 70 }} value={item.duration} onChange={e => { const ni = [...(currentStory.items||[])]; ni[idx].duration = Number(e.target.value); setCurrentStory({...currentStory, items: ni}); }} /></div>
                   </div>
@@ -122,6 +190,7 @@ export default function StoriesTab() {
           </div>
         </div>
       )}
+      <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }`}</style>
     </div>
   )
 }

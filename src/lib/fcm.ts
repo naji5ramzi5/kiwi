@@ -16,7 +16,7 @@ export const sendFcmNotification = async (
   try {
     // Call the edge function
     const { data: responseData, error } = await supabase.functions.invoke(
-      'send-fcm-notification',
+      'send-notification',
       {
         body: { userId, title, body, data },
       }

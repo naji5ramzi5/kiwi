@@ -17,7 +17,7 @@ export default function NotificationsTab() {
     setSending(true)
     try {
       if (notifTarget === 'all') {
-        const { error } = await supabase.functions.invoke('send-fcm-notification', {
+        const { error } = await supabase.functions.invoke('send-notification', {
           body: { broadcast: true, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
         })
         if (error) throw error
@@ -27,7 +27,7 @@ export default function NotificationsTab() {
         if (dErr) throw dErr
         if (!drivers || drivers.length === 0) { toast.error('لا يوجد مناديب مسجلين'); setSending(false); return }
         const promises = drivers.map(d =>
-          supabase.functions.invoke('send-fcm-notification', {
+          supabase.functions.invoke('send-notification', {
             body: { userId: d.id, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
           })
         )
@@ -41,7 +41,7 @@ export default function NotificationsTab() {
       } else {
         const { data: user, error: uErr } = await supabase.from('profiles').select('id').eq('phone', notifPhone).single()
         if (uErr || !user) { toast.error('لم يتم العثور على مستخدم بهذا الرقم'); setSending(false); return }
-        const { error } = await supabase.functions.invoke('send-fcm-notification', {
+        const { error } = await supabase.functions.invoke('send-notification', {
           body: { userId: user.id, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
         })
         if (error) throw error

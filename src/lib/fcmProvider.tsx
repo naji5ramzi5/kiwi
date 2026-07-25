@@ -108,7 +108,7 @@ export const sendNotification = async (
   data?: Record<string, string>
 ) => {
   try {
-    const { error } = await supabase.functions.invoke('send-fcm-notification', {
+    const { error } = await supabase.functions.invoke('send-notification', {
       body: { userId, title, body, data: data || {} },
     });
 

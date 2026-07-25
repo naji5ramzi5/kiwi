@@ -5,11 +5,17 @@ import toast from 'react-hot-toast'
 
 async function invokeEdgeFunction(body: Record<string, unknown>) {
   const { data: { session } } = await supabase.auth.getSession()
-  const { data, error } = await supabase.functions.invoke('send-notification', {
-    body,
-    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+  const res = await fetch('https://pftjlvtdzokbzuioqfug.supabase.co/functions/v1/send-notification', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDg0NjgsImV4cCI6MjA5NDE4NDQ2OH0.3ujKn2bxihvFfhfeIXPVNDjxjfqpWsXJq4bpaPNsQOM',
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify(body),
   })
-  if (error) throw error
+  const data = await res.json()
+  if (!res.ok || data.error) throw new Error(data.error || 'Edge Function error')
   return data
 }
 

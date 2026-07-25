@@ -88,8 +88,8 @@ class SupabaseService {
       'product_id': item.productId,
       'product_name': item.name,
       'quantity': item.quantity,
-      'unit_price': item.price,
-      'total_price': item.total,
+      'unit_price': item.price.toDouble(),
+      'total_price': item.total.toDouble(),
     }).toList();
 
     await supabase.from('order_items').insert(orderItems);

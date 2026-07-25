@@ -160,7 +160,6 @@ class _CashierScreenState extends State<CashierScreen> {
       );
 
       await _supabase.saveInvoice(invoice);
-      await _invoiceService.printDirect(invoice);
 
       setState(() {
         _cart.clear();
@@ -169,8 +168,18 @@ class _CashierScreenState extends State<CashierScreen> {
       });
 
       Get.snackbar('نجاح', 'تم إتمام البيع بنجاح', backgroundColor: Colors.green, colorText: Colors.white);
+
+      try {
+        await _invoiceService.printDirect(invoice);
+      } catch (printError) {
+        debugPrint('Print error (non-critical): $printError');
+      }
     } catch (e) {
-      Get.snackbar('خطأ', 'فشل إتمام البيع: $e');
+      Get.snackbar('خطأ', 'فشل إتمام البيع: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 8));
     } finally {
       setState(() => _isCheckingOut = false);
     }

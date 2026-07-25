@@ -26,7 +26,7 @@ class InvoiceService {
     final doc = pw.Document();
 
     final double pageWidth = settings.paperSize == '58mm' ? 58.0 : 80.0;
-    final pageFormat = PdfPageFormat(pageWidth, 0, marginAll: 8);
+    final pageFormat = PdfPageFormat(pageWidth, double.infinity, marginAll: 8);
 
     doc.addPage(
       pw.MultiPage(

@@ -92,12 +92,15 @@ export default function Ratings() {
     const full = Math.floor(rating);
     const half = rating - full >= 0.5;
     return (
-      <div className="flex gap-0.5">
+      <div style={{ display: 'flex', gap: 2 }}>
         {Array.from({ length: 5 }, (_, i) => (
           <Star
             key={i}
             size={16}
-            className={i < full ? 'fill-amber-400 text-amber-400' : i === full && half ? 'text-amber-400' : 'text-gray-200'}
+            style={{
+              color: i < full || (i === full && half) ? '#f59e0b' : '#e5e7eb',
+              fill: i < full ? '#f59e0b' : 'none',
+            }}
           />
         ))}
       </div>
@@ -105,32 +108,32 @@ export default function Ratings() {
   }
 
   function getRatingColor(rating: number) {
-    if (rating >= 4.5) return 'text-emerald-600';
-    if (rating >= 4.0) return 'text-green-600';
-    if (rating >= 3.0) return 'text-amber-600';
-    return 'text-red-500';
+    if (rating >= 4.5) return '#059669';
+    if (rating >= 4.0) return '#16a34a';
+    if (rating >= 3.0) return '#d97706';
+    return '#ef4444';
   }
 
-  if (loading) return <div className="p-6"><div className="loader"></div></div>;
+  if (loading) return <div className="empty-state"><div className="loader"></div></div>;
 
   return (
-    <div className="p-6" dir="rtl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900">التقييمات</h1>
-        <p className="text-gray-500 mt-1">متابعة تقييم المناديب من قبل الزبائن</p>
+    <div className="animate-in">
+      <div style={{ marginBottom: 24 }}>
+        <h1 className="brand-name" style={{ fontSize: 24 }}>التقييمات</h1>
+        <p className="brand-sub">متابعة تقييم المناديب من قبل الزبائن</p>
       </div>
 
       {drivers.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-[3rem] border-4 border-dashed border-gray-50">
-          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Star size={40} className="text-gray-200" />
+        <div className="empty-state">
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--gray100)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Star size={36} style={{ color: 'var(--gray300)' }} />
           </div>
-          <p className="text-gray-400 font-bold">لا توجد تقييمات بعد</p>
+          <p style={{ color: 'var(--gray400)', fontWeight: 700 }}>لا توجد تقييمات بعد</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {drivers.map((driver) => (
-            <div key={driver.id} className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden transition-all">
+            <div key={driver.id} className="card">
               <button
                 onClick={() => {
                   if (selectedDriver === driver.id) {
@@ -140,58 +143,60 @@ export default function Ratings() {
                     fetchDriverRatings(driver.id);
                   }
                 }}
-                className="w-full p-6 flex items-center gap-4 hover:bg-gray-50/50 transition-colors"
+                style={{
+                  width: '100%', padding: 20, display: 'flex', alignItems: 'center', gap: 16,
+                  border: 'none', background: 'none', cursor: 'pointer', textAlign: 'right',
+                  fontFamily: 'var(--font-ar)',
+                }}
               >
-                <div className="relative">
+                <div style={{ position: 'relative', flexShrink: 0 }}>
                   {driver.avatar_url ? (
-                    <img src={driver.avatar_url} className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-50" alt={driver.full_name} />
+                    <img src={driver.avatar_url} style={{ width: 56, height: 56, borderRadius: 14, objectFit: 'cover', border: '2px solid var(--g100)' }} alt={driver.full_name} />
                   ) : (
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border-2 border-emerald-100">
-                      <User size={24} />
+                    <div style={{ width: 56, height: 56, borderRadius: 14, background: 'var(--g50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--g600)', border: '2px solid var(--g100)' }}>
+                      <User size={26} />
                     </div>
                   )}
                 </div>
-                <div className="flex-1 text-right">
-                  <h3 className="font-black text-gray-900">{driver.full_name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--gray900)', margin: 0 }}>{driver.full_name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                     {renderStars(driver.avg_rating)}
-                    <span className={`font-black text-lg ${getRatingColor(driver.avg_rating)}`}>
+                    <span style={{ fontWeight: 800, fontSize: 16, color: getRatingColor(driver.avg_rating) }}>
                       {driver.avg_rating.toFixed(1)}
                     </span>
-                    <span className="text-gray-400 text-sm">({driver.total_ratings} تقييم)</span>
+                    <span style={{ color: 'var(--gray400)', fontSize: 12 }}>({driver.total_ratings} تقييم)</span>
                   </div>
                 </div>
-                {selectedDriver === driver.id ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                {selectedDriver === driver.id ? <ChevronUp size={20} style={{ color: 'var(--gray400)' }} /> : <ChevronDown size={20} style={{ color: 'var(--gray400)' }} />}
               </button>
 
               {selectedDriver === driver.id && (
-                <div className="px-6 pb-6 border-t border-gray-100 pt-4">
+                <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--gray100)', paddingTop: 16 }}>
                   {ratingLoading ? (
-                    <div className="flex justify-center py-8">
-                      <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+                      <div className="loader"></div>
                     </div>
                   ) : ratings.length === 0 ? (
-                    <p className="text-center text-gray-400 py-8">لا توجد تقييمات مفصلة</p>
+                    <p style={{ textAlign: 'center', color: 'var(--gray400)', padding: '32px 0' }}>لا توجد تقييمات مفصلة</p>
                   ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 384, overflowY: 'auto' }}>
                       {ratings.map((r) => (
-                        <div key={r.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="flex">
-                                {Array.from({ length: 5 }, (_, i) => (
-                                  <Star key={i} size={14} className={i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200'} />
-                                ))}
-                              </div>
+                        <div key={r.id} style={{ padding: 16, background: 'var(--gray50)', borderRadius: 12, border: '1px solid var(--gray100)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', gap: 2 }}>
+                              {Array.from({ length: 5 }, (_, i) => (
+                                <Star key={i} size={14} style={{ color: i < r.rating ? '#f59e0b' : '#e5e7eb', fill: i < r.rating ? '#f59e0b' : 'none' }} />
+                              ))}
                             </div>
-                            <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <span style={{ fontSize: 11, color: 'var(--gray400)', display: 'flex', alignItems: 'center', gap: 4 }}>
                               <Calendar size={12} />
                               {new Date(r.created_at).toLocaleDateString('ar-IQ')}
                             </span>
                           </div>
                           {r.comment && (
-                            <p className="text-sm text-gray-600 flex items-start gap-2">
-                              <MessageCircle size={14} className="text-gray-300 mt-0.5 shrink-0" />
+                            <p style={{ fontSize: 13, color: 'var(--gray600)', display: 'flex', alignItems: 'flex-start', gap: 8, margin: 0 }}>
+                              <MessageCircle size={14} style={{ color: 'var(--gray300)', marginTop: 2, flexShrink: 0 }} />
                               {r.comment}
                             </p>
                           )}

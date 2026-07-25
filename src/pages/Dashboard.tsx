@@ -32,13 +32,14 @@ export default function Dashboard() {
   async function fetchDashboardData() {
     setLoading(true)
     try {
-      const [branchesRes, driversRes, ordersRes, inventoryRes, purchasesRes, categoryRes] = await Promise.all([
-        supabase.from('branches').select('id, name, status, latitude, longitude'),
+      const [branchesRes, driversRes, ordersRes, inventoryRes, purchasesRes, categoryRes, zonesRes] = await Promise.all([
+        supabase.from('branches').select('id, name, status, latitude, longitude, location_url'),
         supabase.from('drivers').select('id, branch_id, is_active, current_status'),
         supabase.from('orders').select('id, branch_id, status, total_amount, total_price, created_at'),
         supabase.from('branch_inventory').select('id, branch_id, product_id, actual_stock, buffer_limit, branches!inner(name)'),
         supabase.from('purchases').select('id, branch_id, total_value'),
         supabase.from('order_items').select('quantity, unit_price, total_price, products!inner(category)'),
+        supabase.from('delivery_zones').select('id, branch_id, name, color, geojson, is_active'),
       ])
 
       const branchesData = (branchesRes.data || []) as BranchRow[]
@@ -47,8 +48,14 @@ export default function Dashboard() {
       const inventoryData = inventoryRes.data || []
       const purchasesData = purchasesRes.data || []
       const categoryItems = categoryRes.data || []
+      const zonesData = (zonesRes.data || []) as { branch_id: string; geojson: any; is_active: boolean }[]
 
-      setBranches(branchesData)
+      const branchesWithZones = branchesData.map(b => ({
+        ...b,
+        delivery_zones: zonesData.filter(z => z.branch_id === b.id && z.is_active && z.geojson),
+      }))
+
+      setBranches(branchesWithZones)
       setDrivers(driversData)
 
       // Build per-branch stats

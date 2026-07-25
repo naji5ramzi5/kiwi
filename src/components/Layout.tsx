@@ -193,9 +193,7 @@ export default function Layout() {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="brand-logo">
-            <div className="brand-icon" style={{ background: 'var(--gray900)', color: 'white', boxShadow: 'none' }}>
-              <Leaf size={24} />
-            </div>
+            <img src="/kiwi-icon.svg" alt="Kiwi" style={{ width: 40, height: 40, borderRadius: 12, boxShadow: '0 4px 12px rgba(16,185,129,.3)' }} />
             <div>
               <div className="brand-name" style={{ letterSpacing: '0.5px' }}>KIWI</div>
               <div className="brand-sub">ENTERPRISE SYSTEM</div>

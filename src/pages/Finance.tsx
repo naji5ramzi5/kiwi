@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrendingUp, DollarSign, Settings, ShieldCheck, HeartPulse, Store, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -50,7 +49,7 @@ export default function Finance() {
   async function updateRatios() {
     await supabase.from('system_settings').update({ value_decimal: ratios.dev }).eq('key', 'dev_partner_ratio');
     await supabase.from('system_settings').update({ value_decimal: ratios.maintenance }).eq('key', 'system_maintenance_ratio');
-    toast.success('تم تحديث نسب الشراكة بنجاح ✅');
+    toast.success('تم تحديث نسب الشراكة بنجاح');
     setShowSettings(false);
   }
 
@@ -71,24 +70,25 @@ export default function Finance() {
   }
 
   return (
-    <div className="animate-in p-6">
-      <div className="flex justify-between items-center mb-8">
+    <div className="animate-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">التقارير المالية والشركاء</h1>
-          <p className="text-gray-500">توزيع أرباح النظام (المطور، الصيانة، الفروع)</p>
+          <h1 className="brand-name" style={{ fontSize: 24 }}>التقارير المالية والشركاء</h1>
+          <p className="brand-sub">توزيع أرباح النظام (المطور، الصيانة، الفروع)</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray400)' }} />
             <input
               type="text"
               placeholder="بحث بالفرع..."
-              className="pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all w-48"
+              className="form-input"
+              style={{ paddingRight: 36, width: 200 }}
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <button className="btn btn-outline" onClick={() => setShowSettings(true)} style={{ gap: 8 }}>
+          <button className="btn btn-outline" onClick={() => setShowSettings(true)}>
             <Settings size={18} /> إعدادات النسب
           </button>
         </div>
@@ -110,46 +110,67 @@ export default function Finance() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <StatCard icon={<TrendingUp />} label="إجمالي المبيعات" value={stats.revenue} color="emerald" />
-        <StatCard icon={<ShieldCheck />} label="حصة المبرمج الشريك" value={stats.dev} color="blue" sub={`${(ratios.dev * 100).toFixed(0)}%`} />
-        <StatCard icon={<HeartPulse />} label="صندوق الصيانة" value={stats.maintenance} color="purple" sub={`${(ratios.maintenance * 100).toFixed(0)}%`} />
-        <StatCard icon={<Store />} label="صافي أرباح الفروع" value={stats.branch} color="orange" />
+      <div className="stats-grid">
+        <div className="stat-card stat-green">
+          <div className="stat-icon-wrap" style={{ background: 'var(--g50)' }}><TrendingUp color="var(--g600)" /></div>
+          <div className="stat-label">إجمالي المبيعات</div>
+          <div className="stat-value">{fmt(stats.revenue)} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span></div>
+        </div>
+        <div className="stat-card stat-blue">
+          <div className="stat-icon-wrap" style={{ background: '#dbeafe' }}><ShieldCheck color="#2563eb" /></div>
+          <div className="stat-label">حصة المبرمج الشريك ({(ratios.dev * 100).toFixed(0)}%)</div>
+          <div className="stat-value">{fmt(stats.dev)} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span></div>
+        </div>
+        <div className="stat-card stat-purple">
+          <div className="stat-icon-wrap" style={{ background: '#ede9fe' }}><HeartPulse color="#7c3aed" /></div>
+          <div className="stat-label">صندوق الصيانة ({(ratios.maintenance * 100).toFixed(0)}%)</div>
+          <div className="stat-value">{fmt(stats.maintenance)} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span></div>
+        </div>
+        <div className="stat-card stat-amber">
+          <div className="stat-icon-wrap" style={{ background: '#fff7ed' }}><Store color="#ea580c" /></div>
+          <div className="stat-label">صافي أرباح الفروع</div>
+          <div className="stat-value">{fmt(stats.branch)} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span></div>
+        </div>
       </div>
 
-      <div className="card" style={{ padding: 0 }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--gray100)' }}>
-          <h3 className="font-bold">سجل التسويات التفصيلية</h3>
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">سجل التسويات التفصيلية</span>
         </div>
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500">التاريخ</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500">الفرع</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500">المبلغ</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500">المبرمج</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500">الصيانة</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500">الفرع</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {settlements.filter(s => {
-              if (search && !s.branches?.name?.includes(search)) return false;
-              if (startDate) { const d = new Date(s.created_at).toISOString().slice(0, 10); if (d < startDate) return false; }
-              if (endDate) { const d = new Date(s.created_at).toISOString().slice(0, 10); if (d > endDate) return false; }
-              return true;
-            }).map((s) => (
-              <tr key={s.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm">{new Date(s.created_at).toLocaleDateString('ar-IQ')}</td>
-                <td className="px-6 py-4 text-sm font-bold">{s.branches?.name}</td>
-                <td className="px-6 py-4 text-sm">{fmt(s.total_revenue)}</td>
-                <td className="px-6 py-4 text-sm font-bold text-blue-600">{fmt(s.dev_profit)}</td>
-                <td className="px-6 py-4 text-sm font-bold text-purple-600">{fmt(s.maintenance_fund)}</td>
-                <td className="px-6 py-4 text-sm font-bold text-emerald-600">{fmt(s.branch_profit)}</td>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>الفرع</th>
+                <th>المبلغ</th>
+                <th>المبرمج</th>
+                <th>الصيانة</th>
+                <th>الفرع</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {settlements.filter(s => {
+                if (search && !s.branches?.name?.includes(search)) return false;
+                if (startDate) { const d = new Date(s.created_at).toISOString().slice(0, 10); if (d < startDate) return false; }
+                if (endDate) { const d = new Date(s.created_at).toISOString().slice(0, 10); if (d > endDate) return false; }
+                return true;
+              }).map((s) => (
+                <tr key={s.id}>
+                  <td style={{ fontSize: 13 }}>{new Date(s.created_at).toLocaleDateString('ar-IQ')}</td>
+                  <td style={{ fontWeight: 700 }}>{s.branches?.name}</td>
+                  <td>{fmt(s.total_revenue)}</td>
+                  <td style={{ fontWeight: 700, color: '#2563eb' }}>{fmt(s.dev_profit)}</td>
+                  <td style={{ fontWeight: 700, color: '#7c3aed' }}>{fmt(s.maintenance_fund)}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--g600)' }}>{fmt(s.branch_profit)}</td>
+                </tr>
+              ))}
+              {settlements.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--gray400)', padding: '40px 0' }}>لا توجد تسويات مالية بعد</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showSettings && (
@@ -170,34 +191,14 @@ export default function Finance() {
                 value={ratios.maintenance} onChange={e => setRatios({...ratios, maintenance: parseFloat(e.target.value)})}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-4">المتبقي سيتم احتسابه تلقائياً كصافي ربح لصاحب الفرع.</p>
-            <div className="flex gap-4 mt-6">
-              <button className="btn btn-primary flex-1" onClick={updateRatios}>حفظ النسب الجديدة</button>
+            <p style={{ fontSize: 11, color: 'var(--gray400)', marginTop: 16 }}>المتبقي سيتم احتسابه تلقائياً كصافي ربح لصاحب الفرع.</p>
+            <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={updateRatios}>حفظ النسب الجديدة</button>
               <button className="btn btn-ghost" onClick={() => setShowSettings(false)}>إلغاء</button>
             </div>
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function StatCard({ icon, label, value, color, sub }: any) {
-  const colors: any = {
-    emerald: 'bg-emerald-50 text-emerald-600',
-    blue: 'bg-blue-50 text-blue-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
-  }
-  return (
-    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-      <div className="flex items-center gap-4 mb-2">
-        <div className={`p-3 rounded-xl ${colors[color]}`}>{icon}</div>
-        <div>
-          <p className="text-xs text-gray-500">{label} {sub && <span className="font-bold">({sub})</span>}</p>
-          <h3 className="text-xl font-bold">{fmt(value)} <span className="text-xs font-normal">د.ع</span></h3>
-        </div>
-      </div>
     </div>
   )
 }

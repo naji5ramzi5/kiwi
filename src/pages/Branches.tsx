@@ -4,7 +4,6 @@ import { Plus, MapPin, ShoppingCart, TrendingUp, Edit2, Key, Shield, ShieldOff, 
 import { supabase } from '../lib/supabase'
 import { ORDER_STATUS } from '../lib/orderStatus'
 import toast from 'react-hot-toast'
-import ZoneMap from '../components/ZoneMap'
 
 interface Branch {
   id: string;
@@ -77,7 +76,6 @@ export default function Branches() {
   async function saveBranch(form: Partial<Branch>) {
     setLoading(true)
     try {
-      const deliveryZones = (form as any).delivery_zones || []
       const { delivery_zones, ...branchData } = form as any
 
       let branchId = form.id
@@ -91,25 +89,9 @@ export default function Branches() {
         branchId = data.id
       }
       
-      // Save delivery zones if any
-      if (deliveryZones.length > 0 && branchId) {
-        const zonePayload = deliveryZones.map((z: any) => ({
-          branch_id: branchId,
-          name: z.name || 'منطقة توصيل',
-          color: z.color || '#10b981',
-          delivery_fee: z.delivery_fee || 0,
-          min_order: z.min_order || 5000,
-          max_delivery_time: z.max_delivery_time || 45,
-          is_active: true,
-          geojson: z.geojson || null
-        }))
-        const { error: zoneError } = await supabase.from('delivery_zones').insert(zonePayload)
-        if (zoneError) console.error('Error saving delivery zones:', zoneError)
-      }
-      
       fetchBranches()
       setModal(null)
-      toast.success('✅ تم حفظ الفرع وتوليد رمز التفعيل بنجاح!')
+      toast.success('تم حفظ الفرع بنجاح!')
     } catch (err: any) {
       console.error('Error saving branch:', err)
       toast.error('فشل في حفظ الفرع: ' + (err.message || 'خطأ غير معروف'))
@@ -288,17 +270,7 @@ export default function Branches() {
             <div className="form-group">
               <label className="form-label">رابط موقع الفرع (Google Maps)</label>
               <input className="form-input" id="b_location_url" placeholder="https://maps.google.com/..." defaultValue={modal === 'new' ? '' : (modal as Branch).location_url} />
-              <p style={{ fontSize: 10, color: 'var(--gray400)', marginTop: 4 }}>الصق الرابط هنا وسيتم تحديد الموقع تلقائياً على الخريطة ✨</p>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">مناطق التوصيل (رسم الزونات)</label>
-              <ZoneMap 
-                center={[(modal as Branch).latitude || 33.3152, (modal as Branch).longitude || 44.3661]} 
-                zones={(modal as any).delivery_zones || []}
-                onZonesChange={(newZones) => setModal(modal === 'new' ? { delivery_zones: newZones } as any : { ...modal, delivery_zones: newZones } as any)}
-              />
-              <p style={{ fontSize: 10, color: 'var(--gray400)', marginTop: 4 }}>استخدم الأدوات في أعلى يمين الخريطة لرسم مناطق التوصيل المسموحة لهذا الفرع.</p>
+              <p style={{ fontSize: 10, color: 'var(--gray400)', marginTop: 4 }}>الصق الرابط هنا وسيتم تحديد الموقع تلقائياً على الخريطة</p>
             </div>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
@@ -308,7 +280,6 @@ export default function Branches() {
                 const address = (document.getElementById('b_address') as HTMLTextAreaElement).value;
                 const location_url = (document.getElementById('b_location_url') as HTMLInputElement).value;
                 const access_code = (document.getElementById('b_access_code') as HTMLInputElement).value;
-                const delivery_zones = (modal as any).delivery_zones || [];
                 
                 let latitude = (modal as Branch).latitude || 33.3152;
                 let longitude = (modal as Branch).longitude || 44.3661;
@@ -324,8 +295,7 @@ export default function Branches() {
                 saveBranch({ 
                   ...(isNew ? {} : modal as Branch), 
                   name, phone, address, location_url, access_code, 
-                  latitude, longitude, status: 'نشط', city: 'بغداد',
-                  delivery_zones 
+                  latitude, longitude, status: 'نشط', city: 'بغداد'
                 });
               }}>حفظ بيانات الفرع</button>
               <button className="btn btn-ghost" onClick={() => setModal(null)}>إلغاء</button>

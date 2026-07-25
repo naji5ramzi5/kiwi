@@ -259,40 +259,34 @@ export default function Orders() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+    <div className="animate-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">إدارة الطلبات</h1>
-          <p className="text-gray-500">متابعة وتحديث حالات الطلبات لجميع الفروع</p>
+          <h1 className="brand-name" style={{ fontSize: 24 }}>إدارة الطلبات</h1>
+          <p className="brand-sub">متابعة وتحديث حالات الطلبات لجميع الفروع</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray400)' }} />
             <input
               type="text"
               placeholder="بحث بالاسم أو الهاتف..."
-              className="pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all w-56"
+              className="form-input"
+              style={{ paddingRight: 36, width: 240 }}
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <button
-            onClick={exportToCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-600 transition-all"
-            title="تصدير CSV"
-          >
-            <Download size={16} />
-            تصدير
+          <button className="btn btn-outline" onClick={exportToCSV} title="تصدير CSV">
+            <Download size={16} /> تصدير
           </button>
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+          <div style={{ display: 'flex', gap: 4, background: 'var(--white)', padding: 4, borderRadius: 12, border: '1px solid var(--gray100)' }}>
           {STATUSES.map(status => (
             <button
               key={status}
               onClick={() => setFilter(status)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                filter === status ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
-              }`}
+              className={filter === status ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
             >
               {status === STATUS_ALL ? STATUS_ALL : getStatusLabel(status)}
             </button>
@@ -318,53 +312,51 @@ export default function Orders() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500" />
-        </div>
+        <div className="empty-state" style={{ minHeight: 300 }}><div className="loader"></div></div>
       ) : (
-        <div className="grid gap-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {filteredOrders.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-gray-200">
-              <Package size={48} className="mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500">لا توجد طلبات في هذا القسم حاليًا</p>
+            <div className="empty-state">
+              <Package size={48} style={{ color: 'var(--gray300)' }} />
+              <p style={{ color: 'var(--gray500)', fontWeight: 600 }}>لا توجد طلبات في هذا القسم حاليًا</p>
             </div>
           ) : (
             pagedOrders.map(order => (
               <div
                 key={order.id}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group"
+                className="card"
               >
-                <div className="p-6">
-                  <div className="flex flex-col lg:flex-row justify-between gap-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <span className="text-sm font-mono text-gray-400 bg-gray-50 px-2 py-1 rounded">
+                <div style={{ padding: 20 }}>
+                  <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 300 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--gray400)', background: 'var(--gray50)', padding: '2px 8px', borderRadius: 6 }}>
                           #{order.id.substring(0, 8)}
                         </span>
-                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(order.status)}`}>
+                        <div className={`badge ${getStatusColor(order.status)}`} style={{ gap: 4 }}>
                           {getStatusIcon(order.status)}
                           {getStatusLabel(order.status)}
                         </div>
-                        <span className="text-xs text-gray-400">
+                        <span style={{ fontSize: 11, color: 'var(--gray400)' }}>
                           {new Date(order.created_at).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
 
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--g50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--g600)', flexShrink: 0 }}>
                             <User size={20} />
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">{order.customer_name}</p>
-                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <p style={{ fontWeight: 700, color: 'var(--gray900)', margin: 0 }}>{order.customer_name}</p>
+                            <p style={{ fontSize: 13, color: 'var(--gray500)', display: 'flex', alignItems: 'center', gap: 4, margin: 0 }}>
                               <Phone size={12} /> {order.customer_phone}
                               {order.customer_phone && order.customer_phone !== 'غير مسجل' && (
                                 <a
                                   href={`https://wa.me/${order.customer_phone.replace(/[^0-9]/g, '')}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-green-500 hover:text-green-600 mr-1"
+                                  style={{ color: 'var(--g500)', marginRight: 4 }}
                                 >
                                   <MessageCircle size={14} />
                                 </a>
@@ -372,31 +364,32 @@ export default function Orders() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', flexShrink: 0 }}>
                             <MapPin size={20} />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-900 line-clamp-1">{order.delivery_address}</p>
-                            <p className="text-xs text-gray-500">عنوان التوصيل</p>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--gray900)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{order.delivery_address}</p>
+                            <p style={{ fontSize: 11, color: 'var(--gray500)', margin: 0 }}>عنوان التوصيل</p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col justify-between items-end border-t lg:border-t-0 lg:border-r border-gray-50 pt-6 lg:pt-0 lg:pr-6 min-w-[200px]">
-                      <div className="text-right mb-4 lg:mb-0">
-                        <p className="text-xs text-gray-400">إجمالي المبلغ</p>
-                        <p className="text-2xl font-black text-emerald-600">
-                          {(order.total_price || 0).toLocaleString('ar-IQ')} <span className="text-sm font-normal">د.ع</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', borderRight: '1px solid var(--gray100)', paddingRight: 20, minWidth: 180 }}>
+                      <div style={{ textAlign: 'right', marginBottom: 16 }}>
+                        <p style={{ fontSize: 11, color: 'var(--gray400)', margin: 0 }}>إجمالي المبلغ</p>
+                        <p style={{ fontSize: 24, fontWeight: 900, color: 'var(--g600)', margin: 0 }}>
+                          {(order.total_price || 0).toLocaleString('ar-IQ')} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span>
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 w-full lg:w-auto">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <select
                           value={order.status}
                           onChange={event => updateOrderStatus(order.id, event.target.value)}
-                          className="flex-1 lg:w-32 bg-gray-50 border-none rounded-xl text-sm font-medium p-2 cursor-pointer focus:ring-2 focus:ring-emerald-500 outline-none"
+                          className="form-select"
+                          style={{ width: 130, padding: '6px 10px', fontSize: 12 }}
                         >
                           {STATUSES.filter(status => status !== STATUS_ALL).map(status => (
                             <option key={status} value={status}>
@@ -404,26 +397,23 @@ export default function Orders() {
                             </option>
                           ))}
                         </select>
-                        <button
-                          className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-                          onClick={() => printOrder(order)}
-                        >
-                          <Printer size={20} />
+                        <button className="btn btn-icon btn-ghost btn-sm" onClick={() => printOrder(order)}>
+                          <Printer size={18} />
                         </button>
                         {order.customer_phone && order.customer_phone !== 'غير مسجل' && (
                           <button
-                            className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:bg-green-50 hover:text-green-600 transition-colors"
+                            className="btn btn-icon btn-ghost btn-sm"
                             onClick={() => {
                               const phone = order.customer_phone!.replace(/[^0-9]/g, '');
                               const msg = encodeURIComponent(`مرحباً! طلبك رقم #${order.id.substring(0, 8)} قيد التجهيز من Kiwi Fresh`);
                               window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
                             }}
                           >
-                            <MessageCircle size={20} />
+                            <MessageCircle size={18} />
                           </button>
                         )}
-                        <button className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">
-                          <MoreVertical size={20} />
+                        <button className="btn btn-icon btn-ghost btn-sm">
+                          <MoreVertical size={18} />
                         </button>
                       </div>
                     </div>
@@ -437,26 +427,24 @@ export default function Orders() {
 
       {/* Pagination */}
       {!loading && filteredOrders.length > PAGE_SIZE && (
-        <div className="flex items-center justify-center gap-4 mt-8">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 24 }}>
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={safePage === 0}
-            className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="btn btn-ghost btn-sm"
           >
-            <ChevronRight size={16} />
-            السابق
+            <ChevronRight size={16} /> السابق
           </button>
-          <span className="text-sm text-gray-500 font-medium">
+          <span style={{ fontSize: 13, color: 'var(--gray500)', fontWeight: 600 }}>
             صفحة {safePage + 1} من {totalPages}
-            <span className="text-gray-400 mr-2">({filteredOrders.length} طلب)</span>
+            <span style={{ color: 'var(--gray400)', marginRight: 8 }}>({filteredOrders.length} طلب)</span>
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={safePage >= totalPages - 1}
-            className="flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-medium bg-white border border-gray-200 text-gray-600 hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="btn btn-ghost btn-sm"
           >
-            التالي
-            <ChevronLeft size={16} />
+            التالي <ChevronLeft size={16} />
           </button>
         </div>
       )}

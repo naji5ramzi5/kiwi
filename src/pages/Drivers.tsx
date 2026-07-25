@@ -1,177 +1,148 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User, Star, Search } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User, Star, Search } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface Driver {
-  id: string;
-  full_name: string;
-  email: string;
-  vehicle_type: string;
-  is_approved: boolean;
-  is_online: boolean;
-  plate_number?: string;
-  avatar_url?: string;
-  avg_rating?: number;
-  total_ratings?: number;
+  id: string; full_name: string; email: string; vehicle_type: string;
+  is_approved: boolean; is_online: boolean; plate_number?: string;
+  avatar_url?: string; avg_rating?: number; total_ratings?: number;
 }
 
 export default function Drivers() {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [drivers, setDrivers] = useState<Driver[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
-  useEffect(() => {
-    fetchDrivers();
-  }, []);
+  useEffect(() => { fetchDrivers() }, [])
 
   async function fetchDrivers() {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'driver');
-    
-    if (error) {
-      toast.error('خطأ في جلب البيانات');
-      setLoading(false);
-      return;
-    }
-    
+    const { data, error } = await supabase.from('profiles').select('*').eq('role', 'driver')
+    if (error) { toast.error('خطأ في جلب البيانات'); setLoading(false); return }
     const driversWithRatings = await Promise.all((data || []).map(async (d) => {
-      const { data: ratingData } = await supabase
-        .from('driver_ratings')
-        .select('rating')
-        .eq('driver_id', d.id);
-      const ratings = (ratingData || []) as { rating: number }[];
-      const avg = ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
-      return { ...d, avg_rating: Math.round(avg * 10) / 10, total_ratings: ratings.length };
-    }));
-    
-    setDrivers(driversWithRatings);
-    setLoading(false);
+      const { data: ratingData } = await supabase.from('driver_ratings').select('rating').eq('driver_id', d.id)
+      const ratings = (ratingData || []) as { rating: number }[]
+      const avg = ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0
+      return { ...d, avg_rating: Math.round(avg * 10) / 10, total_ratings: ratings.length }
+    }))
+    setDrivers(driversWithRatings)
+    setLoading(false)
   }
 
   async function toggleApproval(id: string, currentStatus: boolean) {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_approved: !currentStatus })
-      .eq('id', id);
-
-    if (error) toast.error('فشلت العملية');
-    else {
-      toast.success(currentStatus ? 'تم إلغاء التفعيل' : 'تم تفعيل حساب المندوب');
-      fetchDrivers();
-    }
+    const { error } = await supabase.from('profiles').update({ is_approved: !currentStatus }).eq('id', id)
+    if (error) toast.error('فشلت العملية')
+    else { toast.success(currentStatus ? 'تم إلغاء التفعيل' : 'تم تفعيل حساب المندوب'); fetchDrivers() }
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-8">
+    <div className="animate-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 className="text-3xl font-black text-gray-900">إدارة فريق التوصيل</h1>
-          <p className="text-gray-500">مراجعة ملفات المناديب والموافقة على طلبات الانضمام</p>
+          <h1 className="brand-name" style={{ fontSize: 24 }}>إدارة فريق التوصيل</h1>
+          <p className="brand-sub">مراجعة ملفات المناديب والموافقة على طلبات الانضمام</p>
         </div>
-        <div className="relative">
-          <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div style={{ position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray400)' }} />
           <input
             type="text"
             placeholder="بحث بالاسم..."
-            className="pr-10 pl-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all w-56"
+            className="form-input"
+            style={{ paddingRight: 36, width: 220 }}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {drivers.filter(d => !search || d.full_name.includes(search) || d.email?.includes(search)).map((driver) => (
-          <div key={driver.id} className="bg-white rounded-[2rem] shadow-xl shadow-gray-100/50 border border-gray-100 p-6 transition-all hover:translate-y-[-4px]">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-4">
-                <div className="relative">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+        {drivers.filter(d => !search || d.full_name?.includes(search) || d.email?.includes(search)).map((driver) => (
+          <div key={driver.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: 20, borderBottom: '1px solid var(--gray100)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ position: 'relative' }}>
                   {driver.avatar_url ? (
-                    <img src={driver.avatar_url} className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-50 shadow-md" alt={driver.full_name} />
+                    <img src={driver.avatar_url} style={{ width: 56, height: 56, borderRadius: 14, objectFit: 'cover', border: '2px solid var(--g100)' }} alt={driver.full_name} />
                   ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border-2 border-emerald-100">
-                      <User size={28} />
+                    <div style={{ width: 56, height: 56, borderRadius: 14, background: 'var(--g50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--g600)', border: '2px solid var(--g100)' }}>
+                      <User size={26} />
                     </div>
                   )}
-                  <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white ${driver.is_online ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                  <div style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderRadius: '50%', border: '3px solid white', background: driver.is_online ? '#10b981' : '#9ca3af' }} />
                 </div>
                 <div>
-                  <h3 className="font-black text-gray-900 text-lg leading-tight">{driver.full_name}</h3>
-                  <div className="flex items-center gap-1 text-gray-400 mt-1">
+                  <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--gray900)' }}>{driver.full_name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--gray400)', marginTop: 4 }}>
                     {driver.vehicle_type === 'truck' ? <Truck size={14} /> : <Bike size={14} />}
-                    <span className="text-xs font-bold">{driver.vehicle_type === 'truck' ? 'شاحنة خضار' : 'دراجة نارية'}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>{driver.vehicle_type === 'truck' ? 'شاحنة خضار' : 'دراجة نارية'}</span>
                   </div>
                 </div>
               </div>
-              <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${driver.is_online ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-50 text-gray-400'}`}>
-                {driver.is_online ? 'Active Now' : 'Offline'}
-              </div>
+              <span className={`badge ${driver.is_online ? 'badge-green' : 'badge-gray'}`}>
+                {driver.is_online ? 'متصل' : 'غير متصل'}
+              </span>
             </div>
 
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <CreditCard size={18} className="text-emerald-600" />
-                  <span className="font-bold">رقم اللوحة:</span>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--gray50)', borderRadius: 12, border: '1px solid var(--gray100)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--gray600)' }}>
+                  <CreditCard size={16} style={{ color: 'var(--g600)' }} />
+                  <span style={{ fontWeight: 700 }}>رقم اللوحة:</span>
                 </div>
-                <span className="text-sm font-black text-gray-900">{driver.plate_number || 'غير مسجل'}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--gray900)' }}>{driver.plate_number || 'غير مسجل'}</span>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  {driver.is_approved ? <ShieldCheck size={18} className="text-emerald-500" /> : <ShieldAlert size={18} className="text-amber-500" />}
-                  <span className="font-bold">حالة الاعتماد:</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--gray50)', borderRadius: 12, border: '1px solid var(--gray100)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--gray600)' }}>
+                  {driver.is_approved ? <ShieldCheck size={16} style={{ color: '#10b981' }} /> : <ShieldAlert size={16} style={{ color: '#f59e0b' }} />}
+                  <span style={{ fontWeight: 700 }}>حالة الاعتماد:</span>
                 </div>
-                <span className={`text-sm font-black ${driver.is_approved ? 'text-emerald-600' : 'text-amber-600'}`}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: driver.is_approved ? '#059669' : '#d97706' }}>
                   {driver.is_approved ? 'حساب معتمد' : 'بانتظار المراجعة'}
                 </span>
               </div>
 
               {(driver.total_ratings ?? 0) > 0 && (
-                <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Star size={18} className="text-amber-400" />
-                    <span className="font-bold">التقييم:</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--gray50)', borderRadius: 12, border: '1px solid var(--gray100)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--gray600)' }}>
+                    <Star size={16} style={{ color: '#f59e0b' }} />
+                    <span style={{ fontWeight: 700 }}>التقييم:</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 2 }}>
                       {Array.from({ length: 5 }, (_, i) => (
-                        <Star key={i} size={14} className={i < Math.round(driver.avg_rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'} />
+                        <Star key={i} size={14} style={{ color: i < Math.round(driver.avg_rating ?? 0) ? '#f59e0b' : '#e5e7eb', fill: i < Math.round(driver.avg_rating ?? 0) ? '#f59e0b' : 'none' }} />
                       ))}
                     </div>
-                    <span className="text-sm font-black text-gray-900">{driver.avg_rating?.toFixed(1)}</span>
-                    <span className="text-xs text-gray-400">({driver.total_ratings})</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--gray900)' }}>{driver.avg_rating?.toFixed(1)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--gray400)' }}>({driver.total_ratings})</span>
                   </div>
                 </div>
               )}
             </div>
 
-            <button
-              onClick={() => toggleApproval(driver.id, driver.is_approved)}
-              className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 shadow-lg ${
-                driver.is_approved 
-                ? 'bg-red-50 text-red-600 hover:bg-red-100 shadow-red-100' 
-                : 'bg-gray-900 text-white hover:bg-black shadow-gray-200'
-              }`}
-            >
-              {driver.is_approved ? <UserX size={20} /> : <UserCheck size={20} />}
-              {driver.is_approved ? 'إلغاء الاعتماد' : 'الموافقة على الانضمام'}
-            </button>
+            <div style={{ padding: '0 20px 20px' }}>
+              <button
+                onClick={() => toggleApproval(driver.id, driver.is_approved)}
+                className={driver.is_approved ? 'btn btn-danger' : 'btn btn-primary'}
+                style={{ width: '100%', height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                {driver.is_approved ? <UserX size={18} /> : <UserCheck size={18} />}
+                {driver.is_approved ? 'إلغاء الاعتماد' : 'الموافقة على الانضمام'}
+              </button>
+            </div>
           </div>
         ))}
       </div>
-      
+
       {drivers.length === 0 && !loading && (
-        <div className="text-center py-24 bg-white rounded-[3rem] border-4 border-dashed border-gray-50">
-          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User size={40} className="text-gray-200" />
+        <div className="empty-state" style={{ padding: '80px 20px', textAlign: 'center' }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--gray100)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <User size={36} style={{ color: 'var(--gray300)' }} />
           </div>
-          <p className="text-gray-400 font-bold">لا يوجد طلبات انضمام حالياً</p>
+          <p style={{ color: 'var(--gray400)', fontWeight: 700 }}>لا يوجد طلبات انضمام حالياً</p>
         </div>
       )}
     </div>
-  );
+  )
 }

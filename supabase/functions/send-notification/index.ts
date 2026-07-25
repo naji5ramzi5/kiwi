@@ -1,10 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { JWT } from 'https://esm.sh/google-auth-library@8.7.0'
 
 const fcmProjectId = Deno.env.get('FCM_PROJECT_ID') ?? ''
 const fcmClientEmail = Deno.env.get('FCM_CLIENT_EMAIL') ?? ''
-const fcmPrivateKey = (Deno.env.get('FCM_PRIVATE_KEY') ?? '').replace(/\\n/g, '\n')
+const fcmPrivateKeyB64 = Deno.env.get('FCM_PRIVATE_KEY_B64') ?? ''
+const fcmPrivateKeyRaw = (Deno.env.get('FCM_PRIVATE_KEY') ?? '')
 const fcmApiUrl = `https://fcm.googleapis.com/v1/projects/${fcmProjectId}/messages:send`
 
 const supabase = createClient(
@@ -20,20 +20,95 @@ interface FCMNotificationRequest {
   data?: Record<string, string>
 }
 
-async function getAccessToken() {
-  if (!fcmProjectId || !fcmClientEmail || !fcmPrivateKey) {
-    throw new Error('Missing FCM secrets: FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY')
+function pemToDer(pem: string): Uint8Array {
+  let cleaned = pem
+    .replace(/-----BEGIN [^-]+-----/g, '')
+    .replace(/-----END [^-]+-----/g, '')
+    .replace(/\s+/g, '')
+    .replace(/\n/g, '')
+    .replace(/\r/g, '')
+    .replace(/\\n/g, '')
+  return Uint8Array.from(atob(cleaned), c => c.charCodeAt(0))
+}
+
+function derToPem(der: Uint8Array): string {
+  const b64 = btoa(String.fromCharCode(...der))
+  const lines = b64.match(/.{1,64}/g) || []
+  return '-----BEGIN PRIVATE KEY-----\n' + lines.join('\n') + '\n-----END PRIVATE KEY-----'
+}
+
+async function getPrivateKeyPem(): Promise<string> {
+  if (fcmPrivateKeyB64) {
+    const der = Uint8Array.from(atob(fcmPrivateKeyB64), c => c.charCodeAt(0))
+    return derToPem(der)
   }
 
-  const client = new JWT({
-    email: fcmClientEmail,
-    key: fcmPrivateKey,
-    scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+  let pem = fcmPrivateKeyRaw
+  if (pem && !pem.includes('-----BEGIN')) {
+    try {
+      const der = Uint8Array.from(atob(pem), c => c.charCodeAt(0))
+      return derToPem(der)
+    } catch {
+      // not base64, try as raw
+    }
+  }
+
+  if (pem) {
+    pem = pem.replace(/\\n/g, '\n')
+    if (!pem.includes('-----BEGIN')) {
+      pem = '-----BEGIN PRIVATE KEY-----\n' + pem + '\n-----END PRIVATE KEY-----'
+    }
+  }
+
+  return pem
+}
+
+async function getAccessToken(): Promise<string> {
+  const pem = await getPrivateKeyPem()
+  if (!fcmProjectId || !fcmClientEmail || !pem) {
+    throw new Error(`Missing FCM secrets. Got project=${fcmProjectId}, email=${fcmClientEmail}, key_len=${pem.length}`)
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  const header = { alg: 'RS256', typ: 'JWT' }
+  const payload = {
+    iss: fcmClientEmail,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  }
+
+  const encoder = new TextEncoder()
+  const headerB64 = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  const payloadB64 = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  const signingInput = `${headerB64}.${payloadB64}`
+
+  const keyData = pemToDer(pem)
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    keyData.buffer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, encoder.encode(signingInput))
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+  const jwt = `${signingInput}.${sigB64}`
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
   })
 
-  const { token } = await client.getAccessToken()
-  if (!token) throw new Error('Failed to create FCM access token')
-  return token
+  const tokenData = await tokenRes.json()
+  if (!tokenData.access_token) {
+    throw new Error(`Failed to get access token: ${JSON.stringify(tokenData)}`)
+  }
+  return tokenData.access_token
 }
 
 async function sendMessage(accessToken: string, token: string, title: string, body: string, data?: Record<string, string>) {
@@ -86,14 +161,12 @@ serve(async (req) => {
     const tokens: { token: string; device_type: string }[] = []
 
     if (broadcast) {
-      // Broadcast mode: get ALL tokens from user_fcm_tokens
       const { data: allTokens, error: allErr } = await supabase
         .from('user_fcm_tokens')
         .select('token, device_type')
       if (allErr) throw allErr
       if (allTokens) tokens.push(...allTokens)
 
-      // Also get all profiles with fcm_token
       const { data: profiles, error: profErr } = await supabase
         .from('profiles')
         .select('fcm_token')
@@ -107,7 +180,6 @@ serve(async (req) => {
         }
       }
     } else {
-      // Single user mode
       const { data: tokensRecord, error: tokensErr } = await supabase
         .from('user_fcm_tokens')
         .select('token, device_type')

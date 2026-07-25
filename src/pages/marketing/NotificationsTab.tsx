@@ -3,6 +3,20 @@ import { Send, Image as ImageIcon, CheckCircle, Loader } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
+const SUPABASE_URL = 'https://pftjlvtdzokbzuioqfug.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDg0NjgsImV4cCI6MjA5NDE4NDQ2OH0.3ujKn2bxihvFfhfeIXPVNDjxjfqpWsXJq4bpaPNsQOM'
+
+async function invokeEdgeFunction(body: Record<string, unknown>) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json()
+  if (!res.ok || data.error) throw new Error(data.error || 'Edge Function error')
+  return data
+}
+
 export default function NotificationsTab() {
   const [notifTitle, setNotifTitle] = useState('')
   const [notifBody, setNotifBody] = useState('')
@@ -16,23 +30,16 @@ export default function NotificationsTab() {
     if (!notifTitle || !notifBody) { toast.error('يرجى ملء عنوان ونص الإشعار'); return }
     setSending(true)
     try {
+      const payload = { title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
       if (notifTarget === 'all') {
-        const { error } = await supabase.functions.invoke('send-notification', {
-          body: { broadcast: true, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
-        })
-        if (error) throw error
+        await invokeEdgeFunction({ ...payload, broadcast: true })
         toast.success('تم إرسال الإشعار بنجاح لجميع الأجهزة!')
       } else if (notifTarget === 'driver') {
         const { data: drivers, error: dErr } = await supabase.from('profiles').select('id').eq('role', 'driver')
         if (dErr) throw dErr
         if (!drivers || drivers.length === 0) { toast.error('لا يوجد مناديب مسجلين'); setSending(false); return }
-        const promises = drivers.map(d =>
-          supabase.functions.invoke('send-notification', {
-            body: { userId: d.id, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
-          })
-        )
-        const results = await Promise.all(promises)
-        const successCount = results.filter(r => !r.error).length
+        const results = await Promise.all(drivers.map(d => invokeEdgeFunction({ ...payload, userId: d.id }).then(() => true).catch(() => false)))
+        const successCount = results.filter(Boolean).length
         if (successCount > 0) {
           toast.success(`تم إرسال الإشعار بنجاح لـ ${successCount} مندوب!`)
         } else {
@@ -41,10 +48,7 @@ export default function NotificationsTab() {
       } else {
         const { data: user, error: uErr } = await supabase.from('profiles').select('id').eq('phone', notifPhone).single()
         if (uErr || !user) { toast.error('لم يتم العثور على مستخدم بهذا الرقم'); setSending(false); return }
-        const { error } = await supabase.functions.invoke('send-notification', {
-          body: { userId: user.id, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
-        })
-        if (error) throw error
+        await invokeEdgeFunction({ ...payload, userId: user.id })
         toast.success('تم إرسال الإشعار بنجاح!')
       }
       setSent(true)

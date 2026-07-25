@@ -3,17 +3,13 @@ import { Send, Image as ImageIcon, CheckCircle, Loader } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
-const SUPABASE_URL = 'https://pftjlvtdzokbzuioqfug.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDg0NjgsImV4cCI6MjA5NDE4NDQ2OH0.3ujKn2bxihvFfhfeIXPVNDjxjfqpWsXJq4bpaPNsQOM'
-
 async function invokeEdgeFunction(body: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-    body: JSON.stringify(body),
+  const { data: { session } } = await supabase.auth.getSession()
+  const { data, error } = await supabase.functions.invoke('send-notification', {
+    body,
+    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
   })
-  const data = await res.json()
-  if (!res.ok || data.error) throw new Error(data.error || 'Edge Function error')
+  if (error) throw error
   return data
 }
 

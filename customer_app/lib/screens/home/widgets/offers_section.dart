@@ -72,7 +72,7 @@ class OffersSection extends StatelessWidget {
                     ),
                   ],
                 ),
-                Text('see_all'.tr, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primary, fontFamily: 'Cairo')),
+                const SizedBox.shrink(),
               ],
             ),
           ),

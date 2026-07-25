@@ -50,16 +50,13 @@ class TruckOrderHeader extends StatelessWidget {
                     backgroundColor: AppTheme.primary.withOpacity(isDark ? 0.05 : 0.1),
                   ),
                 ),
-                Positioned(
-                  left: 10,
-                  bottom: 10,
-                  top: 10,
-                  right: 140,
+                Positioned.fill(
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(28),
                     child: Image.asset(
-                      'assets/images/delivery_truck.png',
-                      fit: BoxFit.contain,
+                      'assets/images/truck_header.png',
+                      fit: BoxFit.cover,
+                      width: double.infinity,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           decoration: BoxDecoration(

@@ -343,7 +343,7 @@ class AppTranslations extends Translations {
           'profile_update_error': 'An error occurred while updating data, check your internet connection',
 
           // Truck Order
-          'truck_order_title': 'Bulk Truck Order',
+          'truck_order_title': 'Order a Vegetable Truck',
           'login_required': 'Login Required',
           'login_required_msg': 'Please login first to submit the order',
           'daily_limit_exceeded': 'Daily Limit Exceeded',
@@ -881,7 +881,7 @@ class AppTranslations extends Translations {
           'profile_update_error': 'حدث خطأ أثناء تحديث البيانات، تأكد من الاتصال بالإنترنت',
 
           // Truck Order
-          'truck_order_title': 'طلب شاحنة جمليه',
+          'truck_order_title': 'اطلب شاحنة خضراوات',
           'login_required': 'تسجيل دخول مطلوب',
           'login_required_msg': 'يرجى تسجيل الدخول أولاً لإرسال الطلب',
           'daily_limit_exceeded': 'تم تجاوز الحد اليومي',

@@ -89,11 +89,8 @@ Future<void> _setupFCM() async {
 
     // Get or generate a persistent device ID for guest tracking (UUID v4 format)
     final storage = GetStorage();
-    String? deviceId = storage.read<String>('device_id');
-    if (deviceId == null) {
-      deviceId = _generateDeviceUuid();
-      await storage.write('device_id', deviceId);
-    }
+    String deviceId = storage.read<String>('device_id') ?? _generateDeviceUuid();
+    await storage.write('device_id', deviceId);
 
     // Get and save token
     String? token = await messaging.getToken();

@@ -420,11 +420,12 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GestureDetector(
         onTap: () => Get.to(() => TruckOrderScreen()),
         child: Container(
+          height: 130,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             gradient: isDark
                 ? const LinearGradient(
-                    colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
+                    colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
                   )
                 : const LinearGradient(
                     colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
@@ -438,78 +439,73 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.primary.withOpacity(0.12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Image.asset(
+                  'assets/images/kiwivr.png',
+                  height: 130,
+                  width: 130,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 130,
+                    height: 130,
+                    color: AppTheme.primary.withOpacity(0.1),
+                    child: Icon(LucideIcons.truck, color: AppTheme.primary, size: 40),
                   ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/delivery_truck.png',
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Icon(
-                        LucideIcons.truck,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'truck_order_title'.tr,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
                         color: isDark
-                            ? Colors.green.shade300
+                            ? Colors.green.shade200
                             : AppTheme.primaryDark,
-                        size: 24,
+                        fontFamily: 'Cairo',
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'truck_order_title'.tr,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: isDark
-                              ? Colors.green.shade200
-                              : AppTheme.primaryDark,
-                          fontFamily: 'Cairo',
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'truck_order_subtitle'.tr,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? Colors.green.shade200.withOpacity(0.7)
+                            : AppTheme.primaryDark.withOpacity(0.7),
+                        fontFamily: 'Cairo',
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'truck_order_subtitle'.tr,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark
-                              ? Colors.green.shade200.withOpacity(0.7)
-                              : AppTheme.primaryDark.withOpacity(0.7),
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ],
-                  ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    LucideIcons.arrowLeft,
-                    color: isDark
-                        ? Colors.green.shade300
-                        : AppTheme.primaryDark,
-                    size: 16,
-                  ),
+              ),
+              Container(
+                width: 36,
+                height: 36,
+                margin: const EdgeInsets.only(left: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.15),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
+                child: Icon(
+                  LucideIcons.arrowLeft,
+                  color: isDark
+                      ? Colors.green.shade300
+                      : AppTheme.primaryDark,
+                  size: 18,
+                ),
+              ),
+            ],
           ),
         ),
       ),

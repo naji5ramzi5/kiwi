@@ -13,7 +13,8 @@ const supabase = createClient(
 )
 
 interface FCMNotificationRequest {
-  userId: string
+  userId?: string
+  broadcast?: boolean
   title: string
   body: string
   data?: Record<string, string>
@@ -74,37 +75,63 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, title, body, data } = (await req.json()) as FCMNotificationRequest
-    if (!userId || !title || !body) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: userId, title, body' }), { status: 400, headers })
+    const { userId, broadcast, title, body, data } = (await req.json()) as FCMNotificationRequest
+    if (!title || !body) {
+      return new Response(JSON.stringify({ error: 'Missing required fields: title, body' }), { status: 400, headers })
     }
-
-    const { data: tokensRecord, error: tokensErr } = await supabase
-      .from('user_fcm_tokens')
-      .select('token, device_type')
-      .eq('user_id', userId)
-
-    const { data: profileRecord, error: profileErr } = await supabase
-      .from('profiles')
-      .select('fcm_token')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (tokensErr) throw tokensErr
-    if (profileErr) throw profileErr
+    if (!userId && !broadcast) {
+      return new Response(JSON.stringify({ error: 'Missing required field: userId or broadcast' }), { status: 400, headers })
+    }
 
     const tokens: { token: string; device_type: string }[] = []
-    if (tokensRecord) {
-      tokens.push(...tokensRecord)
-    }
-    if (profileRecord?.fcm_token) {
-      if (!tokens.some(t => t.token === profileRecord.fcm_token)) {
-        tokens.push({ token: profileRecord.fcm_token, device_type: 'android' })
+
+    if (broadcast) {
+      // Broadcast mode: get ALL tokens from user_fcm_tokens
+      const { data: allTokens, error: allErr } = await supabase
+        .from('user_fcm_tokens')
+        .select('token, device_type')
+      if (allErr) throw allErr
+      if (allTokens) tokens.push(...allTokens)
+
+      // Also get all profiles with fcm_token
+      const { data: profiles, error: profErr } = await supabase
+        .from('profiles')
+        .select('fcm_token')
+        .not('fcm_token', 'is', null)
+      if (profErr) throw profErr
+      if (profiles) {
+        for (const p of profiles) {
+          if (p.fcm_token && !tokens.some(t => t.token === p.fcm_token)) {
+            tokens.push({ token: p.fcm_token, device_type: 'android' })
+          }
+        }
+      }
+    } else {
+      // Single user mode
+      const { data: tokensRecord, error: tokensErr } = await supabase
+        .from('user_fcm_tokens')
+        .select('token, device_type')
+        .eq('user_id', userId!)
+
+      const { data: profileRecord, error: profileErr } = await supabase
+        .from('profiles')
+        .select('fcm_token')
+        .eq('id', userId!)
+        .maybeSingle()
+
+      if (tokensErr) throw tokensErr
+      if (profileErr) throw profileErr
+
+      if (tokensRecord) tokens.push(...tokensRecord)
+      if (profileRecord?.fcm_token) {
+        if (!tokens.some(t => t.token === profileRecord.fcm_token)) {
+          tokens.push({ token: profileRecord.fcm_token, device_type: 'android' })
+        }
       }
     }
 
     if (!tokens.length) {
-      return new Response(JSON.stringify({ error: 'No FCM tokens found for user' }), { status: 404, headers })
+      return new Response(JSON.stringify({ error: 'No FCM tokens found', successful: 0, total: 0 }), { status: 200, headers })
     }
 
     const accessToken = await getAccessToken()
@@ -119,7 +146,7 @@ serve(async (req) => {
     )
 
     const successful = results.filter(result => result.success).length
-    return new Response(JSON.stringify({ successful, total: results.length, results }), { headers })
+    return new Response(JSON.stringify({ successful, total: results.length, broadcast: !!broadcast, results }), { headers })
   } catch (error) {
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,

@@ -17,6 +17,8 @@ import 'controllers/theme_controller.dart';
 import 'controllers/favorites_controller.dart';
 import 'config/app_config.dart';
 
+import 'dart:math';
+
 // Global FCM message notifier
 final ValueNotifier<RemoteMessage?> fcmMessageNotifier = ValueNotifier(null);
 
@@ -66,26 +68,42 @@ void main() async {
   }
 }
 
+/// Generates a UUID v4-format string for guest device identification.
+String _generateDeviceUuid() {
+  final rng = Random();
+  final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant 1
+  String hex(int b) => b.toRadixString(16).padLeft(2, '0');
+  return '${hex(bytes[0])}${hex(bytes[1])}${hex(bytes[2])}${hex(bytes[3])}-'
+      '${hex(bytes[4])}${hex(bytes[5])}-'
+      '${hex(bytes[6])}${hex(bytes[7])}-'
+      '${hex(bytes[8])}${hex(bytes[9])}-'
+      '${hex(bytes[10])}${hex(bytes[11])}${hex(bytes[12])}${hex(bytes[13])}${hex(bytes[14])}${hex(bytes[15])}';
+}
+
 Future<void> _setupFCM() async {
   try {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     await messaging.requestPermission(alert: true, badge: true, sound: true);
 
+    // Get or generate a persistent device ID for guest tracking (UUID v4 format)
+    final storage = GetStorage();
+    String? deviceId = storage.read<String>('device_id');
+    if (deviceId == null) {
+      deviceId = _generateDeviceUuid();
+      await storage.write('device_id', deviceId);
+    }
+
     // Get and save token
     String? token = await messaging.getToken();
     if (token != null) {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId != null) {
-        await Supabase.instance.client.from('profiles').update({'fcm_token': token}).eq('id', userId);
-      }
+      await _saveFcmToken(token, deviceId);
     }
 
     // Listen for token refresh
     messaging.onTokenRefresh.listen((newToken) async {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId != null) {
-        await Supabase.instance.client.from('profiles').update({'fcm_token': newToken}).eq('id', userId);
-      }
+      await _saveFcmToken(newToken, deviceId);
     });
 
     // Handle foreground messages - show snackbar
@@ -124,6 +142,32 @@ Future<void> _setupFCM() async {
     }
   } catch (e) {
     debugPrint('FCM setup error: $e');
+  }
+}
+
+/// Saves FCM token to user_fcm_tokens table for ALL users (guests + logged in).
+/// Also saves to profiles.fcm_token for logged-in users (backward compat).
+Future<void> _saveFcmToken(String token, String deviceId) async {
+  try {
+    final supabase = Supabase.instance.client;
+    final userId = supabase.auth.currentUser?.id;
+
+    // Always save to user_fcm_tokens (works for guests and logged-in users)
+    final tokenId = userId ?? deviceId;
+    await supabase.from('user_fcm_tokens').upsert({
+      'user_id': tokenId,
+      'token': token,
+      'device_type': 'android',
+    }, onConflict: 'token');
+
+    // Also save to profiles.fcm_token for logged-in users (backward compat)
+    if (userId != null) {
+      await supabase.from('profiles').update({'fcm_token': token}).eq('id', userId);
+    }
+
+    debugPrint('[FCM] Token saved for ${userId ?? 'guest($deviceId)'}');
+  } catch (e) {
+    debugPrint('[FCM] Error saving token: $e');
   }
 }
 

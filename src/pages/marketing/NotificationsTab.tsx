@@ -3,10 +3,6 @@ import { Send, Image as ImageIcon, CheckCircle, Loader } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
-function Leaf(props: React.SVGProps<SVGSVGElement>) {
-  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
-}
-
 export default function NotificationsTab() {
   const [notifTitle, setNotifTitle] = useState('')
   const [notifBody, setNotifBody] = useState('')
@@ -20,61 +16,40 @@ export default function NotificationsTab() {
     if (!notifTitle || !notifBody) { toast.error('يرجى ملء عنوان ونص الإشعار'); return }
     setSending(true)
     try {
-      let profilesQuery = supabase.from('profiles').select('id, role, phone').not('fcm_token', 'is', null)
-      if (notifTarget === 'driver') {
-        profilesQuery = profilesQuery.eq('role', 'driver')
-      } else if (notifTarget === 'single') {
-        profilesQuery = profilesQuery.eq('phone', notifPhone)
-      }
-      const { data: pData, error: pError } = await profilesQuery
-      if (pError) throw pError
-
-      const { data: tData, error: tError } = await supabase.from('user_fcm_tokens').select('user_id, device_type')
-      if (tError) throw tError
-
-      let tUserIds: string[] = []
-      if (tData && tData.length > 0) {
-        const userIdsInFcmTokens = tData.map(t => t.user_id)
-        const { data: matchedProfiles, error: mpError } = await supabase
-          .from('profiles')
-          .select('id, role, phone')
-          .in('id', userIdsInFcmTokens)
-        if (mpError) throw mpError
-
-        if (matchedProfiles) {
-          tUserIds = matchedProfiles.filter(p => {
-            if (notifTarget === 'driver') return p.role === 'driver'
-            if (notifTarget === 'single') return p.phone === notifPhone
-            return true
-          }).map(p => p.id)
-        }
-      }
-
-      const pUserIds = (pData || []).map(p => p.id)
-      const userIds = Array.from(new Set([...pUserIds, ...tUserIds]))
-
-      if (userIds.length === 0) {
-        toast.error('لم يتم العثور على أجهزة مسجلة للمستهدفين في قاعدة البيانات')
-        setSending(false)
-        return
-      }
-
-      const promises = userIds.map(userId =>
-        supabase.functions.invoke('send-fcm-notification', {
-          body: { userId, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
+      if (notifTarget === 'all') {
+        const { error } = await supabase.functions.invoke('send-fcm-notification', {
+          body: { broadcast: true, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
         })
-      )
-      const results = await Promise.all(promises)
-      const successCount = results.filter(r => !r.error).length
-
-      if (successCount > 0) {
-        setSent(true)
-        toast.success(`✅ تم إرسال الإشعار بنجاح لـ ${successCount} مستخدم!`)
-        setNotifTitle(''); setNotifBody(''); setNotifImage(''); setNotifPhone('')
-        setTimeout(() => setSent(false), 4000)
+        if (error) throw error
+        toast.success('تم إرسال الإشعار بنجاح لجميع الأجهزة!')
+      } else if (notifTarget === 'driver') {
+        const { data: drivers, error: dErr } = await supabase.from('profiles').select('id').eq('role', 'driver')
+        if (dErr) throw dErr
+        if (!drivers || drivers.length === 0) { toast.error('لا يوجد مناديب مسجلين'); setSending(false); return }
+        const promises = drivers.map(d =>
+          supabase.functions.invoke('send-fcm-notification', {
+            body: { userId: d.id, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
+          })
+        )
+        const results = await Promise.all(promises)
+        const successCount = results.filter(r => !r.error).length
+        if (successCount > 0) {
+          toast.success(`تم إرسال الإشعار بنجاح لـ ${successCount} مندوب!`)
+        } else {
+          throw new Error('فشلت جميع محاولات إرسال الإشعارات')
+        }
       } else {
-        throw new Error('فشلت جميع محاولات إرسال الإشعارات عبر الـ Edge Function')
+        const { data: user, error: uErr } = await supabase.from('profiles').select('id').eq('phone', notifPhone).single()
+        if (uErr || !user) { toast.error('لم يتم العثور على مستخدم بهذا الرقم'); setSending(false); return }
+        const { error } = await supabase.functions.invoke('send-fcm-notification', {
+          body: { userId: user.id, title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
+        })
+        if (error) throw error
+        toast.success('تم إرسال الإشعار بنجاح!')
       }
+      setSent(true)
+      setNotifTitle(''); setNotifBody(''); setNotifImage(''); setNotifPhone('')
+      setTimeout(() => setSent(false), 4000)
     } catch (err: unknown) {
       toast.error('خطأ في إرسال الإشعار: ' + ((err as Error).message || String(err)))
     } finally {
@@ -139,9 +114,7 @@ export default function NotificationsTab() {
         <div className="card-body" style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 40, borderRadius: '0 0 16px 16px' }}>
           <div style={{ background: 'white', width: 320, borderRadius: 16, boxShadow: '0 10px 25px rgba(0,0,0,.12)', overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--gray50)', background: '#f8fafc' }}>
-              <div style={{ width: 24, height: 24, background: 'var(--g500)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Leaf size={14} color="white" />
-              </div>
+              <img src="/kiwi-logo.jpg" alt="Kiwi" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'cover' }} />
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--g700)' }}>Kiwi App</span>
               <span style={{ fontSize: 10, color: 'var(--gray400)', marginRight: 'auto' }}>الآن</span>
             </div>

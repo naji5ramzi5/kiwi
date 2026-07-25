@@ -21,7 +21,6 @@ import Categories from './pages/Categories'
 import AIChat from './pages/AIChat'
 import Ratings from './pages/Ratings'
 import Login from './pages/Login'
-import { GeoFenceStatus } from './components/GeoFenceStatus'
 import OrderForm from './pages/OrderForm'
 import DeliveryZones from './pages/DeliveryZones'
 import Profile from './pages/Profile'
@@ -58,10 +57,6 @@ export default function App() {
     }} />
   }
 
-  // Try to get a branchId from the session (if available) to limit the geo-fence check.
-  // Adjust the path according to how you store branch info in the user's metadata.
-  const branchId = session?.user?.app_metadata?.default_branch_id ?? null;
-
   return (
     <BrowserRouter>
       <Toaster 
@@ -89,7 +84,6 @@ export default function App() {
         <Route path="/" element={
           <>
             <Layout />
-            <GeoFenceStatus branchId={branchId} />
           </>
         }>
           <Route index element={<Navigate to="/dashboard" replace />} />

@@ -83,7 +83,7 @@ serve(async (req) => {
       }
 
       case 'deliver': {
-        const { error: updateError } = await supabase.from('orders').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', orderId)
+        const { error: updateError } = await supabase.from('orders').update({ status: 'delivered' }).eq('id', orderId)
         if (updateError) throw updateError
         
         if (order.customer_id) {

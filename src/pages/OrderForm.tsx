@@ -83,12 +83,11 @@ export default function OrderForm({ branchId }: OrderFormProps = {}) {
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: user.id,
+          customer_id: user.id,
           branch_id: effectiveBranchId,
-          total_price: totalPrice,
+          total_amount: totalPrice,
           delivery_address: form.deliveryAddress,
-          status: ORDER_STATUS.PENDING, // New order starts as pending
-          // We could also store items in a separate order_items table, but for simplicity we'll just store summary.
+          status: ORDER_STATUS.PENDING,
         })
         .select()
         .single();

@@ -35,9 +35,9 @@ interface Order {
   id: string;
   created_at: string;
   status: string;
-  total_price: number;
+  total_amount: number;
   delivery_address: string;
-  user_id: string;
+  customer_id: string;
   branch_id: string;
   customer_name?: string;
   customer_phone?: string;
@@ -63,7 +63,7 @@ export default function Orders() {
         .from('orders')
         .select(`
           *,
-          profiles:user_id (full_name, phone),
+          profiles:customer_id (full_name, phone),
           branches:branch_id (name)
         `)
         .order('created_at', { ascending: false });
@@ -139,9 +139,9 @@ export default function Orders() {
       // Send FCM notification to the customer about status change
       try {
         const order = orders.find(o => o.id === orderId);
-        if (order?.user_id) {
+        if (order?.customer_id) {
           await sendFcmNotification(
-            order.user_id,
+            order.customer_id,
             'تحديث حالة الطلب',
             `تم تغيير حالة طلبك رقم ${orderId.substring(0, 8)} إلى "${newStatus}"`,
             { orderId, status: newStatus }
@@ -205,7 +205,7 @@ export default function Orders() {
             <p><strong>الحالة:</strong> ${order.status || '-'}</p>
           </div>
           <div class="total">
-            الإجمالي: ${(order.total_price || 0).toLocaleString('ar-IQ')} د.ع
+            الإجمالي: ${(order.total_amount || 0).toLocaleString('ar-IQ')} د.ع
           </div>
         </body>
       </html>
@@ -244,7 +244,7 @@ export default function Orders() {
       o.customer_name || '',
       o.customer_phone || '',
       o.status || '',
-      String(o.total_price || 0),
+      String(o.total_amount || 0),
       o.delivery_address || '',
       new Date(o.created_at).toLocaleDateString('ar-IQ'),
     ]);
@@ -380,7 +380,7 @@ export default function Orders() {
                       <div style={{ textAlign: 'right', marginBottom: 16 }}>
                         <p style={{ fontSize: 11, color: 'var(--gray400)', margin: 0 }}>إجمالي المبلغ</p>
                         <p style={{ fontSize: 24, fontWeight: 900, color: 'var(--g600)', margin: 0 }}>
-                          {(order.total_price || 0).toLocaleString('ar-IQ')} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span>
+                          {(order.total_amount || 0).toLocaleString('ar-IQ')} <span style={{ fontSize: 12, fontWeight: 500 }}>د.ع</span>
                         </p>
                       </div>
 

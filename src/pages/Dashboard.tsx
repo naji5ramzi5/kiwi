@@ -125,7 +125,7 @@ export default function Dashboard() {
   const statsArr = Object.values(branchStats)
   const totalSales = statsArr.reduce((s, b) => s + b.sales, 0)
   const lowStockCount = lowStockAlerts.length
-  const activeDriversCount = drivers.filter((d: any) => d.is_active && d.current_status === 'متاح').length
+  const activeDriversCount = drivers.filter((d: any) => d.is_active && (d.current_status === 'available' || d.current_status === 'متاح')).length
   const deliveredOrders = statsArr.reduce((s, b) => s + b.sales, 0)
 
   return (

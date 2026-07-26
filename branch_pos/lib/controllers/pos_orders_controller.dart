@@ -54,7 +54,7 @@ class POSOrdersController extends GetxController {
       // Notify the assigned driver via FCM
       try {
         await supabase.functions.invoke(
-          'send-fcm-notification',
+          'send-notification',
           body: {
             'userId': driverId,
             'title': 'طلب جديد تم إسناده إليك',

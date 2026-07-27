@@ -101,7 +101,7 @@ class DriverApp extends StatelessWidget {
     final session = supabase.auth.currentSession;
 
     return GetMaterialApp(
-      title: 'Fresh Driver',
+      title: 'Kiwi_Driver',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: const Color(0xFF10b981),

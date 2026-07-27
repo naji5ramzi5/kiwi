@@ -1,6 +1,5 @@
-// Worker URL for FCM notifications
-// غيّر هذا الرابط بعد نشر الـ Worker على Cloudflare
-export const FCM_WORKER_URL = 'https://kiwi-fcm-worker.citrine-odometer.workers.dev';
+// Supabase Edge Function URL for FCM notifications
+export const FCM_FUNCTION_URL = 'https://pftjlvtdzokbzuioqfug.supabase.co/functions/v1/send-notification';
 
 // Supabase
 export const SUPABASE_URL = 'https://pftjlvtdzokbzuioqfug.supabase.co';

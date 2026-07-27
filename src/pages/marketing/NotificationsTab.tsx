@@ -1,13 +1,17 @@
 import { useState, useRef } from 'react'
 import { Send, Image as ImageIcon, CheckCircle, Loader, Upload, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { FCM_WORKER_URL } from '../../config'
+import { FCM_FUNCTION_URL, SUPABASE_ANON_KEY } from '../../config'
 import toast from 'react-hot-toast'
 
 async function invokeEdgeFunction(body: Record<string, unknown>) {
-  const res = await fetch(FCM_WORKER_URL, {
+  const res = await fetch(FCM_FUNCTION_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
     body: JSON.stringify(body),
   })
   if (!res.ok) {

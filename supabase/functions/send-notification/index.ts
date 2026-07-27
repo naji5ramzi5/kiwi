@@ -7,7 +7,7 @@ const supabase = createClient(
 
 const FCM_PROJECT_ID = Deno.env.get('FCM_PROJECT_ID') ?? 'fresh-enterprise'
 const FCM_CLIENT_EMAIL = Deno.env.get('FCM_CLIENT_EMAIL') ?? 'firebase-adminsdk-fbsvc@fresh-enterprise.iam.gserviceaccount.com'
-const FCM_PRIVATE_KEY_B64 = Deno.env.get('FCM_PRIVATE_KEY_B64') ?? ''
+const FCM_PRIVATE_KEY = Deno.env.get('FCM_PRIVATE_KEY') ?? ''
 
 interface FCMNotificationRequest {
   userId?: string
@@ -17,10 +17,19 @@ interface FCMNotificationRequest {
   data?: Record<string, string>
 }
 
-async function getAccessToken(): Promise<string> {
-  if (!FCM_PRIVATE_KEY_B64) throw new Error('FCM_PRIVATE_KEY_B64 secret is missing')
+function pemToDer(pem: string): Uint8Array {
+  const cleaned = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/\r?\n/g, '')
+    .replace(/\s/g, '')
+  return Uint8Array.from(atob(cleaned), c => c.charCodeAt(0))
+}
 
-  const derBytes = Uint8Array.from(atob(FCM_PRIVATE_KEY_B64), c => c.charCodeAt(0))
+async function getAccessToken(): Promise<string> {
+  if (!FCM_PRIVATE_KEY) throw new Error('FCM_PRIVATE_KEY secret is missing')
+
+  const derBytes = pemToDer(FCM_PRIVATE_KEY)
 
   const privateKey = await crypto.subtle.importKey(
     'pkcs8',

@@ -1,7 +1,7 @@
 import { useEffect, useRef, createContext, useContext, type ReactNode } from 'react';
 import { supabase } from './supabase';
 import { toast } from 'react-hot-toast';
-import { FCM_WORKER_URL } from '../config';
+import { FCM_FUNCTION_URL, SUPABASE_ANON_KEY } from '../config';
 
 interface FcmContextType {
   getToken: () => Promise<string | null>;
@@ -107,9 +107,13 @@ export const sendNotification = async (
   data?: Record<string, string>
 ) => {
   try {
-    const res = await fetch(`${FCM_WORKER_URL}`, {
+    const res = await fetch(`${FCM_FUNCTION_URL}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
       body: JSON.stringify({ userId, title, body, data: data || {} }),
     });
 

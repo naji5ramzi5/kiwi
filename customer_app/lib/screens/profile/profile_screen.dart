@@ -369,19 +369,50 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _menuItemWithWidget(IconData icon, String title, Widget trailing, VoidCallback? onTap) {
     final isDark = Get.isDarkMode;
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.surfaceDark : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E291F) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.15 : 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.surfaceDark : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 20, color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ),
+              trailing,
+            ],
+          ),
         ),
-        child: Icon(icon, size: 20, color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary),
       ),
-      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary, fontFamily: 'Cairo')),
-      trailing: trailing,
     );
   }
 

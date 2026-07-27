@@ -1,6 +1,7 @@
 import { useEffect, useRef, createContext, useContext, type ReactNode } from 'react';
 import { supabase } from './supabase';
 import { toast } from 'react-hot-toast';
+import { FCM_WORKER_URL } from '../config';
 
 interface FcmContextType {
   getToken: () => Promise<string | null>;
@@ -106,12 +107,15 @@ export const sendNotification = async (
   data?: Record<string, string>
 ) => {
   try {
-    const { error } = await supabase.functions.invoke('send-notification', {
-      body: { userId, title, body, data: data || {} },
+    const res = await fetch(`${FCM_WORKER_URL}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, title, body, data: data || {} }),
     });
 
-    if (error) {
-      console.error('Send notification error:', error);
+    if (!res.ok) {
+      const err = await res.json();
+      console.error('Send notification error:', err);
       toast.error('فشل إرسال الإشعار');
       return false;
     }

@@ -8,6 +8,7 @@ import 'controllers/auth_controller.dart';
 import 'controllers/pos_orders_controller.dart';
 import 'screens/splash_screen.dart';
 import 'services/database_service.dart';
+import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,7 @@ void main() async {
   ).catchError((e) => debugPrint('Supabase init error: $e'));
 
   DatabaseService().database.catchError((e) => debugPrint('Database init error: $e'));
+  SyncService().startMonitoring();
 
   runApp(const FreshPOSApp());
 }

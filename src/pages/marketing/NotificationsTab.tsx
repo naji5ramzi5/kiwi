@@ -1,12 +1,20 @@
 import { useState, useRef } from 'react'
 import { Send, Image as ImageIcon, CheckCircle, Loader, Upload, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { FCM_WORKER_URL } from '../../config'
 import toast from 'react-hot-toast'
 
 async function invokeEdgeFunction(body: Record<string, unknown>) {
-  const { data, error } = await supabase.functions.invoke('send-notification', { body })
-  if (error) throw error
-  return data
+  const res = await fetch(FCM_WORKER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || 'Failed to send')
+  }
+  return res.json()
 }
 
 export default function NotificationsTab() {

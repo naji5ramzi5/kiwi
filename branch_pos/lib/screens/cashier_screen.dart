@@ -1,8 +1,11 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:convert';
 import '../controllers/auth_controller.dart';
 import '../services/supabase_service.dart';
+import '../services/database_service.dart';
 import '../models/product.dart';
 import '../models/cart_item.dart';
 import '../models/invoice.dart';
@@ -129,6 +132,44 @@ class _CashierScreenState extends State<CashierScreen> {
 
     setState(() => _isCheckingOut = true);
     try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final isOffline = connectivityResult == ConnectivityResult.none;
+
+      if (isOffline) {
+        final orderId = DateTime.now().millisecondsSinceEpoch.toString();
+        final itemsJson = jsonEncode(_cart.map((c) => {
+          'product_id': c.productId,
+          'name': c.name,
+          'price': c.price,
+          'quantity': c.quantity,
+          'unit': c.unit,
+          'total': c.total,
+        }).toList());
+
+        await DatabaseService().saveOfflineOrder({
+          'id': orderId,
+          'branch_id': _auth.currentBranchId.value,
+          'created_by': _auth.supabase.auth.currentUser?.id ?? '',
+          'total_amount': _total,
+          'items_json': itemsJson,
+          'is_synced': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        setState(() {
+          _cart.clear();
+          _discount = 0.0;
+          _customerName = null;
+        });
+
+        Get.snackbar('تم الحفظ محلياً', 'سيتم رفع البيانات عند عودة الإنترنت',
+          backgroundColor: AppTheme.warning,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
       final order = await _supabase.createOrder(
         branchId: _auth.currentBranchId.value,
         createdBy: _auth.supabase.auth.currentUser?.id ?? '',

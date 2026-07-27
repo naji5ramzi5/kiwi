@@ -33,6 +33,30 @@ class _SettlementScreenState extends State<SettlementScreen> {
   Future<void> fetchDailyStats() async {
     setState(() => isLoading = true);
     try {
+      final branchId = authController.currentBranchId.value;
+
+      final rpcData = await supabase.rpc('get_branch_daily_stats', params: {
+        'p_branch_id': branchId,
+      });
+
+      setState(() {
+        stats = {
+          'total_sales': (rpcData?['total_sales'] as num?)?.toDouble() ?? 0.0,
+          'total_purchases': (rpcData?['total_purchases'] as num?)?.toDouble() ?? 0.0,
+          'total_damaged': (rpcData?['total_damaged'] as num?)?.toDouble() ?? 0.0,
+          'orders_count': rpcData?['orders_count'] ?? 0,
+        };
+      });
+    } catch (e) {
+      debugPrint('Error fetching stats via RPC: $e');
+      await _fetchDailyStatsFallback();
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _fetchDailyStatsFallback() async {
+    try {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
 
@@ -68,9 +92,7 @@ class _SettlementScreenState extends State<SettlementScreen> {
         };
       });
     } catch (e) {
-      debugPrint('Error fetching stats: $e');
-    } finally {
-      setState(() => isLoading = false);
+      debugPrint('Error fetching stats fallback: $e');
     }
   }
 

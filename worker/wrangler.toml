@@ -1,0 +1,11 @@
+name = "kiwi-fcm-worker"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Environment Variables (set these via `wrangler secret put`)
+# SUPABASE_URL = "https://pftjlvtdzokbzuioqfug.supabase.co"
+# SUPABASE_ANON_KEY = "..."
+# SUPABASE_SERVICE_ROLE_KEY = "..."
+# FCM_PROJECT_ID = "fresh-enterprise"
+# FCM_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@fresh-enterprise.iam.gserviceaccount.com"
+# FCM_PRIVATE_KEY_B64 = "..."

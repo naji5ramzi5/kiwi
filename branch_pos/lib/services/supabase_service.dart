@@ -53,11 +53,11 @@ class SupabaseService {
   Future<double> getStock(String branchId, String productId) async {
     final data = await supabase
         .from('branch_inventory')
-        .select('stock_quantity')
+        .select('actual_stock')
         .eq('branch_id', branchId)
         .eq('product_id', productId)
         .maybeSingle();
-    return (data?['stock_quantity'] ?? 0).toDouble();
+    return (data?['actual_stock'] ?? 0).toDouble();
   }
 
   // ─── Orders ─────────────────────────────────────────────

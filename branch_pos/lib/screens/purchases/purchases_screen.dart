@@ -20,7 +20,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   final AuthController authController = Get.find<AuthController>();
 
   List<Map<String, dynamic>> cart = [];
-  String supplierName = '';
+  final TextEditingController supplierController = TextEditingController();
   double totalValue = 0;
   final TextEditingController barcodeController = TextEditingController();
 
@@ -85,7 +85,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   }
 
   Future<void> savePurchase() async {
-    if (cart.isEmpty || supplierName.isEmpty) {
+    if (cart.isEmpty || supplierController.text.isEmpty) {
       Get.snackbar('تنبيه', 'يرجى اختيار منتجات وإدخال اسم المورد');
       return;
     }
@@ -95,7 +95,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
 
       final purchaseResponse = await supabase.from('purchases').insert({
         'branch_id': branchId,
-        'supplier_name': supplierName,
+        'supplier_name': supplierController.text,
         'total_amount': totalValue,
         'created_by': Supabase.instance.client.auth.currentUser?.id,
       }).select().single();
@@ -127,7 +127,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
       );
       setState(() {
         cart = [];
-        supplierName = '';
+        supplierController.clear();
         totalValue = 0;
       });
       inventoryController.fetchInventory();
@@ -275,7 +275,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: TextField(
-                    onChanged: (v) => supplierName = v,
+                    controller: supplierController,
                     decoration: InputDecoration(
                       labelText: 'اسم المورد / المصدر',
                       prefixIcon: Container(

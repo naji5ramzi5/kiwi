@@ -154,7 +154,7 @@ class _BarcodePrinterSettingsPageState extends State<BarcodePrinterSettingsPage>
               ),
             if (_settings.showBatchNumber)
               pw.Text(
-                'ال批次: B2026-07',
+                'الدفعة: B2026-07',
                 style: pw.TextStyle(font: font, fontSize: 8 * fs, color: PdfColors.grey600),
                 textAlign: pw.TextAlign.center,
               ),

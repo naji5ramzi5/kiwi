@@ -2,25 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/app_theme.dart';
 import 'general_settings_page.dart';
-import 'thermal_printer_settings_page.dart';
-import 'thermal_receipt_designer_page.dart';
-import 'barcode_printer_settings_page.dart';
-import 'barcode_label_designer_page.dart';
+import 'thermal_printer_full_page.dart';
+import 'barcode_printer_full_page.dart';
 import 'backup_settings_page.dart';
 import 'users_settings_page.dart';
 import 'system_settings_page.dart';
-import 'about_page.dart';
 
 enum SettingsSection {
   general,
   thermalPrinter,
-  receiptDesigner,
   barcodePrinter,
-  labelDesigner,
   backup,
   users,
   system,
-  about,
 }
 
 class SettingsPage extends StatefulWidget {
@@ -45,19 +39,9 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: LucideIcons.printer,
     ),
     _SidebarItem(
-      section: SettingsSection.receiptDesigner,
-      title: 'تصميم الفاتورة الحرارية',
-      icon: LucideIcons.receipt,
-    ),
-    _SidebarItem(
       section: SettingsSection.barcodePrinter,
       title: 'إعدادات طابعة الباركود',
       icon: LucideIcons.qrCode,
-    ),
-    _SidebarItem(
-      section: SettingsSection.labelDesigner,
-      title: 'تصميم ملصق الباركود',
-      icon: LucideIcons.tag,
     ),
     _SidebarItem(
       section: SettingsSection.backup,
@@ -74,11 +58,6 @@ class _SettingsPageState extends State<SettingsPage> {
       title: 'إعدادات النظام',
       icon: LucideIcons.monitor,
     ),
-    _SidebarItem(
-      section: SettingsSection.about,
-      title: 'حول البرنامج',
-      icon: LucideIcons.info,
-    ),
   ];
 
   Widget _buildContentArea() {
@@ -86,21 +65,15 @@ class _SettingsPageState extends State<SettingsPage> {
       case SettingsSection.general:
         return const GeneralSettingsPage();
       case SettingsSection.thermalPrinter:
-        return const ThermalPrinterSettingsPage();
-      case SettingsSection.receiptDesigner:
-        return const ThermalReceiptDesignerPage();
+        return const ThermalPrinterFullPage();
       case SettingsSection.barcodePrinter:
-        return const BarcodePrinterSettingsPage();
-      case SettingsSection.labelDesigner:
-        return const BarcodeLabelDesignerPage();
+        return const BarcodePrinterFullPage();
       case SettingsSection.backup:
         return const BackupSettingsPage();
       case SettingsSection.users:
         return const UsersSettingsPage();
       case SettingsSection.system:
         return const SystemSettingsPage();
-      case SettingsSection.about:
-        return const AboutPage();
     }
   }
 
@@ -201,7 +174,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               ),
                               Text(
-                                '管理中心',
+                                'لوحة التحكم',
                                 style: TextStyle(
                                   color: AppTheme.primaryLight,
                                   fontSize: 11,

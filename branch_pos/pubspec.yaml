@@ -53,6 +53,7 @@ dependencies:
   printing: ^5.13.2
   file_picker: ^8.1.7
   flutter_launcher_icons: ^0.14.4
+  connectivity_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:

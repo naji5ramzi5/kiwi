@@ -307,7 +307,7 @@ class _BarcodeLabelDesignerPageState extends State<BarcodeLabelDesignerPage>
           ],
           if (_settings.showBatchNumber) ...[
             Text(
-              'ال批次: B2026-07',
+              'الدفعة: B2026-07',
               style: TextStyle(
                 fontSize: 7 * fs,
                 color: AppTheme.textLight,

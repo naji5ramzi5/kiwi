@@ -25,7 +25,7 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
   List<Map<String, dynamic>> historyOrders = [];
   bool isLoading = true;
   Map<String, dynamic>? driverProfile;
-  String avgRating = 'Ø¬Ø¯ÙŠØ¯';
+  String avgRating = 'جديد';
   int totalRatings = 0;
   int deliveryCount = 0;
   double totalEarnings = 0;
@@ -250,8 +250,8 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     if (value) {
       _startLocationTracking();
       Get.snackbar(
-        'Ø£Ù†Øª Ù…ØªØµÙ„ Ø§Ù„Ø¢Ù†',
-        'Ù…Ø³ØªØ¹Ø¯ÙˆÙ† Ù„ØªÙ„Ù‚ÙŠ Ø§Ù„Ø·Ù„Ø¨Ø§Øª',
+        'أنت متصل الآن',
+        'مستعد لتلقي الطلبات',
         backgroundColor: const Color(0xFF10b981),
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -306,19 +306,19 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(LucideIcons.home),
-            label: 'Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©',
+            label: 'الرئيسية',
           ),
           BottomNavigationBarItem(
             icon: Icon(LucideIcons.wallet),
-            label: 'Ø§Ù„Ø£Ø±Ø¨Ø§Ø­',
+            label: 'الأرباح',
           ),
           BottomNavigationBarItem(
             icon: Icon(LucideIcons.clock),
-            label: 'Ø§Ù„Ø³Ø¬Ù„',
+            label: 'السجل',
           ),
           BottomNavigationBarItem(
             icon: Icon(LucideIcons.settings),
-            label: 'Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª',
+            label: 'الإعدادات',
           ),
         ],
       ),

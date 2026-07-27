@@ -26,10 +26,10 @@ class SupabaseService {
     if (branchId != null) {
       try {
         final inventoryData = await supabase
-            .from('inventory')
-            .select('product_id, stock_quantity')
+            .from('branch_inventory')
+            .select('product_id, actual_stock')
             .eq('branch_id', branchId);
-        final stockMap = {for (final inv in inventoryData) inv['product_id']: (inv['stock_quantity'] as num?)?.toDouble() ?? 0};
+        final stockMap = {for (final inv in inventoryData) inv['product_id']: (inv['actual_stock'] as num?)?.toDouble() ?? 0};
         for (int i = 0; i < products.length; i++) {
           products[i] = products[i].copyWith(stockQuantity: stockMap[products[i].id] ?? 0);
         }
@@ -42,16 +42,17 @@ class SupabaseService {
 
   // ─── Inventory ──────────────────────────────────────────
   Future<void> updateStock(String branchId, String productId, double quantity) async {
-    await supabase.from('inventory').upsert({
+    await supabase.from('branch_inventory').upsert({
       'branch_id': branchId,
       'product_id': productId,
-      'stock_quantity': quantity,
+      'actual_stock': quantity,
+      'is_active': true,
     }, onConflict: 'branch_id,product_id');
   }
 
   Future<double> getStock(String branchId, String productId) async {
     final data = await supabase
-        .from('inventory')
+        .from('branch_inventory')
         .select('stock_quantity')
         .eq('branch_id', branchId)
         .eq('product_id', productId)

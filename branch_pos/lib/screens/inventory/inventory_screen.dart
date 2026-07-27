@@ -15,7 +15,7 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final supabase = Supabase.instance.client;
   final AuthController authController = Get.find<AuthController>();
-  
+
   List<Map<String, dynamic>> _inventory = [];
   bool _loading = true;
   String _search = '';
@@ -30,37 +30,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
     try {
       setState(() => _loading = true);
       final branchId = authController.currentBranchId.value;
-      
-      // 1. Fetch all active products in catalog
+
       final productsResponse = await supabase
           .from('products')
           .select('*')
           .eq('is_active', true);
-      
-      // 2. Fetch branch inventory
+
       final invResponse = await supabase
-          .from('inventory')
+          .from('branch_inventory')
           .select('*')
           .eq('branch_id', branchId);
-      
+
       final List<Map<String, dynamic>> allCatalog = List<Map<String, dynamic>>.from(productsResponse);
       final List<Map<String, dynamic>> branchInv = List<Map<String, dynamic>>.from(invResponse);
-      
+
       final List<Map<String, dynamic>> mappedInventory = allCatalog.map((prod) {
         final invEntry = branchInv.firstWhere(
           (inv) => inv['product_id'] == prod['id'],
           orElse: () => <String, dynamic>{},
         );
-        
+
         return {
           'id': invEntry.isNotEmpty ? invEntry['id'] : null,
           'product_id': prod['id'],
           'branch_id': branchId,
-          'stock_quantity': invEntry.isNotEmpty 
-              ? (invEntry['stock_quantity'] is num ? (invEntry['stock_quantity'] as num).toDouble() : double.tryParse(invEntry['stock_quantity'].toString()) ?? 0.0)
+          'stock_quantity': invEntry.isNotEmpty
+              ? (invEntry['actual_stock'] is num ? (invEntry['actual_stock'] as num).toDouble() : double.tryParse(invEntry['actual_stock'].toString()) ?? 0.0)
               : 0.0,
-          'min_stock_level': invEntry.isNotEmpty 
-              ? (invEntry['min_stock_level'] is num ? (invEntry['min_stock_level'] as num).toDouble() : double.tryParse(invEntry['min_stock_level'].toString()) ?? 2.0)
+          'min_stock_level': invEntry.isNotEmpty
+              ? (invEntry['buffer_limit'] is num ? (invEntry['buffer_limit'] as num).toDouble() : double.tryParse(invEntry['buffer_limit'].toString()) ?? 2.0)
               : 2.0,
           'products': prod,
         };
@@ -71,7 +69,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         _loading = false;
       });
     } catch (e) {
-      print('Error fetching inventory: $e');
+      debugPrint('Error fetching inventory: $e');
       setState(() => _loading = false);
     }
   }
@@ -79,17 +77,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> updateStock(String productId, double qty) async {
     try {
       final branchId = authController.currentBranchId.value;
-      
-      await supabase.from('inventory').upsert({
+
+      await supabase.from('branch_inventory').upsert({
         'branch_id': branchId,
         'product_id': productId,
-        'stock_quantity': qty,
+        'actual_stock': qty,
+        'is_active': true,
       }, onConflict: 'branch_id,product_id');
-      
-      Get.snackbar('تم', 'تم تحديث كمية المخزون بنجاح');
+
+      Get.snackbar('تم', 'تم تحديث كمية المخزون بنجاح',
+        backgroundColor: AppTheme.success,
+        colorText: Colors.white,
+      );
       fetchInventory();
     } catch (e) {
-      Get.snackbar('خطأ', 'فشل تحديث المخزون: $e');
+      Get.snackbar('خطأ', 'فشل تحديث المخزون: $e',
+        backgroundColor: AppTheme.error,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -105,10 +110,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
         'type': 'damaged'
       });
 
-      // Decrement actual stock
       await _decrementStock(branchId, productId, qty);
 
-      Get.snackbar('تم', 'تم تسجيل التالف وتحديث المخزون بنجاح');
+      Get.snackbar('تم', 'تم تسجيل التالف وتحديث المخزون بنجاح',
+        backgroundColor: AppTheme.success,
+        colorText: Colors.white,
+      );
       fetchInventory();
     } catch (e) {
       try {
@@ -121,10 +128,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
         await _decrementStock(branchId, productId, qty);
 
-        Get.snackbar('تم', 'تم تسجيل التالف وتحديث المخزون بنجاح');
+        Get.snackbar('تم', 'تم تسجيل التالف وتحديث المخزون بنجاح',
+          backgroundColor: AppTheme.success,
+          colorText: Colors.white,
+        );
         fetchInventory();
       } catch (err) {
-        Get.snackbar('خطأ', 'فشل تسجيل التالف: $err');
+        Get.snackbar('خطأ', 'فشل تسجيل التالف: $err',
+          backgroundColor: AppTheme.error,
+          colorText: Colors.white,
+        );
       }
     }
   }
@@ -132,31 +145,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _decrementStock(String branchId, String productId, double qty) async {
     try {
       final current = await supabase
-          .from('inventory')
-          .select('stock_quantity')
+          .from('branch_inventory')
+          .select('actual_stock')
           .eq('branch_id', branchId)
           .eq('product_id', productId)
           .maybeSingle();
 
-      final currentStock = (current?['stock_quantity'] ?? 0).toDouble();
+      final currentStock = (current?['actual_stock'] ?? 0).toDouble();
       final newStock = (currentStock - qty) < 0 ? 0.0 : currentStock - qty;
 
-      await supabase.from('inventory').upsert({
+      await supabase.from('branch_inventory').upsert({
         'branch_id': branchId,
         'product_id': productId,
-        'stock_quantity': newStock,
+        'actual_stock': newStock,
+        'is_active': true,
       }, onConflict: 'branch_id,product_id');
     } catch (e) {
-      print('Error decrementing stock for waste: $e');
+      debugPrint('Error decrementing stock for waste: $e');
     }
   }
 
   void _generateBarcode(Map<String, dynamic> item) {
-    // Basic local barcode generation (e.g. branch prefix + product id)
     final String branchId = authController.currentBranchId.value.toString();
     final String productId = item['product_id'].toString();
     final String localBarcode = 'BR-$branchId-PR-$productId';
-    
+
     Get.defaultDialog(
       title: 'طباعة باركود محلي',
       content: Column(
@@ -169,12 +182,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
             child: Text(localBarcode, style: const TextStyle(fontSize: 18, letterSpacing: 2)),
           ),
           const SizedBox(height: 10),
-          const Text('تم ربط هذا الباركود محلياً للصنف لطباعته واستخدامه في המبيعات والمشتريات.'),
+          const Text('تم ربط هذا الباركود محلياً للصنف لطباعته واستخدامه في المبيعات والمشتريات.'),
         ],
       ),
       confirm: ElevatedButton.icon(
         onPressed: () {
-          // Implement actual printing logic via printing package
           Get.back();
           Get.snackbar('جاري الطباعة', 'يتم إرسال أمر الطباعة إلى طابعة الباركود الحرارية...');
         },
@@ -187,34 +199,49 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _inventory.where((item) => 
+    final filtered = _inventory.where((item) =>
       item['products']['name'].toString().contains(_search)
     ).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: Padding(
-        padding: const EdgeInsets.all(40.0),
+        padding: const EdgeInsets.all(32.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('إدارة المخزون والتوالف', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppTheme.primaryDark)),
-                    Obx(() => Text('جرد المنتجات الحالي لفرع: ${authController.currentBranchName.value}', style: const TextStyle(color: AppTheme.textSecondary))),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(LucideIcons.package, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        const Text('إدارة المخزون والتوالف', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppTheme.primaryDarker)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Obx(() => Text('جرد المنتجات الحالي لفرع: ${authController.currentBranchName.value}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
                   ],
                 ),
                 _buildSearchField(),
               ],
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
             Expanded(
-              child: _loading 
-                ? const Center(child: CircularProgressIndicator()) 
+              child: _loading
+                ? const Center(child: CircularProgressIndicator())
                 : _buildInventoryTable(filtered),
             ),
           ],
@@ -225,76 +252,145 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Widget _buildSearchField() {
     return Container(
-      width: 400,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)]),
+      width: 360,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
       child: TextField(
         onChanged: (v) => setState(() => _search = v),
-        decoration: const InputDecoration(border: InputBorder.none, hintText: 'بحث عن منتج...', icon: Icon(LucideIcons.search, size: 18)),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: 'بحث عن منتج...',
+          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+          prefixIcon: Icon(LucideIcons.search, size: 18, color: Colors.grey.shade400),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       ),
     );
   }
 
   Widget _buildInventoryTable(List<Map<String, dynamic>> items) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 30)]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: Scrollbar(
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-              headingRowColor: WidgetStateProperty.all(AppTheme.primary.withOpacity(0.05)),
-              columns: const [
-                DataColumn(label: Text('المنتج', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('المخزون الحالي', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('الحالة', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('الإجراءات', style: TextStyle(fontWeight: FontWeight.bold))),
-              ],
-              rows: items.map((item) {
-                final stock = item['stock_quantity'];
-                final unit = item['products']['unit'];
-                return DataRow(cells: [
-                  DataCell(Row(
-                    children: [
-                      Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)), child: const Icon(LucideIcons.package, size: 20)),
-                      const SizedBox(width: 12),
-                      Text(item['products']['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  )),
-                  DataCell(Text('$stock $unit', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
-                  DataCell(_buildStatusBadge(stock)),
-                  DataCell(Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _showUpdateStockDialog(item),
-                        icon: const Icon(LucideIcons.edit2, size: 14),
-                        label: const Text('تحديث الكمية'),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary.withOpacity(0.1), foregroundColor: AppTheme.primary, elevation: 0),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => _showWasteDialog(item),
-                        icon: const Icon(LucideIcons.alertTriangle, size: 14),
-                        label: const Text('تسجيل تالف'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red.withOpacity(0.1), foregroundColor: Colors.red, elevation: 0),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () => _generateBarcode(item),
-                        icon: const Icon(Icons.qr_code, size: 20),
-                        tooltip: 'توليد وطباعة باركود',
-                        color: AppTheme.secondary,
-                      ),
-                    ],
-                  )),
-                ]);
-              }).toList(),
+                headingRowColor: WidgetStateProperty.all(AppTheme.primaryLighter),
+                columns: const [
+                  DataColumn(label: Text('المنتج', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
+                  DataColumn(label: Text('المخزون الحالي', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
+                  DataColumn(label: Text('الحالة', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
+                  DataColumn(label: Text('الإجراءات', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
+                ],
+                rows: items.map((item) {
+                  final stock = item['stock_quantity'];
+                  final unit = item['products']['unit'];
+                  return DataRow(cells: [
+                    DataCell(Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(LucideIcons.package, size: 18, color: Colors.white),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(item['products']['name'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      ],
+                    )),
+                    DataCell(Text(
+                      '$stock $unit',
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.primaryDarker),
+                    )),
+                    DataCell(_buildStatusBadge(stock)),
+                    DataCell(Row(
+                      children: [
+                        _buildActionBtn(
+                          'تحديث الكمية',
+                          LucideIcons.edit2,
+                          AppTheme.primary,
+                          () => _showUpdateStockDialog(item),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildActionBtn(
+                          'تسجيل تالف',
+                          LucideIcons.alertTriangle,
+                          AppTheme.error,
+                          () => _showWasteDialog(item),
+                          isDestructive: true,
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => _generateBarcode(item),
+                          icon: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryLighter,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.qr_code, size: 16, color: AppTheme.primary),
+                          ),
+                          tooltip: 'توليد وطباعة باركود',
+                        ),
+                      ],
+                    )),
+                  ]);
+                }).toList(),
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActionBtn(String label, IconData icon, Color color, VoidCallback onTap, {bool isDestructive = false}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDestructive ? AppTheme.errorLight : color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
@@ -302,13 +398,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Widget _buildStatusBadge(double stock) {
     String label = 'متوفر';
-    Color color = Colors.green;
-    if (stock <= 0) { label = 'منتهي'; color = Colors.red; }
-    else if (stock < 5) { label = 'منخفض'; color = Colors.orange; }
-    
+    Color color = AppTheme.success;
+    if (stock <= 0) { label = 'منتهي'; color = AppTheme.error; }
+    else if (stock < 5) { label = 'منخفض'; color = AppTheme.warning; }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
@@ -347,8 +446,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
           const Text('أدخل الكمية الفعلية المتوفرة في الرفوف حالياً'),
           const SizedBox(height: 20),
           TextField(
-            controller: controller, 
-            keyboardType: TextInputType.number, 
+            controller: controller,
+            keyboardType: TextInputType.number,
             decoration: InputDecoration(hintText: 'الكمية بـ ${item['products']['unit']}')
           ),
         ],

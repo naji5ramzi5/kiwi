@@ -42,7 +42,6 @@ export async function requestNotificationPermission(): Promise<string | null> {
       vapidKey: 'BF7wkvaSEINXTN-SsV_3tcRMZVmsk0_JZdlYXzJXhiDTcagcid0pRQUAktchrsJy7hi5oKd-DwljxeYN-3GGaOc',
     })
 
-    console.log('[FCM] Token:', token)
     return token
   } catch (err) {
     console.error('[FCM] Error getting token:', err)

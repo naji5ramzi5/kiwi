@@ -7,6 +7,7 @@ import '../models/product.dart';
 import '../models/cart_item.dart';
 import '../models/invoice.dart';
 import '../services/invoice_service.dart';
+import '../theme/app_theme.dart';
 
 class CashierScreen extends StatefulWidget {
   const CashierScreen({Key? key}) : super(key: key);
@@ -45,14 +46,12 @@ class _CashierScreenState extends State<CashierScreen> {
 
   void _onSearchChanged() {
     final query = _searchController.text.trim().toLowerCase();
-    
+
     if (query.isNotEmpty) {
-      // Check if there is an exact barcode match
       final exactMatchIndex = _products.indexWhere((p) => p.barcode?.toLowerCase() == query);
       if (exactMatchIndex >= 0) {
         final product = _products[exactMatchIndex];
         _addToCart(product);
-        // Clear search controller immediately to prepare for next scan
         _searchController.clear();
         return;
       }
@@ -167,7 +166,11 @@ class _CashierScreenState extends State<CashierScreen> {
         _customerName = null;
       });
 
-      Get.snackbar('نجاح', 'تم إتمام البيع بنجاح', backgroundColor: Colors.green, colorText: Colors.white);
+      Get.snackbar('نجاح', 'تم إتمام البيع بنجاح',
+        backgroundColor: AppTheme.success,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
 
       try {
         await _invoiceService.printDirect(invoice);
@@ -177,7 +180,7 @@ class _CashierScreenState extends State<CashierScreen> {
     } catch (e) {
       Get.snackbar('خطأ', 'فشل إتمام البيع: $e',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.error,
         colorText: Colors.white,
         duration: const Duration(seconds: 8));
     } finally {
@@ -188,43 +191,86 @@ class _CashierScreenState extends State<CashierScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('شاشة الكاشير'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.refreshCw),
-            onPressed: _loadProducts,
-          ),
-        ],
-      ),
+      backgroundColor: AppTheme.background,
       body: Column(
         children: [
-          // Search + Barcode area
+          // Top bar
           Container(
-            padding: const EdgeInsets.all(12),
-            color: Colors.grey[100],
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'بحث بالاسم أو الباركود...',
-                      prefixIcon: const Icon(LucideIcons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    autofocus: true,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: const Row(
+                    children: [
+                      Icon(LucideIcons.monitor, color: Colors.white, size: 18),
+                      SizedBox(width: 8),
+                      Text('شاشة الكاشير', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                // Search bar
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'بحث بالاسم أو الباركود...',
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        prefixIcon: Icon(LucideIcons.search, size: 18, color: Colors.grey.shade400),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      autofocus: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryLighter,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(LucideIcons.scan, size: 18, color: AppTheme.primary),
+                  ),
+                  onPressed: () => Get.snackbar('باركود', 'امسح الباركود باستخدام الماسح الضوئي'),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(LucideIcons.scan),
-                  onPressed: () => Get.snackbar('باركود', 'امسح الباركود باستخدام الماسح الضوئي'),
-                  tooltip: 'مسح الباركود',
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryLighter,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(LucideIcons.refreshCw, size: 18, color: AppTheme.primary),
+                  ),
+                  onPressed: _loadProducts,
+                  tooltip: 'تحديث المنتجات',
                 ),
               ],
             ),
@@ -240,14 +286,23 @@ class _CashierScreenState extends State<CashierScreen> {
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _filteredProducts.isEmpty
-                          ? const Center(child: Text('لا توجد منتجات'))
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(LucideIcons.package, size: 64, color: Colors.grey.shade300),
+                                  const SizedBox(height: 16),
+                                  Text('لا توجد منتجات', style: TextStyle(color: Colors.grey.shade400, fontSize: 16)),
+                                ],
+                              ),
+                            )
                           : GridView.builder(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(16),
                               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 4,
-                                childAspectRatio: 0.8,
-                                crossAxisSpacing: 6,
-                                mainAxisSpacing: 6,
+                                childAspectRatio: 0.85,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
                               ),
                               itemCount: _filteredProducts.length,
                               itemBuilder: (context, index) {
@@ -260,26 +315,64 @@ class _CashierScreenState extends State<CashierScreen> {
                             ),
                 ),
 
-                // Divider
-                Container(width: 1, color: Colors.grey[300]),
-
                 // Cart Panel (right)
-                Expanded(
-                  flex: 2,
+                Container(
+                  width: 380,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 16,
+                        offset: const Offset(-4, 0),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     children: [
                       // Cart header
                       Container(
-                        padding: const EdgeInsets.all(12),
-                        color: Colors.teal[50],
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.primary.withOpacity(0.05),
+                              AppTheme.primary.withOpacity(0.02),
+                            ],
+                          ),
+                          border: Border(
+                            bottom: BorderSide(color: AppTheme.primary.withOpacity(0.1)),
+                          ),
+                        ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('السلة (${_cart.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            IconButton(
-                              icon: const Icon(LucideIcons.trash2, color: Colors.red),
-                              onPressed: _cart.isEmpty ? null : () => setState(() => _cart.clear()),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(LucideIcons.shoppingCart, color: Colors.white, size: 20),
                             ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'سلة المشتريات (${_cart.length})',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const Spacer(),
+                            if (_cart.isNotEmpty)
+                              IconButton(
+                                icon: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.errorLight,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(LucideIcons.trash2, color: AppTheme.error, size: 16),
+                                ),
+                                onPressed: () => setState(() => _cart.clear()),
+                                tooltip: 'تفريغ السلة',
+                              ),
                           ],
                         ),
                       ),
@@ -287,37 +380,85 @@ class _CashierScreenState extends State<CashierScreen> {
                       // Cart items
                       Expanded(
                         child: _cart.isEmpty
-                            ? const Center(child: Text('السلة فارغة', style: TextStyle(color: Colors.grey)))
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(LucideIcons.shoppingCart, size: 48, color: Colors.grey.shade200),
+                                    const SizedBox(height: 12),
+                                    Text('السلة فارغة', style: TextStyle(color: Colors.grey.shade400, fontSize: 14)),
+                                    const SizedBox(height: 4),
+                                    Text('اضغط على منتج لإضافته', style: TextStyle(color: Colors.grey.shade300, fontSize: 12)),
+                                  ],
+                                ),
+                              )
                             : ListView.builder(
+                                padding: const EdgeInsets.all(8),
                                 itemCount: _cart.length,
                                 itemBuilder: (context, index) {
                                   final item = _cart[index];
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    child: ListTile(
-                                      dense: true,
-                                      title: Text(item.name, style: const TextStyle(fontSize: 13)),
-                                      subtitle: Text('${item.price.toStringAsFixed(0)} د.ع / ${item.unit}'),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.remove_circle_outline, size: 18),
-                                            onPressed: () => _updateQuantity(index, -1),
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey.shade100),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item.name,
+                                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '${item.price.toStringAsFixed(0)} د.ع / ${item.unit}',
+                                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                              ),
+                                            ],
                                           ),
-                                          Text('${item.quantity}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                          IconButton(
-                                            icon: const Icon(Icons.add_circle_outline, size: 18),
-                                            onPressed: () => _updateQuantity(index, 1),
-                                          ),
-                                          Text('${item.total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13)),
-                                          const SizedBox(width: 4),
-                                          IconButton(
-                                            icon: const Icon(Icons.close, size: 16, color: Colors.red),
-                                            onPressed: () => _removeFromCart(index),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _buildQtyButton(
+                                              icon: LucideIcons.minus,
+                                              onTap: () => _updateQuantity(index, -1),
+                                              color: Colors.grey.shade300,
+                                            ),
+                                            Container(
+                                              width: 36,
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                '${item.quantity}',
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                              ),
+                                            ),
+                                            _buildQtyButton(
+                                              icon: LucideIcons.plus,
+                                              onTap: () => _updateQuantity(index, 1),
+                                              color: AppTheme.primary,
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${item.total.toStringAsFixed(0)}',
+                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryDark),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        GestureDetector(
+                                          onTap: () => _removeFromCart(index),
+                                          child: Icon(Icons.close, size: 16, color: Colors.grey.shade400),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },
@@ -329,7 +470,13 @@ class _CashierScreenState extends State<CashierScreen> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, -2))],
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 16,
+                              offset: const Offset(0, -4),
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -337,65 +484,109 @@ class _CashierScreenState extends State<CashierScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('المجموع الفرعي:', style: TextStyle(fontSize: 14)),
-                                Text('${_subtotal.toStringAsFixed(0)} د.ع', style: const TextStyle(fontSize: 14)),
+                                Text('المجموع الفرعي:', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                                Text('${_subtotal.toStringAsFixed(0)} د.ع', style: TextStyle(fontSize: 14, color: Colors.grey.shade800)),
                               ],
                             ),
-                            if (_discount > 0) Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('الخصم:', style: TextStyle(fontSize: 14, color: Colors.red)),
-                                Text('-${_discount.toStringAsFixed(0)} د.ع', style: const TextStyle(fontSize: 14, color: Colors.red)),
-                              ],
+                            if (_discount > 0) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('الخصم:', style: TextStyle(fontSize: 14, color: AppTheme.error)),
+                                  Text('-${_discount.toStringAsFixed(0)} د.ع', style: const TextStyle(fontSize: 14, color: AppTheme.error)),
+                                ],
+                              ),
+                            ],
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Divider(color: Colors.grey.shade200),
                             ),
-                            const Divider(),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('الإجمالي:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                                Text('${_total.toStringAsFixed(0)} د.ع', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.teal)),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            // Discount input
-                            Row(
-                              children: [
-                                const Text('خصم: '),
-                                SizedBox(
-                                  width: 80,
-                                  child: TextField(
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      isDense: true,
-                                      hintText: '0',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onChanged: (v) => setState(() => _discount = double.tryParse(v) ?? 0),
+                                ShaderMask(
+                                  shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
+                                  child: Text(
+                                    '${_total.toStringAsFixed(0)} د.ع',
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: Colors.white),
                                   ),
                                 ),
-                                const Spacer(),
-                                DropdownButton<String>(
-                                  value: _paymentMethod,
-                                  items: ['نقداً', 'بطاقة', 'محفظة'].map((m) =>
-                                    DropdownMenuItem(value: m, child: Text(m))).toList(),
-                                  onChanged: (v) => setState(() => _paymentMethod = v ?? 'نقداً'),
-                                ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 48,
+                            const SizedBox(height: 12),
+                            // Discount input
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(LucideIcons.percent, size: 16, color: Colors.grey.shade400),
+                                  const SizedBox(width: 8),
+                                  Text('خصم:', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                                  const SizedBox(width: 8),
+                                  SizedBox(
+                                    width: 70,
+                                    child: TextField(
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        isDense: true,
+                                        hintText: '0',
+                                        border: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      ),
+                                      onChanged: (v) => setState(() => _discount = double.tryParse(v) ?? 0),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.grey.shade200),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: _paymentMethod,
+                                        isDense: true,
+                                        items: ['نقداً', 'بطاقة', 'محفظة'].map((m) =>
+                                          DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 12)))).toList(),
+                                        onChanged: (v) => setState(() => _paymentMethod = v ?? 'نقداً'),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Checkout button
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: _cart.isEmpty ? null : AppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: _cart.isEmpty ? [] : AppTheme.buttonShadow,
+                              ),
                               child: ElevatedButton.icon(
                                 icon: _isCheckingOut
                                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                                    : const Icon(LucideIcons.receipt),
-                                label: Text(_isCheckingOut ? 'جاري...' : 'إتمام البيع (${_total.toStringAsFixed(0)} د.ع)'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.teal,
-                                  foregroundColor: Colors.white,
-                                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    : const Icon(LucideIcons.receipt, color: Colors.white),
+                                label: Text(
+                                  _isCheckingOut ? 'جاري المعالجة...' : 'إتمام البيع (${_total.toStringAsFixed(0)} د.ع)',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
-                                onPressed: _isCheckingOut ? null : _checkout,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(vertical: 18),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                onPressed: (_isCheckingOut || _cart.isEmpty) ? null : _checkout,
                               ),
                             ),
                           ],
@@ -408,6 +599,21 @@ class _CashierScreenState extends State<CashierScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQtyButton({required IconData icon, required VoidCallback onTap, required Color color}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 14, color: color),
       ),
     );
   }
@@ -424,32 +630,81 @@ class _ProductCard extends StatelessWidget {
     final hasStock = (product.stockQuantity ?? 0) > 0;
     return GestureDetector(
       onTap: hasStock ? onTap : null,
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: hasStock ? Colors.grey.shade100 : Colors.grey.shade200,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: product.imageUrl != null
-                    ? Image.network(product.imageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(LucideIcons.package, size: 40))
-                    : const Center(child: Icon(LucideIcons.package, size: 40, color: Colors.grey)),
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: product.imageUrl != null
+                      ? Image.network(product.imageUrl!, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Icon(LucideIcons.package, size: 36, color: Colors.grey.shade300),
+                          ))
+                      : Center(child: Icon(LucideIcons.package, size: 36, color: Colors.grey.shade300)),
+                ),
               ),
             ),
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(product.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(
+                      product.name,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const Spacer(),
-                    Text('${product.defaultPrice.toStringAsFixed(0)} د.ع', style: TextStyle(fontSize: 11, color: Colors.teal[700], fontWeight: FontWeight.bold)),
-                    Text('المخزون: ${product.stockQuantity?.toStringAsFixed(0) ?? "0"}', style: TextStyle(fontSize: 9, color: hasStock ? Colors.grey : Colors.red)),
+                    Row(
+                      children: [
+                        Text(
+                          '${product.defaultPrice.toStringAsFixed(0)} د.ع',
+                          style: const TextStyle(fontSize: 12, color: AppTheme.primaryDark, fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        if (!hasStock)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorLight,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('نفذ', style: TextStyle(fontSize: 9, color: AppTheme.error, fontWeight: FontWeight.bold)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'المخزون: ${product.stockQuantity?.toStringAsFixed(0) ?? "0"}',
+                      style: TextStyle(fontSize: 9, color: hasStock ? Colors.grey.shade500 : AppTheme.error),
+                    ),
                   ],
                 ),
               ),

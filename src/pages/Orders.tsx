@@ -154,7 +154,7 @@ export default function Orders() {
       // Notify admin/drivers for certain status changes
       if (newStatus === ORDER_STATUS.DELIVERING) {
         // In a full implementation, notify available drivers
-        console.log('Order ready for delivery, would notify drivers');
+        // TODO: In a full implementation, notify available drivers
       }
     }
   }

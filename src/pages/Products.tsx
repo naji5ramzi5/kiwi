@@ -24,7 +24,6 @@ export default function Products() {
   async function fetchData() {
     setLoading(true)
     try {
-      console.log('Fetching products data...')
       const [pRes, cRes, bRes] = await Promise.all([
         supabase.from('products').select('*, branch_inventory(branch_id, actual_stock)').order('created_at', { ascending: false }),
         supabase.from('categories').select('*').order('name'),
@@ -35,7 +34,6 @@ export default function Products() {
       if (cRes.error) { console.error('Categories Error:', cRes.error); throw cRes.error; }
       if (bRes.error) { console.error('Branches Error:', bRes.error); throw bRes.error; }
 
-      console.log('Data loaded:', { products: pRes.data?.length, categories: cRes.data?.length, branches: bRes.data?.length })
       setProducts(pRes.data || [])
       setCategories(cRes.data || [])
       setBranches(bRes.data || [])

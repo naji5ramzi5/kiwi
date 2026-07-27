@@ -410,7 +410,7 @@ class CartController extends GetxController {
                 .update({'used_count': currentUsed + 1})
                 .eq('id', couponId);
           } catch (couponErr) {
-            print('Warning: coupon usage increment failed: $couponErr');
+            debugPrint('Warning: coupon usage increment failed: $couponErr');
           }
         }
 
@@ -443,7 +443,7 @@ class CartController extends GetxController {
               );
             }
           } catch (stockErr) {
-            print('Warning: stock decrement failed: $stockErr');
+            debugPrint('Warning: stock decrement failed: $stockErr');
           }
         }
 

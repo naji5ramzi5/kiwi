@@ -40,58 +40,83 @@ class _LoginScreenState extends State<LoginScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Container(
-                  width: 420,
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+                  width: 440,
+                  padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 52),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(28),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 60, offset: const Offset(0, 24)),
-                      BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20, offset: const Offset(0, 8)),
+                      BoxShadow(
+                        color: AppTheme.primary.withOpacity(0.08),
+                        blurRadius: 60,
+                        offset: const Offset(0, 24),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
                     ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 88,
-                          height: 88,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 88,
-                            height: 88,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(24),
+                      // Logo
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.3),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
                             ),
-                            child: Icon(LucideIcons.leaf, color: AppTheme.primary, size: 44),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(28),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 96,
+                            height: 96,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              LucideIcons.leaf,
+                              color: Colors.white,
+                              size: 48,
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Kiwi Fresh',
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.textPrimary,
-                          letterSpacing: -0.5,
+                      const SizedBox(height: 28),
+                      // Title
+                      ShaderMask(
+                        shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
+                        child: const Text(
+                          'Kiwi Fresh',
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: -1,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(
                         'نظام إدارة الفروع',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           color: Colors.grey.shade500,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 40),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 44),
+
+                      // Activation code field
                       Align(
                         alignment: Alignment.centerRight,
                         child: Text(
@@ -110,7 +135,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           hintText: 'FR-1234',
                           hintTextDirection: TextDirection.ltr,
-                          prefixIcon: Icon(LucideIcons.key, size: 20, color: AppTheme.primary.withOpacity(0.5)),
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryLighter,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(LucideIcons.key, size: 18, color: AppTheme.primary),
+                          ),
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
                           border: OutlineInputBorder(
@@ -129,6 +162,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
+
+                      // Password field
                       Align(
                         alignment: Alignment.centerRight,
                         child: Text(
@@ -146,11 +181,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscureText: !showPassword,
                         decoration: InputDecoration(
                           hintText: '••••••••',
-                          prefixIcon: Icon(LucideIcons.lock, size: 20, color: AppTheme.primary.withOpacity(0.5)),
+                          prefixIcon: Container(
+                            margin: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryLighter,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(LucideIcons.lock, size: 18, color: AppTheme.primary),
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               showPassword ? LucideIcons.eyeOff : LucideIcons.eye,
-                              size: 20,
+                              size: 18,
                               color: Colors.grey.shade400,
                             ),
                             onPressed: () => setState(() => showPassword = !showPassword),
@@ -172,10 +215,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      Obx(() => SizedBox(
+                      const SizedBox(height: 36),
+
+                      // Login button
+                      Obx(() => Container(
                         width: double.infinity,
-                        height: 52,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: authController.isLoading.value ? null : AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: authController.isLoading.value ? [] : AppTheme.buttonShadow,
+                        ),
                         child: ElevatedButton(
                           onPressed: authController.isLoading.value ? null : () async {
                             final success = await authController.activateWithCode(emailController.text);
@@ -191,12 +241,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
+                            backgroundColor: Colors.transparent,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: AppTheme.primary.withOpacity(0.5),
+                            disabledBackgroundColor: Colors.grey.shade300,
+                            disabledForegroundColor: Colors.grey.shade500,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                           child: authController.isLoading.value
@@ -211,7 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                         ),
                       )),
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 40),
                       Text(
                         'جميع الحقوق محفوظة لمنظومة "كيوي" 2026 ©',
                         style: TextStyle(fontSize: 11, color: Colors.grey.shade400),

@@ -63,7 +63,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
       if (mounted) setState(() => _orderProducts = products);
     } catch (e) {
       // non-fatal: product rating is optional
-      print('Error loading order products: $e');
+      debugPrint('Error loading order products: $e');
     }
   }
 
@@ -98,7 +98,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
               'rating': r,
             });
           } catch (e) {
-            print('Product rating insert failed: $e');
+            debugPrint('Product rating insert failed: $e');
           }
         }
       }
@@ -113,7 +113,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
             'rating': _branchRating,
           });
         } catch (e) {
-          print('Branch rating insert failed: $e');
+          debugPrint('Branch rating insert failed: $e');
         }
       }
 

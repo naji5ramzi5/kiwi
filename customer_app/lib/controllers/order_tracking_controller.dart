@@ -95,7 +95,7 @@ class OrderTrackingController extends GetxController {
         }
       }
     } catch (e) {
-      print('Error fetching order: $e');
+      debugPrint('Error fetching order: $e');
     } finally {
       isLoading(false);
     }

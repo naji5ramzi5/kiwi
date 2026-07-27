@@ -25,7 +25,6 @@ export async function saveFcmToken(token: string, userId?: string) {
     }, { onConflict: 'token' })
 
   if (error) console.warn('[FCM] Could not save token:', error.message)
-  else console.log('[FCM] Token saved to Supabase')
 }
 
 // ── Main Notifications Hook ──

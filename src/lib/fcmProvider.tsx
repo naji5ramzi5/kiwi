@@ -18,7 +18,6 @@ export const FcmProvider = ({ children }: { children: ReactNode }) => {
       // For web, we use the VAPID key approach (Push API)
       // Check if service worker is supported
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('Push notifications not supported');
         return null;
       }
 
@@ -28,7 +27,6 @@ export const FcmProvider = ({ children }: { children: ReactNode }) => {
       // Request permission
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        console.log('Notification permission denied');
         return null;
       }
 

@@ -49,15 +49,17 @@ class StoriesSection extends StatelessWidget {
       }
 
       final dbStories = controller.storyGroups;
-      final List<Map<String, String>> displayStories = dbStories.isNotEmpty
-          ? dbStories
-              .map((s) => {
-                    'name': (s['name'] ?? s['title'] ?? 'story_fallback'.tr).toString(),
-                    'imageUrl': (s['thumbnail_url'] ?? '').toString(),
-                    'emoji': '',
-                  })
-              .toList()
-          : _getStaticStories();
+      if (dbStories.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      final List<Map<String, String>> displayStories = dbStories
+          .map((s) => {
+                'name': (s['name'] ?? s['title'] ?? '').toString(),
+                'imageUrl': (s['thumbnail_url'] ?? '').toString(),
+                'emoji': '',
+              })
+          .toList();
 
       return SizedBox(
         height: 105,
@@ -68,27 +70,16 @@ class StoriesSection extends StatelessWidget {
           itemCount: displayStories.length,
           itemBuilder: (context, index) {
             final story = displayStories[index];
-            final isFirst = index == 0; // Highlight first story
+            final isFirst = index == 0;
             return _buildStoryItem(story, isFirst, isDark, onTap: () {
-              if (dbStories.isNotEmpty) {
-                Get.to(
-                  () => StoryViewerScreen(
-                    groups: dbStories.toList(),
-                    initialGroupIndex: index,
-                  ),
-                  fullscreenDialog: true,
-                  transition: Transition.fadeIn,
-                );
-              } else {
-                Get.snackbar(
-                  'no_stories_title'.tr,
-                  'no_stories_msg'.tr,
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: AppTheme.primary,
-                  colorText: Colors.white,
-                  duration: const Duration(seconds: 2),
-                );
-              }
+              Get.to(
+                () => StoryViewerScreen(
+                  groups: dbStories.toList(),
+                  initialGroupIndex: index,
+                ),
+                fullscreenDialog: true,
+                transition: Transition.fadeIn,
+              );
             });
           },
         ),

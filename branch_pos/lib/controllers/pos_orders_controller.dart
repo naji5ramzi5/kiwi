@@ -40,7 +40,7 @@ class POSOrdersController extends GetxController {
           .eq('is_active', true);
       drivers.value = List<Map<String, dynamic>>.from(response);
     } catch (e) {
-      print('Error fetching drivers: $e');
+      debugPrint('Error fetching drivers: $e');
     }
   }
 
@@ -63,7 +63,7 @@ class POSOrdersController extends GetxController {
           },
         );
       } catch (fcmErr) {
-        print('Failed to send FCM to driver: $fcmErr');
+        debugPrint('Failed to send FCM to driver: $fcmErr');
       }
 
       Get.snackbar('تم الإسناد', 'تم إسناد الطلب للمندوب بنجاح');
@@ -90,7 +90,7 @@ class POSOrdersController extends GetxController {
       orders.value = List<Map<String, dynamic>>.from(response);
       pendingCount.value = _pendingOrders;
     } catch (e) {
-      print('Error fetching orders: $e');
+      debugPrint('Error fetching orders: $e');
       // Fallback: try without branch_id filter
       try {
         final response = await supabase
@@ -103,7 +103,7 @@ class POSOrdersController extends GetxController {
         orders.value = List<Map<String, dynamic>>.from(response);
         pendingCount.value = _pendingOrders;
       } catch (e2) {
-        print('Fallback fetch also failed: $e2');
+        debugPrint('Fallback fetch also failed: $e2');
       }
     } finally {
       isLoading(false);

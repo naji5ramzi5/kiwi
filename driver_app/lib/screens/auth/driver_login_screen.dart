@@ -84,7 +84,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
               await supabase.storage.from('avatars').upload(fileName, _avatarFile!);
               avatarUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
             } catch (e) {
-              print('Warning: Failed to upload avatar. Bucket might not exist. $e');
+              debugPrint('Warning: Failed to upload avatar. Bucket might not exist. $e');
             }
           }
 
@@ -133,10 +133,10 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
         msg = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
       }
       Get.snackbar('خطأ في الدخول', msg, backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
-      print('Auth Error: $e');
+      debugPrint('Auth Error: $e');
     } catch (e) {
       Get.snackbar('خطأ', 'حدث خطأ غير متوقع، تأكد من الاتصال بالإنترنت', backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
-      print('Auth Error: $e');
+      debugPrint('Auth Error: $e');
     } finally {
       setState(() => isLoading = false);
     }

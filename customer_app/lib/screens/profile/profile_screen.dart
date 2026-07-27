@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -395,86 +394,56 @@ class ProfileScreen extends StatelessWidget {
         return GestureDetector(
           onTap: () => _toggleLanguage(),
           child: Container(
-            height: 38,
-            width: 100,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                colors: isDark
-                    ? [
-                        AppTheme.primary.withOpacity(0.18),
-                        AppTheme.primary.withOpacity(0.08),
-                      ]
-                    : [
-                        AppTheme.primary.withOpacity(0.12),
-                        AppTheme.primary.withOpacity(0.04),
-                      ],
-              ),
-              border: Border.all(
-                color: AppTheme.primary.withOpacity(isDark ? 0.25 : 0.18),
-                width: 1,
-              ),
+              borderRadius: BorderRadius.circular(12),
+              color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isArabic
-                            ? AppTheme.primary.withOpacity(isDark ? 0.3 : 0.2)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'عربي',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isArabic ? FontWeight.w900 : FontWeight.w600,
-                          color: isArabic
-                              ? (isDark ? AppTheme.emeraldLight : AppTheme.primaryDark)
-                              : textSecColor,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isArabic ? AppTheme.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'عربي',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isArabic
+                          ? Colors.white
+                          : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary),
+                      fontFamily: 'Cairo',
                     ),
-                    Container(
-                      width: 1,
-                      height: 18,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      color: AppTheme.primary.withOpacity(isDark ? 0.3 : 0.2),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: !isArabic
-                            ? AppTheme.primary.withOpacity(isDark ? 0.3 : 0.2)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'EN',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: !isArabic ? FontWeight.w900 : FontWeight.w600,
-                          color: !isArabic
-                              ? (isDark ? AppTheme.emeraldLight : AppTheme.primaryDark)
-                              : textSecColor,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 4),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: !isArabic ? AppTheme.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'EN',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: !isArabic
+                          ? Colors.white
+                          : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondary),
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );

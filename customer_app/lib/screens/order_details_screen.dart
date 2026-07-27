@@ -71,7 +71,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         } catch (_) {}
       }
     } catch (e) {
-      print('Error fetching order details: $e');
+      debugPrint('Error fetching order details: $e');
     } finally {
       isLoading(false);
     }
@@ -235,7 +235,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             .eq('order_id', widget.orderId);
         items = List<Map<String, dynamic>>.from(fetched as List? ?? []);
       } catch (e) {
-        print('Warning: could not fetch order items for restock: $e');
+        debugPrint('Warning: could not fetch order items for restock: $e');
       }
 
       await supabase.from('orders').update({
@@ -262,7 +262,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             }
           }
         } catch (stockErr) {
-          print('Warning: restock failed: $stockErr');
+          debugPrint('Warning: restock failed: $stockErr');
         }
       }
 

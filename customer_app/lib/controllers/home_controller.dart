@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -106,7 +107,7 @@ class HomeController extends GetxController {
         }
       }
     } catch (e) {
-      print('Reverse geocode error: $e');
+      debugPrint('Reverse geocode error: $e');
     }
     return '';
   }
@@ -169,7 +170,7 @@ class HomeController extends GetxController {
                     break; // found the zone
                   }
                 } catch (e) {
-                  print('Error parsing polygon coords: $e');
+                debugPrint('Error parsing polygon coords: $e');
                 }
               }
             }
@@ -204,7 +205,7 @@ class HomeController extends GetxController {
         fetchDeliveryZone();
       }
     } catch (e) {
-      print('Error in smart selection: $e');
+      debugPrint('Error in smart selection: $e');
       await fetchAllBranches();
     }
   }
@@ -252,7 +253,7 @@ class HomeController extends GetxController {
                   break; // found the zone
                 }
               } catch (e) {
-                print('Error parsing polygon coords: $e');
+                debugPrint('Error parsing polygon coords: $e');
               }
             }
           }
@@ -286,7 +287,7 @@ class HomeController extends GetxController {
         // Fetch products for the new branch
         await fetchProducts();
     } catch (e) {
-      print('Error updating manual location: $e');
+      debugPrint('Error updating manual location: $e');
     } finally {
       isLocating(false);
       isLoadingBranches(false);
@@ -304,7 +305,7 @@ class HomeController extends GetxController {
         selectedBranch.value = branches.first;
       }
     } catch (e) {
-      print('Error fetching branches: $e');
+      debugPrint('Error fetching branches: $e');
     }
   }
 
@@ -322,7 +323,7 @@ class HomeController extends GetxController {
         banners.value = [];
       }
     } catch (e) {
-      print('Error fetching banners: $e');
+      debugPrint('Error fetching banners: $e');
     } finally {
       isLoadingBanners(false);
     }
@@ -342,7 +343,7 @@ class HomeController extends GetxController {
         storyGroups.value = [];
       }
     } catch (e) {
-      print('Error fetching stories: $e');
+      debugPrint('Error fetching stories: $e');
     } finally {
       isLoadingStories(false);
     }
@@ -366,7 +367,7 @@ class HomeController extends GetxController {
         products.value = [];
       }
     } catch (e) {
-      print('Error fetching products: $e');
+      debugPrint('Error fetching products: $e');
     } finally {
       isLoadingProducts(false);
     }
@@ -402,7 +403,7 @@ class HomeController extends GetxController {
         minOrderAmount.value = 0.0;
       }
     } catch (e) {
-      print('Error fetching delivery zone: $e');
+      debugPrint('Error fetching delivery zone: $e');
     } finally {
       isLoadingDeliveryZone(false);
     }
@@ -418,7 +419,7 @@ class HomeController extends GetxController {
         categories.value = List<Map<String, dynamic>>.from(response);
       }
     } catch (e) {
-      print('Error fetching categories: $e');
+      debugPrint('Error fetching categories: $e');
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../controllers/auth_controller.dart';
@@ -34,7 +35,7 @@ class InventoryController extends GetxController {
         'inventory': [{'stock_quantity': p.stockQuantity}],
       }).toList();
     } catch (e) {
-      print('Error fetching inventory: $e');
+      debugPrint('Error fetching inventory: $e');
     } finally {
       isLoading(false);
     }
@@ -42,11 +43,12 @@ class InventoryController extends GetxController {
 
   Future<void> updateStock(String productId, double newQuantity) async {
     try {
-      await supabase.from('inventory').upsert({
+      await supabase.from('branch_inventory').upsert({
         'branch_id': authController.currentBranchId.value,
         'product_id': productId,
-        'stock_quantity': newQuantity,
-      });
+        'actual_stock': newQuantity,
+        'is_active': true,
+      }, onConflict: 'branch_id,product_id');
       fetchInventory();
     } catch (e) {
       Get.snackbar('خطأ', 'فشل في تحديث المخزون: $e');

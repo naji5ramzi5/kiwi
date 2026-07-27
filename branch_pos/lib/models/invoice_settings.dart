@@ -14,10 +14,10 @@ class InvoiceSettings {
   bool showDate;
 
   InvoiceSettings({
-    this.storeName = 'كيوي - سوق الخضار',
+    this.storeName = 'KIWI STORE',
     this.storePhone = '',
     this.storeAddress = '',
-    this.footerText = 'شكراً لتسوقكم مع كيوي',
+    this.footerText = 'شكراً لتسوقكم معنا',
     this.paperSize = '80mm',
     this.showCustomerInfo = true,
     this.logoPath,
@@ -61,10 +61,10 @@ class InvoiceSettings {
   static Future<InvoiceSettings> load() async {
     final prefs = await SharedPreferences.getInstance();
     return InvoiceSettings(
-      storeName: prefs.getString(_keyStoreName) ?? 'كيوي - سوق الخضار',
+      storeName: prefs.getString(_keyStoreName) ?? 'KIWI STORE',
       storePhone: prefs.getString(_keyStorePhone) ?? '',
       storeAddress: prefs.getString(_keyStoreAddress) ?? '',
-      footerText: prefs.getString(_keyFooterText) ?? 'شكراً لتسوقكم مع كيوي',
+      footerText: prefs.getString(_keyFooterText) ?? 'شكراً لتسوقكم معنا',
       paperSize: prefs.getString(_keyPaperSize) ?? '80mm',
       showCustomerInfo: prefs.getBool(_keyShowCustomer) ?? true,
       logoPath: prefs.getString(_keyLogoPath),

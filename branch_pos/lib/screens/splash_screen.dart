@@ -14,20 +14,49 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   bool _navigated = false;
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.elasticOut)),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.3, 0.8, curve: Curves.easeOut)),
+    );
+
+    _controller.forward();
     _waitForInit();
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _waitForInit() async {
-    // Wait for Supabase + DB to have time to initialize
     await Future.delayed(const Duration(milliseconds: 800));
 
-    // Guaranteed navigation after timeout — even if everything fails
     Future.delayed(const Duration(seconds: 8), () {
       if (!_navigated && mounted) {
         _navigateToMain();
@@ -38,7 +67,6 @@ class _SplashScreenState extends State<SplashScreen> {
       _navigateToMain();
     } catch (e) {
       debugPrint('Splash init error: $e');
-      // Fallback — navigate anyway after short delay
       Future.delayed(const Duration(seconds: 2), () {
         if (!_navigated && mounted) {
           _navigateToMain();
@@ -64,15 +92,14 @@ class _SplashScreenState extends State<SplashScreen> {
               : const LoginScreen()
         ),
         transition: Transition.fadeIn,
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 500),
       );
     } catch (e) {
       debugPrint('Splash navigation error: $e');
-      // Last resort — just go to login
       Get.off(
         () => const LoginScreen(),
         transition: Transition.fadeIn,
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 500),
       );
     }
   }
@@ -92,40 +119,92 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    width: 100,
-                    height: 100,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      LucideIcons.leaf,
-                      size: 80,
-                      color: AppTheme.primary,
+                  // Logo with scale animation
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.3),
+                              blurRadius: 32,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(32),
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              LucideIcons.leaf,
+                              size: 60,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Kiwi Fresh',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.primaryDark,
+                  const SizedBox(height: 32),
+                  // Title with slide animation
+                  SlideTransition(
+                    position: _slideAnimation,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        children: [
+                          ShaderMask(
+                            shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
+                            child: const Text(
+                              'Kiwi Fresh',
+                              style: TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'نظام إدارة الفروع',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade500,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'نظام إدارة الفروع',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  const SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation(AppTheme.primary),
+                  const SizedBox(height: 48),
+                  // Loading indicator
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryLighter,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation(AppTheme.primary),
+                      ),
                     ),
                   ),
                 ],

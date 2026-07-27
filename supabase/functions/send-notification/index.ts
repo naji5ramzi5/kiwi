@@ -1,4 +1,3 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const supabase = createClient(
@@ -67,10 +66,10 @@ async function sendFCMMessage(accessToken: string, token: string, title: string,
     android: { priority: 'high', notification: { sound: 'default' } },
     apns: { payload: { aps: { sound: 'default' } } },
   }
-  // If image URL provided, add to android notification
   if (data?.image) {
-    ;(messagePayload.android as Record<string, unknown>).notification = {
-      ...(messagePayload.android as Record<string, unknown>).notification as Record<string, unknown>,
+    const androidNotif = messagePayload.android as Record<string, unknown>
+    androidNotif.notification = {
+      ...(androidNotif.notification as Record<string, unknown>),
       image: data.image,
     }
   }
@@ -83,7 +82,7 @@ async function sendFCMMessage(accessToken: string, token: string, title: string,
   return { success: true, response: await res.json() }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsHeaders = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',

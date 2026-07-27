@@ -368,117 +368,58 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _menuItemWithWidget(IconData icon, String title, Widget trailing, VoidCallback? onTap) {
-    final isDark = Get.isDarkMode;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E291F) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.15 : 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDark ? AppTheme.surfaceDark : Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 20, color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary,
-                    fontFamily: 'Cairo',
-                  ),
-                ),
-              ),
-              trailing,
-            ],
-          ),
-        ),
+    final bg = Get.isDarkMode ? AppTheme.surfaceDark : Colors.grey.shade50;
+    final fg = Get.isDarkMode ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    final tc = Get.isDarkMode ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, size: 20, color: fg),
       ),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: tc, fontFamily: 'Cairo')),
+      trailing: trailing,
+      visualDensity: VisualDensity.compact,
     );
   }
 
   Widget _buildLanguageToggle(Color textColor, Color textSecColor, bool isDark) {
-    return _menuItemWithWidget(
-      LucideIcons.globe,
-      'language'.tr,
-      Obx(() {
+    final bg = isDark ? AppTheme.surfaceDark : Colors.grey.shade50;
+    final fg = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimary;
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+        child: Icon(LucideIcons.globe, size: 20, color: fg),
+      ),
+      title: Text('language'.tr, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg, fontFamily: 'Cairo')),
+      trailing: Obx(() {
         final isArabic = Get.locale?.languageCode != 'en';
-        return SizedBox(
-          width: 110,
-          height: 36,
-          child: GestureDetector(
-            onTap: () => _toggleLanguage(),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade100,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: isArabic ? AppTheme.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'عربي',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isArabic ? Colors.white : textSecColor,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: !isArabic ? AppTheme.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'EN',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: !isArabic ? Colors.white : textSecColor,
-                          fontFamily: 'Cairo',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        return GestureDetector(
+          onTap: () => _toggleLanguage(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('عربي', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isArabic ? AppTheme.primary : textSecColor, fontFamily: 'Cairo')),
+                const SizedBox(width: 6),
+                Container(width: 1, height: 14, color: textSecColor.withOpacity(0.3)),
+                const SizedBox(width: 6),
+                Text('EN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: !isArabic ? AppTheme.primary : textSecColor, fontFamily: 'Cairo')),
+              ],
             ),
           ),
         );
       }),
-      null,
+      visualDensity: VisualDensity.compact,
     );
   }
 

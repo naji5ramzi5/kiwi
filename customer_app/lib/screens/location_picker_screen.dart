@@ -111,7 +111,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
       if (mounted) {
         setState(() {
-          _address = data['display_name'] ?? 'العنوان غير معروف';
+          _address = _extractCleanAddress(data);
           _isLoadingAddress = false;
         });
       }
@@ -124,6 +124,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         });
       }
     }
+  }
+
+  String _extractCleanAddress(Map<String, dynamic> data) {
+    final addr = data['address'] as Map<String, dynamic>? ?? {};
+    final parts = <String>[];
+    final sub = addr['suburb'] ?? addr['neighbourhood'] ?? addr['subdivision'] ?? '';
+    final thoroughfare = addr['road'] ?? '';
+    final locality = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['hamlet'] ?? '';
+    if (sub.toString().isNotEmpty) parts.add(sub.toString());
+    if (thoroughfare.toString().isNotEmpty) parts.add(thoroughfare.toString());
+    if (locality.toString().isNotEmpty && !parts.any((p) => p == locality.toString())) parts.add(locality.toString());
+    if (parts.isEmpty) return data['display_name'] ?? 'العنوان غير معروف';
+    return parts.join('، ');
   }
 
   Future<void> _searchAddress(String query) async {
@@ -234,7 +247,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
             // Current location FAB
             Positioned(
-              bottom: 200,
+              bottom: 240,
               right: 16,
               child: Container(
                 width: 52,

@@ -9,6 +9,18 @@ class DriverSettingsTab extends StatelessWidget {
 
   const DriverSettingsTab({super.key, required this.driverProfile});
 
+  String _resolvePhone() {
+    final profilePhone = driverProfile?['phone'];
+    if (profilePhone != null && profilePhone.toString().isNotEmpty) return profilePhone.toString();
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      final metaPhone = user.userMetadata?['phone'];
+      if (metaPhone != null && metaPhone.toString().isNotEmpty) return metaPhone.toString();
+      if (user.phone != null && user.phone!.isNotEmpty) return user.phone!;
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -47,7 +59,7 @@ class DriverSettingsTab extends StatelessWidget {
             children: [
               _settingsTile(LucideIcons.hash, 'رقم اللوحة', driverProfile?['plate_number'] ?? ''),
               const Divider(),
-              _settingsTile(LucideIcons.smartphone, 'رقم الجوال', driverProfile?['phone'] ?? 'غير مضاف'),
+              _settingsTile(LucideIcons.smartphone, 'رقم الجوال', _resolvePhone()),
               const Divider(),
               _settingsTile(LucideIcons.mail, 'البريد الإلكتروني', driverProfile?['email'] ?? ''),
             ],
@@ -84,7 +96,7 @@ class DriverSettingsTab extends StatelessWidget {
           const SizedBox(width: 12),
           Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
           const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(value.isNotEmpty ? value : 'غير مضاف', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: value.isNotEmpty ? Colors.black : Colors.grey.shade400)),
         ],
       ),
     );

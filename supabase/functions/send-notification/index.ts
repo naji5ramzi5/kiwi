@@ -60,18 +60,24 @@ async function getAccessToken(): Promise<string> {
 }
 
 async function sendFCMMessage(accessToken: string, token: string, title: string, body: string, data?: Record<string, string>) {
+  const messagePayload: Record<string, unknown> = {
+    token,
+    notification: { title, body },
+    data: data ?? {},
+    android: { priority: 'high', notification: { sound: 'default' } },
+    apns: { payload: { aps: { sound: 'default' } } },
+  }
+  // If image URL provided, add to android notification
+  if (data?.image) {
+    ;(messagePayload.android as Record<string, unknown>).notification = {
+      ...(messagePayload.android as Record<string, unknown>).notification as Record<string, unknown>,
+      image: data.image,
+    }
+  }
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: {
-        token,
-        notification: { title, body },
-        data: data ?? {},
-        android: { priority: 'high', notification: { sound: 'default' } },
-        apns: { payload: { aps: { sound: 'default' } } },
-      },
-    }),
+    body: JSON.stringify({ message: messagePayload }),
   })
   if (!res.ok) return { success: false, error: await res.text() }
   return { success: true, response: await res.json() }

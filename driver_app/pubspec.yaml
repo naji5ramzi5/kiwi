@@ -23,6 +23,8 @@ dependencies:
   geolocator: ^11.0.0
   permission_handler: ^11.3.0
   intl: any
+  shared_preferences: ^2.2.2
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

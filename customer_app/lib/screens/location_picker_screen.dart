@@ -93,85 +93,36 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   Future<void> _geocodePosition(LatLng position) async {
-    if (!mounted) return;
     setState(() {
       _isLoadingAddress = true;
-      _address = 'fetching_address'.tr;
     });
 
     try {
-      try {
-        setLocaleIdentifier('ar');
-      } catch (_) {}
-
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
-      if (placemarks.isNotEmpty) {
-        final place = placemarks.first;
-        final parts = <String>[
-          if (place.street != null &&
-              place.street!.isNotEmpty &&
-              !place.street!.contains('+') &&
-              !place.street!.contains('Unnamed'))
-            place.street!,
-          if (place.subLocality != null && place.subLocality!.isNotEmpty)
-            place.subLocality!,
-          if (place.locality != null && place.locality!.isNotEmpty)
-            place.locality!,
-          if (place.administrativeArea != null &&
-              place.administrativeArea!.isNotEmpty)
-            place.administrativeArea!,
-        ];
-        if (mounted) {
-          setState(() {
-            _address =
-                parts.isNotEmpty ? parts.join('، ') : 'unknown_street'.tr;
-            _isLoadingAddress = false;
-          });
-        }
-        return;
-      }
-    } catch (_) {}
-
-    try {
       final client = HttpClient();
-      final request = await client.getUrl(Uri.parse(
-          'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&accept-language=ar'));
+      final request = await client.getUrl(
+        Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&accept-language=ar',
+        ),
+      );
       request.headers.set(HttpHeaders.userAgentHeader, 'KiwiApp/1.0');
       final response = await request.close();
-      if (response.statusCode == 200) {
-        final content = await response.transform(utf8.decoder).join();
-        final json = jsonDecode(content);
-        final address = json['address'];
-        if (address != null) {
-          final road = address['road'] ??
-              address['suburb'] ??
-              address['neighbourhood'] ??
-              '';
-          final city = address['city'] ??
-              address['town'] ??
-              address['governorate'] ??
-              'baghdad'.tr;
-          if (mounted) {
-            setState(() {
-              _address = road.isNotEmpty ? '$city، $road' : city;
-              _isLoadingAddress = false;
-            });
-          }
-          return;
-        }
-      }
-    } catch (_) {}
+      final responseBody = await response.transform(utf8.decoder).join();
+      final data = json.decode(responseBody);
 
-    if (mounted) {
-      setState(() {
-        _address =
-            '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
-        _isLoadingAddress = false;
-      });
+      if (mounted) {
+        setState(() {
+          _address = data['display_name'] ?? 'العنوان غير معروف';
+          _isLoadingAddress = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[Geocode] Error: $e');
+      if (mounted) {
+        setState(() {
+          _address = 'العنوان غير معروف';
+          _isLoadingAddress = false;
+        });
+      }
     }
   }
 

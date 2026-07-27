@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../notification_center_screen.dart';
 
 class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Map<String, dynamic>? driverProfile;
@@ -57,6 +58,24 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
                       ],
                     ),
                   ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10b981).withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(LucideIcons.bell, color: Color(0xFF10b981), size: 20),
                 ),
               ),
               Container(

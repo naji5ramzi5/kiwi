@@ -18,6 +18,8 @@ import 'controllers/favorites_controller.dart';
 import 'config/app_config.dart';
 
 import 'dart:math';
+import 'models/notification_item.dart';
+import 'services/notification_storage.dart';
 
 // Global FCM message notifier
 final ValueNotifier<RemoteMessage?> fcmMessageNotifier = ValueNotifier(null);
@@ -103,12 +105,21 @@ Future<void> _setupFCM() async {
       await _saveFcmToken(newToken, deviceId);
     });
 
-    // Handle foreground messages - show snackbar
+    // Handle foreground messages - show snackbar + save to local inbox
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       fcmMessageNotifier.value = message;
       if (message.notification != null) {
         final title = message.notification?.title ?? 'new_notification'.tr;
         final body = message.notification?.body ?? '';
+        final imageUrl = message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl ?? message.data['image'];
+        // Save to local notification inbox
+        NotificationStorage.save(NotificationItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: title,
+          body: body,
+          imageUrl: imageUrl,
+          timestamp: DateTime.now(),
+        ));
         // Show snackbar via GetX if app is running
         if (Get.key.currentContext != null) {
           Get.snackbar(

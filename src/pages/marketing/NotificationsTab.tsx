@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Send, Image as ImageIcon, CheckCircle, Loader } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Send, Image as ImageIcon, CheckCircle, Loader, Upload, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -17,12 +17,40 @@ export default function NotificationsTab() {
   const [notifPhone, setNotifPhone] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت')
+      return
+    }
+    setUploading(true)
+    try {
+      const ext = file.name.split('.').pop() || 'png'
+      const path = `notifications/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('kiwi_images')
+        .upload(path, file, { contentType: file.type, upsert: true })
+      if (uploadError) throw uploadError
+      const { data: urlData } = supabase.storage.from('kiwi_images').getPublicUrl(path)
+      setNotifImage(urlData.publicUrl)
+      toast.success('تم رفع الصورة بنجاح')
+    } catch (err: unknown) {
+      toast.error('خطأ في رفع الصورة: ' + ((err as Error).message || String(err)))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   async function sendNotif() {
     if (!notifTitle || !notifBody) { toast.error('يرجى ملء عنوان ونص الإشعار'); return }
     setSending(true)
     try {
-      const payload = { title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
+      const payload: Record<string, unknown> = { title: notifTitle, body: notifBody, data: notifImage ? { image: notifImage } : {} }
       if (notifTarget === 'all') {
         await invokeEdgeFunction({ ...payload, broadcast: true })
         toast.success('تم إرسال الإشعار بنجاح لجميع الأجهزة!')
@@ -89,13 +117,31 @@ export default function NotificationsTab() {
           </div>
           <div className="form-group">
             <label className="form-label">صورة مرفقة (اختياري)</label>
-            <div style={{ position: 'relative' }}>
-              <ImageIcon size={16} style={{ position: 'absolute', right: 12, top: 12, color: 'var(--gray400)' }} />
-              <input className="form-input" style={{ paddingRight: 36 }} value={notifImage} onChange={e => setNotifImage(e.target.value)} placeholder="رابط الصورة (URL)" />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <ImageIcon size={16} style={{ position: 'absolute', right: 12, top: 12, color: 'var(--gray400)' }} />
+                <input className="form-input" style={{ paddingRight: 36 }} value={notifImage} onChange={e => setNotifImage(e.target.value)} placeholder="رابط الصورة (URL) أو ارفع صورة" />
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{ height: 40, minWidth: 40, padding: '0 12px', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                {uploading ? <Loader size={16} className="spin" /> : <Upload size={16} />}
+                {uploading ? 'جاري الرفع...' : 'رفع صورة'}
+              </button>
             </div>
             {notifImage && (
-              <div style={{ marginTop: 10, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--gray200)', height: 120, background: 'var(--gray50)' }}>
+              <div style={{ marginTop: 10, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--gray200)', height: 120, background: 'var(--gray50)', position: 'relative' }}>
                 <img src={notifImage} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                <button
+                  onClick={() => setNotifImage('')}
+                  style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}
+                >
+                  <X size={14} />
+                </button>
               </div>
             )}
           </div>

@@ -9,6 +9,8 @@ import 'config/app_config.dart';
 import 'screens/auth/driver_login_screen.dart';
 import 'screens/driver_main_screen.dart';
 import 'screens/approval_waiting_screen.dart';
+import 'models/notification_item.dart';
+import 'services/notification_storage.dart';
 
 /// Global notifier: when set to true, DriverMainScreen switches to orders tab and refreshes.
 final ValueNotifier<bool> fcmNavigateToOrders = ValueNotifier<bool>(false);
@@ -48,9 +50,21 @@ Future<void> main() async {
       await saveToken(token);
     });
 
-    // Foreground: show snackbar and trigger refresh
+    // Foreground: save to local inbox + show snackbar + trigger refresh
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       fcmNavigateToOrders.value = true;
+      if (message.notification != null) {
+        final title = message.notification?.title ?? 'إشعار جديد';
+        final body = message.notification?.body ?? '';
+        final imageUrl = message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl ?? message.data['image'];
+        NotificationStorage.save(NotificationItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: title,
+          body: body,
+          imageUrl: imageUrl,
+          timestamp: DateTime.now(),
+        ));
+      }
       Get.snackbar(
         message.notification?.title ?? 'إشعار جديد',
         message.notification?.body ?? '',

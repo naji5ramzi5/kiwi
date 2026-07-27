@@ -16,7 +16,7 @@ import 'home/widgets/products_section.dart';
 import 'home/widgets/offers_section.dart';
 import 'truck_order_screen.dart';
 import 'search_screen.dart';
-import 'notifications_screen.dart';
+import 'notification_center_screen.dart';
 import 'order_details_screen.dart';
 import 'widgets/location_bottom_sheet.dart';
 
@@ -74,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('last_seen_notification_count', notificationCount.value);
     hasNewNotification.value = false;
-    Get.to(() => const NotificationsScreen(), transition: Transition.fadeIn);
+    Get.to(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
   }
 
   @override

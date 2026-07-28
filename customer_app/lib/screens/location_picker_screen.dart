@@ -129,12 +129,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   String _extractCleanAddress(Map<String, dynamic> data) {
     final addr = data['address'] as Map<String, dynamic>? ?? {};
     final parts = <String>[];
-    final sub = addr['suburb'] ?? addr['neighbourhood'] ?? addr['subdivision'] ?? '';
-    final thoroughfare = addr['road'] ?? '';
-    final locality = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['hamlet'] ?? '';
-    if (sub.toString().isNotEmpty) parts.add(sub.toString());
-    if (thoroughfare.toString().isNotEmpty) parts.add(thoroughfare.toString());
-    if (locality.toString().isNotEmpty && !parts.any((p) => p == locality.toString())) parts.add(locality.toString());
+    final street = addr['road'] ?? addr['pedestrian'] ?? '';
+    final area = addr['suburb'] ?? addr['neighbourhood'] ?? addr['subdivision'] ?? addr['quarter'] ?? '';
+    final city = addr['city'] ?? addr['town'] ?? addr['village'] ?? addr['county'] ?? '';
+    final governorate = addr['state'] ?? addr['governorate'] ?? addr['region'] ?? '';
+    final streetStr = street.toString();
+    final areaStr = area.toString();
+    final cityStr = city.toString();
+    final governorateStr = governorate.toString();
+    if (streetStr.isNotEmpty) parts.add(streetStr);
+    if (areaStr.isNotEmpty && areaStr != streetStr) parts.add(areaStr);
+    if (cityStr.isNotEmpty && cityStr != areaStr) parts.add(cityStr);
+    if (governorateStr.isNotEmpty && governorateStr != cityStr) parts.add(governorateStr);
     if (parts.isEmpty) return data['display_name'] ?? 'العنوان غير معروف';
     return parts.join('، ');
   }

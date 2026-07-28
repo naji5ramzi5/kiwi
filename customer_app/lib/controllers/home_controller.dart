@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'package:maps_toolkit/maps_toolkit.dart' as mt;
+import '../utils/turf_helper.dart';
 
 class HomeController extends GetxController {
   final supabase = Supabase.instance.client;
@@ -26,6 +26,8 @@ class HomeController extends GetxController {
 
   var searchQuery = ''.obs;
   var userAddress = ''.obs;
+  var userLat = 0.0.obs;
+  var userLng = 0.0.obs;
   var isInDeliveryZone = true.obs;
 
   // Delivery zone config for the selected branch
@@ -75,7 +77,7 @@ class HomeController extends GetxController {
     ]);
   }
 
-  Future<String> reverseGeocode(double lat, double lng) async {
+  Future<Map<String, String>> reverseGeocode(double lat, double lng) async {
     try {
       final client = HttpClient();
       final request = await client.getUrl(
@@ -90,26 +92,33 @@ class HomeController extends GetxController {
         final json = jsonDecode(content);
         final address = json['address'];
         if (address != null) {
-          final road =
-              address['road'] ??
-              address['suburb'] ??
-              address['neighbourhood'] ??
-              '';
-          final city =
-              address['city'] ??
-              address['town'] ??
-              address['governorate'] ??
-              'baghdad'.tr;
-          if (road.isNotEmpty) {
-            return '$city، $road';
-          }
-          return city;
+          final street = address['road'] ?? address['pedestrian'] ?? '';
+          final area = address['suburb'] ?? address['neighbourhood'] ?? address['subdivision'] ?? address['quarter'] ?? '';
+          final city = address['city'] ?? address['town'] ?? address['village'] ?? address['county'] ?? '';
+          final governorate = address['state'] ?? address['governorate'] ?? address['region'] ?? '';
+          final streetStr = street.toString();
+          final areaStr = area.toString();
+          final cityStr = city.toString();
+          final governorateStr = governorate.toString();
+          final parts = <String>[];
+          if (streetStr.isNotEmpty) parts.add(streetStr);
+          if (areaStr.isNotEmpty && areaStr != streetStr) parts.add(areaStr);
+          if (cityStr.isNotEmpty && cityStr != areaStr) parts.add(cityStr);
+          if (governorateStr.isNotEmpty && governorateStr != cityStr) parts.add(governorateStr);
+          final fullAddress = parts.isNotEmpty ? parts.join('، ') : (json['display_name']?.toString() ?? '');
+          return {
+            'street': streetStr,
+            'area': areaStr,
+            'city': cityStr,
+            'governorate': governorateStr,
+            'fullAddress': fullAddress,
+          };
         }
       }
     } catch (e) {
       debugPrint('Reverse geocode error: $e');
     }
-    return '';
+    return {'street': '', 'area': '', 'city': '', 'governorate': '', 'fullAddress': ''};
   }
 
   Future<void> findBestBranchByLocation() async {
@@ -132,8 +141,10 @@ class HomeController extends GetxController {
           position.latitude,
           position.longitude,
         );
-        if (resolvedAddr.isNotEmpty) {
-          userAddress.value = resolvedAddr;
+        if (resolvedAddr['fullAddress']!.isNotEmpty) {
+          userAddress.value = resolvedAddr['fullAddress']!;
+          userLat.value = position.latitude;
+          userLng.value = position.longitude;
         }
 
         // Fetch active delivery zones
@@ -146,33 +157,18 @@ class HomeController extends GetxController {
 
         // Check Point-in-Polygon
         if (zones.isNotEmpty) {
-          final userLatLng = mt.LatLng(position.latitude, position.longitude);
+          final userPoint = [position.longitude.toDouble(), position.latitude.toDouble()];
           for (var zone in zones) {
             final geojson = zone['geojson'];
-            if (geojson != null && geojson['geometry'] != null) {
-              final coords = geojson['geometry']['coordinates'];
-              if (coords != null && coords.isNotEmpty) {
-                // Leaflet-draw polygon coords are usually [[[lng, lat], [lng, lat], ...]]
-                List<mt.LatLng> polygon = [];
-                try {
-                  for (var point in coords[0]) {
-                    // standard GeoJSON is [lng, lat]
-                    double lng = point[0].toDouble();
-                    double lat = point[1].toDouble();
-                    polygon.add(mt.LatLng(lat, lng));
-                  }
-                  if (mt.PolygonUtil.containsLocation(
-                    userLatLng,
-                    polygon,
-                    false,
-                  )) {
-                    matchedBranchId = zone['branch_id'];
-                    break; // found the zone
-                  }
-                } catch (e) {
-                debugPrint('Error parsing polygon coords: $e');
-                }
+            if (geojson == null) continue;
+            try {
+              final coords = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
+              if (coords != null && TurfHelper.pointInPolygon(userPoint, coords)) {
+                matchedBranchId = zone['branch_id'];
+                break;
               }
+            } catch (e) {
+              debugPrint('Error parsing polygon coords: $e');
             }
           }
         }
@@ -220,6 +216,8 @@ class HomeController extends GetxController {
       isLoadingBranches(true);
 
       userAddress.value = address;
+      userLat.value = lat;
+      userLng.value = lng;
 
       // Fetch active delivery zones
       final zones = await supabase
@@ -231,31 +229,18 @@ class HomeController extends GetxController {
 
       // Check Point-in-Polygon
       if (zones.isNotEmpty) {
-        final userLatLng = mt.LatLng(lat, lng);
+        final userPoint = [lng, lat];
         for (var zone in zones) {
           final geojson = zone['geojson'];
-          if (geojson != null && geojson['geometry'] != null) {
-            final coords = geojson['geometry']['coordinates'];
-            if (coords != null && coords.isNotEmpty) {
-              List<mt.LatLng> polygon = [];
-              try {
-                for (var point in coords[0]) {
-                  double lon = point[0].toDouble();
-                  double l = point[1].toDouble();
-                  polygon.add(mt.LatLng(l, lon));
-                }
-                if (mt.PolygonUtil.containsLocation(
-                  userLatLng,
-                  polygon,
-                  false,
-                )) {
-                  matchedBranchId = zone['branch_id'];
-                  break; // found the zone
-                }
-              } catch (e) {
-                debugPrint('Error parsing polygon coords: $e');
-              }
+          if (geojson == null) continue;
+          try {
+            final coords = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
+            if (coords != null && TurfHelper.pointInPolygon(userPoint, coords)) {
+              matchedBranchId = zone['branch_id'];
+              break;
             }
+          } catch (e) {
+            debugPrint('Error parsing polygon coords: $e');
           }
         }
       }
@@ -420,6 +405,23 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       debugPrint('Error fetching categories: $e');
+    }
+  }
+
+  /// Extracts GeoJSON polygon coordinates from various formats (Feature, Polygon, etc.)
+  /// Returns `[[[lng, lat], ...]]` (Polygon coordinates array) or null on failure.
+  List<List<List<double>>>? _parseDeliveryZoneGeojson(Map<String, dynamic> geojson) {
+    try {
+      dynamic coords;
+      if (geojson['type'] == 'Feature' && geojson['geometry'] != null) {
+        coords = geojson['geometry']['coordinates'];
+      } else {
+        coords = geojson['coordinates'];
+      }
+      if (coords is! List || coords.isEmpty) return null;
+      return (coords as List).cast<List<List<double>>>();
+    } catch (_) {
+      return null;
     }
   }
 }

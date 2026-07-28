@@ -14,6 +14,8 @@ import Orders from './pages/Orders'
 import Drivers from './pages/Drivers'
 import Marketing from './pages/Marketing'
 import Finance from './pages/Finance'
+import FinancialDashboard from './pages/FinancialDashboard'
+import Settings from './pages/Settings'
 import Customers from './pages/Customers'
 import Inventory from './pages/Inventory'
 import Purchases from './pages/Purchases'
@@ -95,6 +97,8 @@ export default function App() {
           <Route path="drivers" element={<Drivers />} />
           <Route path="marketing" element={<Marketing />} />
           <Route path="finance" element={<Finance />} />
+          <Route path="financial-dashboard" element={<FinancialDashboard />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="customers" element={<Customers />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="purchases" element={<Purchases />} />

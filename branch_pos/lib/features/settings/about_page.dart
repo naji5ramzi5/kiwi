@@ -358,7 +358,7 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               'Copyright (c) 2026 Kiwi Technologies Inc.\n\n'
-              'يُمنح بموجب هذه الرخصة لجميع الأشخاص_FREE使用权_الحق في الحصول على نسخة '
+              'يُمنح بموجب هذه الرخصة لجميع الأشخاص الحق في الحصول على نسخة '
               'من هذا البرنامج وجميع ملفات التوثيق المرتبطة به، دون تقييد، بما في ذلك '
               'دون حدود الحقوق لاستخدام النسخ والنسخ والدمج والتعديل والتوزيع.',
               style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.6),

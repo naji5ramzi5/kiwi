@@ -28,9 +28,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
-    cartController = Get.isRegistered<CartController>()
-        ? Get.find<CartController>()
-        : Get.put(CartController());
+    cartController = Get.find<CartController>();
     authController = Get.isRegistered<AuthController>()
         ? Get.find<AuthController>()
         : Get.put(AuthController());
@@ -137,6 +135,7 @@ class _CartScreenState extends State<CartScreen> {
         automaticallyImplyLeading: true,
       ),
       body: Obx(() {
+        final _ = cartController.cartVersion.value;
         return PopScope(
           canPop: !cartController.isCountingDown.value,
           child: Builder(builder: (context) {

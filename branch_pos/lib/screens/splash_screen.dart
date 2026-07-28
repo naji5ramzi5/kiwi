@@ -112,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         children: [
           const WindowControls(
             showTitle: true,
-            title: 'Kiwi Fresh - نظام إدارة الفرع',
+            title: 'Kiwi-pos',
           ),
           Expanded(
             child: Center(
@@ -129,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         height: 120,
                         decoration: BoxDecoration(
                           gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(32),
+                          borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
                               color: AppTheme.primary.withOpacity(0.3),
@@ -139,7 +139,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32),
+                          borderRadius: BorderRadius.circular(15),
                           child: Image.asset(
                             'assets/images/logo.png',
                             width: 120,
@@ -166,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           ShaderMask(
                             shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
                             child: const Text(
-                              'Kiwi Fresh',
+                              'Kiwi-pos',
                               style: TextStyle(
                                 fontSize: 36,
                                 fontWeight: FontWeight.w900,

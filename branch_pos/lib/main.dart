@@ -24,7 +24,7 @@ void main() async {
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
     windowButtonVisibility: false,
-    title: 'Kiwi Fresh - نظام إدارة الفرع',
+    title: 'Kiwi-pos',
   );
 
   windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -39,9 +39,9 @@ void main() async {
   Supabase.initialize(
     url: AppConfig.supabaseUrl,
     publishableKey: AppConfig.supabaseAnonKey,
-  ).catchError((e) => debugPrint('Supabase init error: $e'));
+  );
 
-  DatabaseService().database.catchError((e) => debugPrint('Database init error: $e'));
+  DatabaseService().database;
   SyncService().startMonitoring();
 
   runApp(const FreshPOSApp());

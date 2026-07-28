@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../services/notification_storage.dart';
 import 'home/widgets/stories_section.dart';
 import 'home/widgets/banners_section.dart';
 import 'home/widgets/categories_section.dart';
@@ -49,21 +50,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadNotificationCount() async {
     try {
       final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) return;
+      int serverUnread = 0;
+      if (userId != null) {
+        final data = await Supabase.instance.client
+            .from('notifications')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('is_read', false);
+        serverUnread = (data as List).length;
+      }
 
-      final data = await Supabase.instance.client
-          .from('notifications')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('is_read', false);
-
-      final int unreadCount = (data as List).length;
+      final localUnread = await NotificationStorage.getUnreadCount();
+      final int totalUnread = serverUnread + localUnread;
 
       final prefs = await SharedPreferences.getInstance();
       final int lastSeenCount = prefs.getInt('last_seen_notification_count') ?? 0;
 
-      notificationCount.value = unreadCount;
-      hasNewNotification.value = unreadCount > 0 && unreadCount != lastSeenCount;
+      notificationCount.value = totalUnread;
+      hasNewNotification.value = totalUnread > 0 && totalUnread != lastSeenCount;
     } catch (_) {
       notificationCount.value = 0;
       hasNewNotification.value = false;

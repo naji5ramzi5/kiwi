@@ -25,7 +25,9 @@ const NAV = [
   { label: 'العملاء', path: '/customers', icon: Users, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   
   { label: 'الحسابات والتقارير', path: '/finance', icon: DollarSign, section: 'المالية والتسويق', color: '#8b5cf6' },
+  { label: 'لوحة الإحصائيات المالية', path: '/financial-dashboard', icon: TrendingUp, section: 'المالية والتسويق', color: '#8b5cf6' },
   { label: 'التسويق', path: '/marketing', icon: Megaphone, section: 'المالية والتسويق', color: '#8b5cf6' },
+  { label: 'الإعدادات', path: '/settings', icon: Settings, section: 'المالية والتسويق', color: '#8b5cf6' },
   { label: 'KiwiAI (الذكاء الاصطناعي)', path: '/ai-chat', icon: Activity, section: 'الذكاء الاصطناعي', color: '#ec4899' },
 ]
 
@@ -43,7 +45,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/ratings': 'التقييمات والتعليقات',
   '/customers': 'قاعدة العملاء',
   '/finance': 'التقارير المالية والشركاء',
+  '/financial-dashboard': 'لوحة الإحصائيات المالية',
   '/marketing': 'الحملات التسويقية',
+  '/settings': 'الإعدادات',
   '/ai-chat': 'KiwiAI - المساعد الذكي',
 }
 
@@ -59,7 +63,9 @@ const BREADCRUMBS: Record<string, { parent: string; parentPath: string; current:
   '/ratings': { parent: 'الفروع', parentPath: '/branches', current: 'التقييمات' },
   '/customers': { parent: 'الفروع', parentPath: '/branches', current: 'العملاء' },
   '/finance': { parent: 'المالية', parentPath: '/finance', current: 'التقارير' },
+  '/financial-dashboard': { parent: 'المالية', parentPath: '/finance', current: 'الإحصائيات المالية' },
   '/marketing': { parent: 'المالية', parentPath: '/finance', current: 'التسويق' },
+  '/settings': { parent: 'المالية', parentPath: '/finance', current: 'الإعدادات' },
   '/ai-chat': { parent: 'الرئيسية', parentPath: '/dashboard', current: 'KiwiAI' },
 }
 
@@ -193,7 +199,9 @@ export default function Layout() {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="brand-logo">
-            <img src="/kiwi-logo.jpg" alt="Kiwi" style={{ width: 40, height: 40, borderRadius: '50%', boxShadow: '0 4px 12px rgba(16,185,129,.3)', objectFit: 'cover' }} />
+            <div style={{ width: 40, height: 40, borderRadius: 12, overflow: 'hidden', boxShadow: '0 4px 12px rgba(16,185,129,.3)' }}>
+              <img src="/kiwi-logo.jpg" alt="Kiwi" style={{ width: 40, height: 40, objectFit: 'cover' }} />
+            </div>
             <div>
               <div className="brand-name" style={{ letterSpacing: '0.5px' }}>KIWI</div>
               <div className="brand-sub">ENTERPRISE SYSTEM</div>
@@ -249,7 +257,7 @@ export default function Layout() {
                   <User size={16} /> الملف الشخصي
                 </button>
                 <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)' }}
-                  onClick={() => { navigate('/dashboard'); setShowUserMenu(false) }}>
+                  onClick={() => { navigate('/settings'); setShowUserMenu(false) }}>
                   <Settings size={16} /> الإعدادات
                 </button>
                 <div style={{ borderTop: '1px solid var(--gray100)' }}>

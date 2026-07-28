@@ -13,7 +13,7 @@ import 'orders/delivery_orders_screen.dart';
 import 'inventory/inventory_screen.dart';
 import 'cashier_screen.dart';
 import 'purchases/purchases_screen.dart';
-import 'finance/settlement_screen.dart';
+import 'statistics_screen.dart';
 import '../features/settings/settings_page.dart';
 import 'stock_entry.dart';
 
@@ -95,14 +95,14 @@ class _MainLayoutState extends State<MainLayout> {
                                   height: 48,
                                   decoration: BoxDecoration(
                                     color: AppTheme.primary.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(15),
                                     border: Border.all(
                                       color: AppTheme.primary.withOpacity(0.3),
                                       width: 1,
                                     ),
                                   ),
                                   child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(15),
                                     child: Image.asset(
                                       'assets/images/logo.png',
                                       width: 48,
@@ -122,7 +122,7 @@ class _MainLayoutState extends State<MainLayout> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Kiwi Fresh',
+                                        'Kiwi-pos',
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 20,
@@ -291,7 +291,7 @@ class _MainLayoutState extends State<MainLayout> {
                           case 4:
                             return const PurchasesScreen();
                           case 5:
-                            return const SettlementScreen();
+                            return const StatisticsScreen();
                           case 6:
                             return const SettingsPage();
                           default:

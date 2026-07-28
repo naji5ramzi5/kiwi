@@ -17,6 +17,7 @@ class CartController extends GetxController {
   final TextEditingController couponTextController = TextEditingController();
 
   var cartItems = <String, Map<String, dynamic>>{}.obs;
+  var cartVersion = 0.obs;
   var isPlacingOrder = false.obs;
   var isCountingDown = false.obs;
   var lastOrderId = ''.obs;
@@ -90,8 +91,9 @@ class CartController extends GetxController {
         }
       }
       cartItems.value = map;
-      cartItems.refresh();
     }
+    cartItems.refresh();
+    cartVersion.value++;
   }
 
   void _saveCart() {
@@ -152,6 +154,7 @@ class CartController extends GetxController {
     }
     cartItems.refresh();
     _saveCart();
+    cartVersion.value++;
 
     if (showPopup) {
       final totalPrice = (product['price'] as num? ?? 0) * qty;
@@ -177,12 +180,14 @@ class CartController extends GetxController {
     }
     cartItems.refresh();
     _saveCart();
+    cartVersion.value++;
   }
 
   void clearCart() {
     cartItems.clear();
     cartItems.refresh();
     _saveCart();
+    cartVersion.value++;
   }
 
   double get subtotal {
@@ -370,9 +375,15 @@ class CartController extends GetxController {
 
     // Get the selected branch ID from HomeController
     String? branchId;
+    double? customerLat;
+    double? customerLng;
     if (Get.isRegistered<HomeController>()) {
       final homeController = Get.find<HomeController>();
       branchId = homeController.selectedBranch.value?['id']?.toString();
+      if (homeController.userLat.value != 0.0 || homeController.userLng.value != 0.0) {
+        customerLat = homeController.userLat.value;
+        customerLng = homeController.userLng.value;
+      }
     }
 
     Future<bool> tryPlaceOrder() async {
@@ -387,6 +398,10 @@ class CartController extends GetxController {
           'delivery_address': address,
           'payment_method': paymentMethod,
         };
+        if (customerLat != null && customerLng != null) {
+          orderData['customer_lat'] = customerLat;
+          orderData['customer_lng'] = customerLng;
+        }
         // Include branch_id if available
         if (branchId != null && branchId.isNotEmpty) {
           orderData['branch_id'] = branchId;

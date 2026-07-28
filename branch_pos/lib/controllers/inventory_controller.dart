@@ -32,7 +32,7 @@ class InventoryController extends GetxController {
         'default_price': p.defaultPrice,
         'barcode': p.barcode,
         'cost': p.defaultPrice,
-        'inventory': [{'stock_quantity': p.stockQuantity}],
+        'inventory': [{'actual_stock': p.stockQuantity}],
       }).toList();
     } catch (e) {
       debugPrint('Error fetching inventory: $e');

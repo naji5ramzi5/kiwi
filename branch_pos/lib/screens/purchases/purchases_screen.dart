@@ -23,6 +23,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   final TextEditingController supplierController = TextEditingController();
   double totalValue = 0;
   final TextEditingController barcodeController = TextEditingController();
+  bool _isSaving = false;
 
   void scanBarcode(String barcode) {
     if (barcode.isEmpty) return;
@@ -90,51 +91,64 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
       return;
     }
 
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
     try {
       final branchId = authController.currentBranchId.value;
 
-      final purchaseResponse = await supabase.from('purchases').insert({
+      await supabase.from('purchases').insert({
         'branch_id': branchId,
         'supplier_name': supplierController.text,
         'total_amount': totalValue,
         'created_by': Supabase.instance.client.auth.currentUser?.id,
-      }).select().single();
+      }).select().single().then((purchaseResponse) async {
+        final itemsToInsert = cart.map((item) => {
+          'purchase_id': purchaseResponse['id'],
+          'product_id': item['id'],
+          'quantity': item['quantity'],
+          'unit_cost': item['unit_cost'],
+          'total_cost': item['quantity'] * item['unit_cost'],
+        }).toList();
 
-      final List<Map<String, dynamic>> itemsToInsert = cart.map((item) => {
-        'purchase_id': purchaseResponse['id'],
-        'product_id': item['id'],
-        'quantity': item['quantity'],
-        'unit_cost': item['unit_cost'],
-        'total_cost': item['quantity'] * item['unit_cost'],
-      }).toList();
+        await supabase.from('purchase_items').insert(itemsToInsert);
 
-      await supabase.from('purchase_items').insert(itemsToInsert);
+        final supabaseService = SupabaseService();
+        for (final item in cart) {
+          await supabaseService.addStockEntry(
+            branchId,
+            item['id'],
+            item['quantity'],
+            item['unit_cost'],
+            Supabase.instance.client.auth.currentUser?.id ?? '',
+          );
+        }
+      });
 
-      final supabaseService = SupabaseService();
-      for (final item in cart) {
-        await supabaseService.addStockEntry(
-          branchId,
-          item['id'],
-          item['quantity'],
-          item['unit_cost'],
-          Supabase.instance.client.auth.currentUser?.id ?? '',
-        );
-      }
-
-      Get.snackbar('نجاح', 'تم تسجيل المشتريات وتحديث المخزون',
-        backgroundColor: AppTheme.success,
-        colorText: Colors.white,
-      );
+      // ── Success: clear state silently, then show snackbar ──
       setState(() {
-        cart = [];
+        cart.clear();
         supplierController.clear();
         totalValue = 0;
+        _isSaving = false;
       });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('✓ تم تسجيل المشتريات وتحديث المخزون بنجاح'),
+          backgroundColor: const Color(0xFF10b981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 4),
+        ));
+      }
       inventoryController.fetchInventory();
     } catch (e) {
+      setState(() => _isSaving = false);
       Get.snackbar('خطأ', 'فشل في حفظ المشتريات: $e',
         backgroundColor: AppTheme.error,
         colorText: Colors.white,
+        duration: const Duration(seconds: 8),
       );
     }
   }
@@ -391,8 +405,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: AppTheme.buttonShadow,
                         ),
-                        child: ElevatedButton(
-                          onPressed: savePurchase,
+                          child: ElevatedButton(
+                          onPressed: _isSaving ? null : savePurchase,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,

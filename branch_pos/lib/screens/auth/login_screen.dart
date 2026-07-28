@@ -67,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 96,
                         decoration: BoxDecoration(
                           gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(28),
+                          borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
                               color: AppTheme.primary.withOpacity(0.3),
@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
+                          borderRadius: BorderRadius.circular(15),
                           child: Image.asset(
                             'assets/images/logo.png',
                             width: 96,
@@ -95,8 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Title
                       ShaderMask(
                         shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                        child: const Text(
-                          'Kiwi Fresh',
+                          child: const Text(
+                          'Kiwi-pos',
                           style: TextStyle(
                             fontSize: 34,
                             fontWeight: FontWeight.w900,

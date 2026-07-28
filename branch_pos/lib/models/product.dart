@@ -33,7 +33,7 @@ class Product {
       imageUrl: json['image_url'],
       isActive: json['is_active'] ?? true,
       isOffer: json['is_offer'] ?? false,
-      stockQuantity: json['stock_quantity']?.toDouble(),
+      stockQuantity: (json['stock_quantity'] ?? json['actual_stock'])?.toDouble(),
       barcode: json['barcode'],
     );
   }

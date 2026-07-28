@@ -6,6 +6,7 @@ class NotificationItem {
   final String body;
   String? imageUrl;
   final DateTime timestamp;
+  final DateTime expiresAt;
   bool isRead;
 
   NotificationItem({
@@ -14,8 +15,9 @@ class NotificationItem {
     required this.body,
     this.imageUrl,
     required this.timestamp,
+    DateTime? expiresAt,
     this.isRead = false,
-  });
+  }) : expiresAt = expiresAt ?? timestamp.add(const Duration(hours: 48));
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -23,6 +25,7 @@ class NotificationItem {
     'body': body,
     'imageUrl': imageUrl,
     'timestamp': timestamp.toIso8601String(),
+    'expiresAt': expiresAt.toIso8601String(),
     'isRead': isRead,
   };
 
@@ -32,8 +35,11 @@ class NotificationItem {
     body: json['body'] ?? '',
     imageUrl: json['imageUrl'],
     timestamp: DateTime.parse(json['timestamp']),
+    expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt']) : null,
     isRead: json['isRead'] ?? false,
   );
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
 
   String encode() => jsonEncode(toJson());
   static NotificationItem decode(String source) => NotificationItem.fromJson(jsonDecode(source));

@@ -3,8 +3,6 @@ import 'package:get/get.dart';
 import '../theme/app_theme.dart';
 import '../controllers/main_screen_controller.dart';
 
-/// Shows the "added to cart" popup dialog.
-/// Extracted from CartController for separation of UI and business logic.
 void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formattedPrice) {
   Get.dialog(
     Dialog(
@@ -13,7 +11,7 @@ void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formatt
       child: Container(
         decoration: BoxDecoration(
           color: Get.isDarkMode ? const Color(0xFF1C2B1E) : Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -26,7 +24,6 @@ void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formatt
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header gradient
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -56,7 +53,6 @@ void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formatt
                 ],
               ),
             ),
-            // Product info
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Row(
@@ -101,7 +97,7 @@ void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formatt
                             const SizedBox(width: 12),
                             Text(
                               '$formattedPrice ${'currency_iqd'.tr}',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.emeraldDark, fontFamily: 'Cairo'),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppTheme.primaryDark, fontFamily: 'Cairo'),
                             ),
                           ],
                         ),
@@ -114,49 +110,44 @@ void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formatt
             const SizedBox(height: 8),
             Divider(color: Colors.grey.withOpacity(0.2), height: 1),
             const SizedBox(height: 16),
-            // Action buttons
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Row(
                 children: [
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => Get.back(),
-                      child: Container(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primary,
+                        side: const BorderSide(color: AppTheme.primary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusSm)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Get.isDarkMode ? Colors.white.withOpacity(0.08) : const Color(0xFFF0FDF4),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          'continue_shopping'.tr,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppTheme.emeraldDark, fontFamily: 'Cairo'),
-                        ),
+                      ),
+                      child: Text(
+                        'continue_shopping'.tr,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, fontFamily: 'Cairo'),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () {
+                    child: ElevatedButton(
+                      onPressed: () {
                         Get.back();
                         Get.find<MainScreenController>().switchTab(2);
                       },
-                      child: Container(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusSm)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [AppTheme.emeraldDeep, AppTheme.emeraldDark]),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(color: AppTheme.emeraldDark.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
-                          ],
-                        ),
-                        child: Text(
-                          'go_to_cart'.tr,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white, fontFamily: 'Cairo'),
-                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'go_to_cart'.tr,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, fontFamily: 'Cairo'),
                       ),
                     ),
                   ),

@@ -20,9 +20,34 @@ import 'config/app_config.dart';
 import 'dart:math';
 import 'models/notification_item.dart';
 import 'services/notification_storage.dart';
+import 'services/notification_service.dart';
 
 // Global FCM message notifier
 final ValueNotifier<RemoteMessage?> fcmMessageNotifier = ValueNotifier(null);
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await NotificationService.init();
+  final title = message.notification?.title ?? 'New Notification';
+  final body = message.notification?.body ?? '';
+  final imageUrl = message.notification?.android?.imageUrl ??
+      message.notification?.apple?.imageUrl ??
+      message.data['image'];
+  NotificationService.show(
+    id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+    title: title,
+    body: body,
+    imageUrl: imageUrl,
+    payload: message.data['type'] ?? '',
+  );
+  NotificationStorage.save(NotificationItem(
+    id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+    title: title,
+    body: body,
+    imageUrl: imageUrl,
+    timestamp: DateTime.now(),
+  ));
+}
 
 void main() async {
   try {
@@ -45,6 +70,9 @@ void main() async {
           ? AppConfig.supabaseAnonKey
           : const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
     );
+
+    // Initialize notification service
+    await NotificationService.init();
 
     // Register Controllers BEFORE running app
     Get.put(ThemeController());
@@ -89,6 +117,9 @@ Future<void> _setupFCM() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     await messaging.requestPermission(alert: true, badge: true, sound: true);
 
+    // Register background message handler (fires for data + notification payloads)
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
     // Get or generate a persistent device ID for guest tracking (UUID v4 format)
     final storage = GetStorage();
     String deviceId = storage.read<String>('device_id') ?? _generateDeviceUuid();
@@ -105,7 +136,7 @@ Future<void> _setupFCM() async {
       await _saveFcmToken(newToken, deviceId);
     });
 
-    // Handle foreground messages - show snackbar + save to local inbox
+    // Handle foreground messages - save to inbox, show system notification + snackbar
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       fcmMessageNotifier.value = message;
       if (message.notification != null) {
@@ -120,6 +151,14 @@ Future<void> _setupFCM() async {
           imageUrl: imageUrl,
           timestamp: DateTime.now(),
         ));
+        // Show system notification with BigPictureStyle
+        NotificationService.show(
+          id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+          title: title,
+          body: body,
+          imageUrl: imageUrl,
+          payload: message.data['type'] ?? '',
+        );
         // Show snackbar via GetX if app is running
         if (Get.key.currentContext != null) {
           Get.snackbar(

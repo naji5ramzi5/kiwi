@@ -11,9 +11,34 @@ import 'screens/driver_main_screen.dart';
 import 'screens/approval_waiting_screen.dart';
 import 'models/notification_item.dart';
 import 'services/notification_storage.dart';
+import 'services/notification_service.dart';
 
 /// Global notifier: when set to true, DriverMainScreen switches to orders tab and refreshes.
 final ValueNotifier<bool> fcmNavigateToOrders = ValueNotifier<bool>(false);
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await NotificationService.init();
+  final title = message.notification?.title ?? 'New Notification';
+  final body = message.notification?.body ?? '';
+  final imageUrl = message.notification?.android?.imageUrl ??
+      message.notification?.apple?.imageUrl ??
+      message.data['image'];
+  NotificationService.show(
+    id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+    title: title,
+    body: body,
+    imageUrl: imageUrl,
+    payload: message.data['type'] ?? '',
+  );
+  NotificationStorage.save(NotificationItem(
+    id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+    title: title,
+    body: body,
+    imageUrl: imageUrl,
+    timestamp: DateTime.now(),
+  ));
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,9 +52,13 @@ Future<void> main() async {
     anonKey: AppConfig.supabaseAnonKey,
   );
 
+  await NotificationService.init();
+
   try {
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission();
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     Future<void> saveToken(String token) async {
       final user = Supabase.instance.client.auth.currentUser;
@@ -50,7 +79,7 @@ Future<void> main() async {
       await saveToken(token);
     });
 
-    // Foreground: save to local inbox + show snackbar + trigger refresh
+    // Foreground: save to local inbox + show system notification + snackbar + trigger refresh
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       fcmNavigateToOrders.value = true;
       if (message.notification != null) {
@@ -64,6 +93,13 @@ Future<void> main() async {
           imageUrl: imageUrl,
           timestamp: DateTime.now(),
         ));
+        NotificationService.show(
+          id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+          title: title,
+          body: body,
+          imageUrl: imageUrl,
+          payload: message.data['type'] ?? '',
+        );
       }
       Get.snackbar(
         message.notification?.title ?? 'إشعار جديد',

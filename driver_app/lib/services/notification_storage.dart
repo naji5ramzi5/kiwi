@@ -10,10 +10,14 @@ class NotificationStorage {
     final prefs = await SharedPreferences.getInstance();
     final list = prefs.getStringList(_key) ?? [];
     final items = list.map((e) => NotificationItem.decode(e)).toList();
-    final now = DateTime.now();
-    final fresh = items.where((item) => now.difference(item.timestamp).inHours <= 48).toList();
+    final fresh = items.where((item) => !item.isExpired).toList();
     fresh.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return fresh;
+  }
+
+  static Future<int> getUnreadCount() async {
+    final items = await loadAll();
+    return items.where((item) => !item.isRead).length;
   }
 
   static Future<void> save(NotificationItem item) async {
@@ -54,24 +58,11 @@ class NotificationStorage {
     await prefs.remove(_key);
   }
 
-  static Future<void> removeExpiredImages({Duration ttl = const Duration(hours: 24)}) async {
+  static Future<void> removeExpired({Duration? ttl}) async {
     final items = await _loadAllRaw();
-    final now = DateTime.now();
-    bool changed = false;
-    final expiredIds = <String>[];
-    for (final item in items) {
-      if (now.difference(item.timestamp).inHours > 48) {
-        expiredIds.add(item.id);
-        changed = true;
-      } else if (item.imageUrl != null && now.difference(item.timestamp) > ttl) {
-        item.imageUrl = null;
-        changed = true;
-      }
-    }
-    if (expiredIds.isNotEmpty) {
-      items.removeWhere((e) => expiredIds.contains(e.id));
-    }
-    if (changed) {
+    final before = items.length;
+    items.removeWhere((item) => item.isExpired);
+    if (items.length != before) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_key, items.map((e) => e.encode()).toList());
     }

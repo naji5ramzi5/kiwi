@@ -23,7 +23,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   }
 
   Future<void> _loadNotifications() async {
-    await NotificationStorage.removeExpiredImages();
+    await NotificationStorage.removeExpired();
     final items = await NotificationStorage.loadAll();
     setState(() {
       _notifications = items;

@@ -6,8 +6,12 @@ import '../controllers/auth_controller.dart';
 import '../theme/app_theme.dart';
 import 'main_screen.dart';
 import 'auth/login_screen.dart';
+import 'notification_center_screen.dart';
 import 'widgets/splash_particles.dart';
 import 'widgets/splash_loading_dots.dart';
+
+// Global FCM message notifier reference for cold-start navigation
+import '../main.dart' show fcmMessageNotifier;
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -100,6 +104,13 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToNext() {
+    // If app was opened from a notification (cold start), navigate directly to notification center
+    if (fcmMessageNotifier.value != null) {
+      fcmMessageNotifier.value = null;
+      Get.offAll(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
+      return;
+    }
+
     if (!Get.isRegistered<AuthController>()) {
       Get.put(AuthController());
     }

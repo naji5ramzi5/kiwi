@@ -25,7 +25,7 @@ void showLocationBottomSheet(BuildContext context) {
         child: Obx(() {
           final String userLocation = controller.userAddress.value.isNotEmpty
               ? controller.userAddress.value
-              : (controller.selectedBranch.value?['address'] ?? 'deliver_to_location'.tr);
+              : 'deliver_to_location'.tr;
           final bool inZone = controller.isInDeliveryZone.value;
 
           return Column(

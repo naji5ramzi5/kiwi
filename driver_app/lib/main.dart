@@ -120,10 +120,26 @@ Future<void> main() async {
     final initialMessage = await messaging.getInitialMessage();
     if (initialMessage != null) {
       fcmNavigateToOrders.value = true;
+      final title = initialMessage.notification?.title ?? 'إشعار جديد';
+      final body = initialMessage.notification?.body ?? '';
+      final imageUrl = initialMessage.notification?.android?.imageUrl ?? initialMessage.notification?.apple?.imageUrl ?? initialMessage.data['image'];
+      await NotificationStorage.save(NotificationItem(
+        id: initialMessage.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        body: body,
+        imageUrl: imageUrl,
+        timestamp: DateTime.now(),
+      ));
     }
   } catch (e) {
     debugPrint('FCM init error: $e');
   }
+
+  // Global error handler to prevent black screen from runtime exceptions
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exception}');
+  };
 
   runApp(const DriverApp());
 }

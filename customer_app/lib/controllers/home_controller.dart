@@ -162,8 +162,8 @@ class HomeController extends GetxController {
             final geojson = zone['geojson'];
             if (geojson == null) continue;
             try {
-              final coords = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
-              if (coords != null && TurfHelper.pointInPolygon(userPoint, coords)) {
+              final polygons = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
+              if (polygons != null && TurfHelper.pointInAnyPolygon(userPoint, polygons)) {
                 matchedBranchId = zone['branch_id'];
                 break;
               }
@@ -203,6 +203,9 @@ class HomeController extends GetxController {
     } catch (e) {
       debugPrint('Error in smart selection: $e');
       await fetchAllBranches();
+    } finally {
+      isLocating(false);
+      isLoadingBranches(false);
     }
   }
 
@@ -234,8 +237,8 @@ class HomeController extends GetxController {
           final geojson = zone['geojson'];
           if (geojson == null) continue;
           try {
-            final coords = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
-            if (coords != null && TurfHelper.pointInPolygon(userPoint, coords)) {
+            final polygons = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
+            if (polygons != null && TurfHelper.pointInAnyPolygon(userPoint, polygons)) {
               matchedBranchId = zone['branch_id'];
               break;
             }
@@ -335,7 +338,10 @@ class HomeController extends GetxController {
   }
 
   Future<void> fetchProducts() async {
-    if (selectedBranch.value == null) return;
+    if (selectedBranch.value == null) {
+      isLoadingProducts(false);
+      return;
+    }
 
     try {
       isLoadingProducts(true);
@@ -408,18 +414,30 @@ class HomeController extends GetxController {
     }
   }
 
-  /// Extracts GeoJSON polygon coordinates from various formats (Feature, Polygon, etc.)
-  /// Returns `[[[lng, lat], ...]]` (Polygon coordinates array) or null on failure.
-  List<List<List<double>>>? _parseDeliveryZoneGeojson(Map<String, dynamic> geojson) {
+  /// Extracts polygon coordinates from GeoJSON (handles Feature, Polygon, MultiPolygon).
+  /// Returns a list of polygons `[[[lng, lat], ...]]` or null on failure.
+  List<List<List<List<double>>>>? _parseDeliveryZoneGeojson(Map<String, dynamic> geojson) {
     try {
       dynamic coords;
+      String? geomType;
+
       if (geojson['type'] == 'Feature' && geojson['geometry'] != null) {
         coords = geojson['geometry']['coordinates'];
+        geomType = geojson['geometry']['type'];
       } else {
         coords = geojson['coordinates'];
+        geomType = geojson['type'];
       }
+
       if (coords is! List || coords.isEmpty) return null;
-      return (coords as List).cast<List<List<double>>>();
+
+      if (geomType == 'MultiPolygon') {
+        // MultiPolygon: [[[[lng,lat],...]],[[[lng,lat],...]]]
+        return (coords as List).cast<List<List<List<double>>>>();
+      }
+
+      // Polygon: [[[lng,lat],...]]
+      return [coords as List<List<List<double>>>];
     } catch (_) {
       return null;
     }

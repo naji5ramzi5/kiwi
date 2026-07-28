@@ -9,7 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
-import 'screens/orders_list_screen.dart';
+import 'screens/notification_center_screen.dart';
 import 'controllers/home_controller.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/cart_controller.dart';
@@ -18,6 +18,7 @@ import 'controllers/favorites_controller.dart';
 import 'config/app_config.dart';
 
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'models/notification_item.dart';
 import 'services/notification_storage.dart';
 import 'services/notification_service.dart';
@@ -90,6 +91,12 @@ void main() async {
         statusBarIconBrightness: Brightness.dark,
       ),
     );
+
+    // Global error handler to prevent black screen from runtime exceptions
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('FlutterError: ${details.exception}');
+    };
 
     runApp(const KiwiCustomerApp());
   } catch (e) {
@@ -178,14 +185,25 @@ Future<void> _setupFCM() async {
     // Handle notification tap when app is in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       fcmMessageNotifier.value = message;
-      // Navigate to orders screen
-      Get.to(() => const OrdersListScreen(), transition: Transition.fadeIn);
+      // Navigate to notification center
+      Get.to(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
     });
 
     // Handle cold start from notification
     RemoteMessage? initialMessage = await messaging.getInitialMessage();
     if (initialMessage != null) {
       fcmMessageNotifier.value = initialMessage;
+      // Ensure notification is saved to storage (background handler may not run for notification-only payloads)
+      final title = initialMessage.notification?.title ?? 'new_notification'.tr;
+      final body = initialMessage.notification?.body ?? '';
+      final imageUrl = initialMessage.notification?.android?.imageUrl ?? initialMessage.notification?.apple?.imageUrl ?? initialMessage.data['image'];
+      await NotificationStorage.save(NotificationItem(
+        id: initialMessage.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        body: body,
+        imageUrl: imageUrl,
+        timestamp: DateTime.now(),
+      ));
     }
   } catch (e) {
     debugPrint('FCM setup error: $e');

@@ -106,7 +106,7 @@ class _CartScreenState extends State<CartScreen> {
     final homeController = Get.isRegistered<HomeController>() ? Get.find<HomeController>() : null;
     final String address = (homeController != null && homeController.userAddress.value.isNotEmpty)
         ? homeController.userAddress.value
-        : (homeController?.selectedBranch.value?['address']?.toString() ?? 'unspecified'.tr);
+        : 'unspecified'.tr;
     final success = await cartController.placeOrder(
       address: address,
       paymentMethod: 'cash_on_delivery'.tr,

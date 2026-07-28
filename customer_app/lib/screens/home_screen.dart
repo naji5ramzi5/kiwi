@@ -342,8 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Obx(() {
         final String area = controller.userAddress.value.isNotEmpty
             ? controller.userAddress.value.split('،').first
-            : (controller.selectedBranch.value?['name']?.toString() ??
-                  'current_location_fallback'.tr);
+            : 'current_location_fallback'.tr;
         final bool inZone = controller.isInDeliveryZone.value;
 
         return GestureDetector(

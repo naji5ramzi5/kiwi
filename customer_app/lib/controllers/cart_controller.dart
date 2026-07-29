@@ -349,6 +349,8 @@ class CartController extends GetxController {
       return false;
     }
 
+    if (isPlacingOrder.value) return false;
+
     if (isBelowMinOrder) {
       Get.snackbar(
         'minimum_order'.tr,
@@ -379,7 +381,6 @@ class CartController extends GetxController {
     isPlacingOrder(true);
     final userId = supabase.auth.currentUser!.id;
 
-    // Get the selected branch ID from HomeController
     String? branchId;
     double? customerLat;
     double? customerLng;
@@ -392,173 +393,116 @@ class CartController extends GetxController {
       }
     }
 
-    Future<bool> tryPlaceOrder() async {
-      try {
-        final orderData = <String, dynamic>{
-          'customer_id': userId,
-          'total_amount': total,
-          'delivery_fee': deliveryFee,
-          'discount_amount': discountAmount.value,
-          'discount_code': appliedCoupon.value?['code'],
-          'status': 'pending',
-          'delivery_address': address,
-          'payment_method': paymentMethod,
-        };
-        if (customerLat != null && customerLng != null) {
-          orderData['customer_lat'] = customerLat;
-          orderData['customer_lng'] = customerLng;
-        }
-        // Include branch_id if available
-        if (branchId != null && branchId.isNotEmpty) {
-          orderData['branch_id'] = branchId;
-        }
-        final orderResponse = await supabase
-            .from('orders')
-            .insert(orderData)
-            .select()
-            .single();
+    try {
+      final orderData = <String, dynamic>{
+        'customer_id': userId,
+        'total_amount': total,
+        'delivery_fee': deliveryFee,
+        'discount_amount': discountAmount.value,
+        'discount_code': appliedCoupon.value?['code'],
+        'status': 'pending',
+        'delivery_address': address,
+        'payment_method': paymentMethod,
+      };
+      if (customerLat != null && customerLng != null) {
+        orderData['customer_lat'] = customerLat;
+        orderData['customer_lng'] = customerLng;
+      }
+      if (branchId != null && branchId.isNotEmpty) {
+        orderData['branch_id'] = branchId;
+      }
+      final orderResponse = await supabase
+          .from('orders')
+          .insert(orderData)
+          .select()
+          .single();
 
-        final orderId = orderResponse['id'];
+      final orderId = orderResponse['id'];
 
-        // Increment coupon usage count if a coupon was applied
-        if (appliedCoupon.value != null) {
-          try {
-            final couponId = appliedCoupon.value!['id'];
-            final currentUsed =
-                (appliedCoupon.value!['used_count'] as num?)?.toInt() ?? 0;
-            await supabase
-                .from('discount_codes')
-                .update({'used_count': currentUsed + 1})
-                .eq('id', couponId);
-          } catch (couponErr) {
-            debugPrint('Warning: coupon usage increment failed: $couponErr');
-          }
+      if (appliedCoupon.value != null) {
+        try {
+          final couponId = appliedCoupon.value!['id'];
+          final currentUsed =
+              (appliedCoupon.value!['used_count'] as num?)?.toInt() ?? 0;
+          await supabase
+              .from('discount_codes')
+              .update({'used_count': currentUsed + 1})
+              .eq('id', couponId);
+        } catch (couponErr) {
+          debugPrint('Warning: coupon usage increment failed: $couponErr');
         }
+      }
 
-        final List<Map<String, dynamic>> itemsToInsert = [];
-        cartItems.forEach((key, item) {
-          itemsToInsert.add({
-            'order_id': orderId,
-            'product_id': item['id'],
-            'quantity': item['quantity'],
-            'unit_price': item['price'],
-            'unit': item['unit']?.toString() ?? 'unit_kg'.tr,
-            'unit_type': item['unit_type']?.toString() ?? 'kilogram',
-            'total_price': (item['price'] as num) * (item['quantity'] as num),
-          });
+      final List<Map<String, dynamic>> itemsToInsert = [];
+      cartItems.forEach((key, item) {
+        itemsToInsert.add({
+          'order_id': orderId,
+          'product_id': item['id'],
+          'quantity': item['quantity'],
+          'unit_price': item['price'],
+          'unit': item['unit']?.toString() ?? 'unit_kg'.tr,
+          'unit_type': item['unit_type']?.toString() ?? 'kilogram',
+          'total_price': (item['price'] as num) * (item['quantity'] as num),
         });
+      });
 
-        await supabase.from('order_items').insert(itemsToInsert);
+      await supabase.from('order_items').insert(itemsToInsert);
 
-        // Decrement stock in branch_inventory for each item
-        if (branchId != null && branchId.isNotEmpty) {
-          try {
-            for (final item in itemsToInsert) {
-              final productId = item['product_id'];
-              final qty = (item['quantity'] as num).toDouble();
-              await supabase.rpc(
-                'decrement_branch_inventory',
-                params: {
-                  'p_branch_id': branchId,
-                  'p_product_id': productId,
-                  'p_quantity': qty,
-                },
-              );
-            }
-          } catch (stockErr) {
-            debugPrint('Warning: stock decrement failed: $stockErr');
-          }
-        }
-
-        clearCart();
-        _resetCoupon();
-        couponCode.value = '';
-        lastOrderId(orderId.toString());
-        await refreshActiveOrder();
-        Get.snackbar(
-          'success'.tr,
-          'order_sent_success'.tr,
-          backgroundColor: AppTheme.primary,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-          margin: const EdgeInsets.all(16),
-        );
-        return true;
-      } on SocketException {
-        throw Exception('network');
-      } on PostgrestException catch (e) {
-        throw Exception('server: ${e.message}');
-      } catch (e) {
-        throw Exception('unknown: $e');
-      }
-    }
-
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        return await tryPlaceOrder();
-      } catch (e) {
-        if (attempt == 3) {
-          final errorStr = e.toString();
-          if (errorStr.contains('network')) {
-            Get.snackbar(
-              'connection_error'.tr,
-              'no_internet'.tr,
-              backgroundColor: Colors.red.shade700,
-              colorText: Colors.white,
-              snackPosition: SnackPosition.TOP,
-              margin: const EdgeInsets.all(16),
-              duration: const Duration(seconds: 5),
-              mainButton: TextButton(
-                onPressed: () =>
-                    placeOrder(address: address, paymentMethod: paymentMethod),
-                child: Text(
-                  'retry'.tr,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          } else if (errorStr.contains('server')) {
-            Get.snackbar(
-              'order_error'.tr,
-              'order_send_failed'.tr,
-              backgroundColor: Colors.red.shade700,
-              colorText: Colors.white,
-              snackPosition: SnackPosition.TOP,
-              margin: const EdgeInsets.all(16),
-              duration: const Duration(seconds: 5),
-              mainButton: TextButton(
-                onPressed: () =>
-                    placeOrder(address: address, paymentMethod: paymentMethod),
-                child: Text(
-                  'retry'.tr,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          } else {
-            Get.snackbar(
-              'error'.tr,
-              'order_send_failed_error'.trParams({'error': e.toString()}),
-              backgroundColor: Colors.red.shade700,
-              colorText: Colors.white,
-              snackPosition: SnackPosition.TOP,
-              margin: const EdgeInsets.all(16),
-              duration: const Duration(seconds: 5),
-              mainButton: TextButton(
-                onPressed: () =>
-                    placeOrder(address: address, paymentMethod: paymentMethod),
-                child: Text(
-                  'retry'.tr,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
+      if (branchId != null && branchId.isNotEmpty) {
+        try {
+          for (final item in itemsToInsert) {
+            final productId = item['product_id'];
+            final qty = (item['quantity'] as num).toDouble();
+            await supabase.rpc(
+              'decrement_branch_inventory',
+              params: {
+                'p_branch_id': branchId,
+                'p_product_id': productId,
+                'p_quantity': qty,
+              },
             );
           }
-          return false;
+        } catch (stockErr) {
+          debugPrint('Warning: stock decrement failed: $stockErr');
         }
-        await Future.delayed(Duration(seconds: attempt));
       }
+
+      clearCart();
+      _resetCoupon();
+      couponCode.value = '';
+      lastOrderId(orderId.toString());
+      await refreshActiveOrder();
+      Get.snackbar(
+        'success'.tr,
+        'order_sent_success'.tr,
+        backgroundColor: AppTheme.primary,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+      );
+      return true;
+    } catch (e) {
+      final errStr = e.toString();
+      Get.snackbar(
+        'order_error'.tr,
+        errStr.contains('network') ? 'no_internet'.tr : 'order_send_failed'.tr,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 5),
+        mainButton: TextButton(
+          onPressed: () =>
+              placeOrder(address: address, paymentMethod: paymentMethod),
+          child: Text(
+            'retry'.tr,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      return false;
+    } finally {
+      isPlacingOrder(false);
     }
-    return false;
   }
 }

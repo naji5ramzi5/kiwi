@@ -49,13 +49,18 @@ Map<String, dynamic> _extractNotificationData(RemoteMessage message) {
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await NotificationService.init();
   final data = _extractNotificationData(message);
-  NotificationService.show(
-    id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
-    title: data['title'],
-    body: data['body'],
-    imageUrl: data['imageUrl'],
-    payload: message.data['type'] ?? '',
-  );
+  // Only show notification for data-only messages (no notification payload)
+  // to avoid duplicates — FCM auto-displays notification payloads in the tray
+  // when the app is in background.
+  if (message.notification == null) {
+    NotificationService.show(
+      id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+      title: data['title'],
+      body: data['body'],
+      imageUrl: data['imageUrl'],
+      payload: message.data['type'] ?? '',
+    );
+  }
   NotificationStorage.save(NotificationItem(
     id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
     title: data['title'],
@@ -200,7 +205,6 @@ Future<void> _setupFCM() async {
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
       fcmMessageNotifier.value = message;
       final notifData = _extractNotificationData(message);
-      // Ensure notification is saved to storage before navigating
       await NotificationStorage.save(NotificationItem(
         id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
         title: notifData['title'],
@@ -208,8 +212,12 @@ Future<void> _setupFCM() async {
         imageUrl: notifData['imageUrl'],
         timestamp: DateTime.now(),
       ));
-      // Navigate to notification center
-      Get.to(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
+      // Defer navigation to ensure UI is mounted
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (Get.key.currentContext != null) {
+          Get.to(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
+        }
+      });
     });
 
     // Handle cold start from notification

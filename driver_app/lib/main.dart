@@ -39,13 +39,17 @@ Map<String, dynamic> _extractNotificationData(RemoteMessage message) {
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await NotificationService.init();
   final data = _extractNotificationData(message);
-  NotificationService.show(
-    id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
-    title: data['title'],
-    body: data['body'],
-    imageUrl: data['imageUrl'],
-    payload: message.data['type'] ?? '',
-  );
+  // Only show notification for data-only messages (no notification payload)
+  // to avoid duplicates — FCM auto-displays notification payloads in the tray.
+  if (message.notification == null) {
+    NotificationService.show(
+      id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+      title: data['title'],
+      body: data['body'],
+      imageUrl: data['imageUrl'],
+      payload: message.data['type'] ?? '',
+    );
+  }
   NotificationStorage.save(NotificationItem(
     id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
     title: data['title'],

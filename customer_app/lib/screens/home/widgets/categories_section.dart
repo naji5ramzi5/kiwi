@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../theme/app_theme.dart';
 import '../../../controllers/home_controller.dart';
-import '../../../screens/categories/categories_screen.dart';
+import '../../../controllers/main_screen_controller.dart';
 
 // Static fallback categories - use function to resolve .tr at build time
 List<Map<String, String>> _getStaticCategories() => [
@@ -81,10 +81,7 @@ class CategoriesSection extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () {
-                      Get.to(
-                        () => CategoriesScreen(),
-                        transition: Transition.fadeIn,
-                      );
+                      Get.find<MainScreenController>().switchTab(1);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -125,10 +122,7 @@ class CategoriesSection extends StatelessWidget {
 
                 return GestureDetector(
                   onTap: () {
-                    Get.to(
-                      () => CategoriesScreen(initialCategory: name),
-                      transition: Transition.fadeIn,
-                    );
+                    Get.find<MainScreenController>().switchTab(1, category: name);
                   },
                   child: Container(
                     width: 85,

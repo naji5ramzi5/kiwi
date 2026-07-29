@@ -146,16 +146,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 14),
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
                           child: const Icon(
                             LucideIcons.bell,
                             color: AppTheme.primary,
-                            size: 20,
+                            size: 24,
                           ),
                         ),
                         if (hasNewNotification.value)

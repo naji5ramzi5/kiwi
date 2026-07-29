@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:io';
@@ -8,6 +9,9 @@ import '../utils/turf_helper.dart';
 
 class HomeController extends GetxController {
   final supabase = Supabase.instance.client;
+  final _box = GetStorage();
+
+  static const _selectedBranchKey = 'selected_branch_id';
 
   var products = <Map<String, dynamic>>[].obs;
   var allProducts = <Map<String, dynamic>>[].obs;
@@ -122,6 +126,8 @@ class HomeController extends GetxController {
   }
 
   Future<void> findBestBranchByLocation() async {
+    final savedBranchId = _box.read<String>(_selectedBranchKey);
+
     try {
       isLocating(true);
       isLoadingBranches(true);
@@ -182,18 +188,26 @@ class HomeController extends GetxController {
             .eq('status', 'نشط');
         branches.value = List<Map<String, dynamic>>.from(allBranches);
 
-        if (matchedBranchId != null) {
+        // Restore saved branch if available
+        String? effectiveBranchId = matchedBranchId;
+        if (effectiveBranchId == null && savedBranchId != null) {
+          final saved = branches.firstWhereOrNull((b) => b['id'] == savedBranchId);
+          if (saved != null) {
+            effectiveBranchId = savedBranchId;
+          }
+        }
+
+        if (effectiveBranchId != null) {
           final matched = branches.firstWhereOrNull(
-            (b) => b['id'] == matchedBranchId,
+            (b) => b['id'] == effectiveBranchId,
           );
           if (matched != null) {
             selectedBranch.value = matched;
-            isInDeliveryZone.value = true;
+            isInDeliveryZone.value = effectiveBranchId == matchedBranchId;
             fetchDeliveryZone();
           }
         } else {
           isInDeliveryZone.value = false;
-          // Default to first branch if out of zone
           if (branches.isNotEmpty) {
             selectedBranch.value = branches.first;
             fetchDeliveryZone();
@@ -266,19 +280,18 @@ class HomeController extends GetxController {
         );
           if (matched != null) {
             selectedBranch.value = matched;
+            _box.write(_selectedBranchKey, matched['id']);
             isInDeliveryZone.value = true;
             fetchDeliveryZone();
           }
         } else {
           isInDeliveryZone.value = false;
-          // Default to first branch if out of zone
           if (branches.isNotEmpty) {
             selectedBranch.value = branches.first;
             fetchDeliveryZone();
           }
         }
 
-        // Fetch products for the new branch
         await fetchProducts();
     } catch (e) {
       debugPrint('Error updating manual location: $e');
@@ -295,6 +308,16 @@ class HomeController extends GetxController {
           .select()
           .eq('status', 'نشط');
       branches.value = List<Map<String, dynamic>>.from(response);
+
+      final savedBranchId = _box.read<String>(_selectedBranchKey);
+      if (savedBranchId != null) {
+        final saved = branches.firstWhereOrNull((b) => b['id'] == savedBranchId);
+        if (saved != null) {
+          selectedBranch.value = saved;
+          return;
+        }
+      }
+
       if (branches.isNotEmpty && selectedBranch.value == null) {
         selectedBranch.value = branches.first;
       }
@@ -397,6 +420,7 @@ class HomeController extends GetxController {
 
   void changeBranch(Map<String, dynamic> branch) {
     selectedBranch.value = branch;
+    _box.write(_selectedBranchKey, branch['id']);
     fetchProducts();
     fetchDeliveryZone();
   }

@@ -69,13 +69,7 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10b981).withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(LucideIcons.bell, color: Color(0xFF10b981), size: 20),
+                  child: const Icon(LucideIcons.bell, color: Color(0xFF10b981), size: 24),
                 ),
               ),
               Container(

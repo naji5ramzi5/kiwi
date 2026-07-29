@@ -100,6 +100,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _confirmOrder() async {
+    if (cartController.isPlacingOrder.value) return;
     _countdownTimer?.cancel();
     cartController.isCountingDown(false);
     setState(() => _countdown = 6);

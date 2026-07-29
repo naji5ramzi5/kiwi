@@ -20,6 +20,7 @@ const NAV = [
   
   { label: 'الفروع', path: '/branches', icon: GitBranch, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'مناطق التوصيل', path: '/delivery-zones', icon: MapPin, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
+  { label: 'أسعار الفروع', path: '/branch-prices', icon: DollarSign, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'المناديب والسائقين', path: '/drivers', icon: Truck, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'التقييمات', path: '/ratings', icon: Star, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'العملاء', path: '/customers', icon: Users, section: 'الموارد البشرية والفروع', color: '#f59e0b' },

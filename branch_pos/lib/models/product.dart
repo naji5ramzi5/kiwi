@@ -38,12 +38,12 @@ class Product {
     );
   }
 
-  Product copyWith({double? stockQuantity}) => Product(
+  Product copyWith({double? stockQuantity, double? defaultPrice}) => Product(
     id: id,
     name: name,
     category: category,
     unit: unit,
-    defaultPrice: defaultPrice,
+    defaultPrice: defaultPrice ?? this.defaultPrice,
     imageUrl: imageUrl,
     isActive: isActive,
     isOffer: isOffer,

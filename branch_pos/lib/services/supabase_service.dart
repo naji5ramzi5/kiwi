@@ -25,16 +25,34 @@ class SupabaseService {
 
     if (branchId != null) {
       try {
-        final inventoryData = await supabase
-            .from('branch_inventory')
-            .select('product_id, actual_stock')
-            .eq('branch_id', branchId);
+        final results = await Future.wait([
+          supabase
+              .from('branch_inventory')
+              .select('product_id, actual_stock')
+              .eq('branch_id', branchId),
+          supabase
+              .from('branch_product_prices')
+              .select('product_id, price')
+              .eq('branch_id', branchId),
+        ]);
+
+        final inventoryData = results[0];
+        final priceData = results[1];
+
         final stockMap = {for (final inv in inventoryData) inv['product_id']: (inv['actual_stock'] as num?)?.toDouble() ?? 0};
+        final priceMap = {for (final bp in priceData) bp['product_id']: (bp['price'] as num?)?.toDouble()};
+
         for (int i = 0; i < products.length; i++) {
-          products[i] = products[i].copyWith(stockQuantity: stockMap[products[i].id] ?? 0);
+          products[i] = products[i].copyWith(
+            stockQuantity: stockMap[products[i].id] ?? 0,
+          );
+          final branchPrice = priceMap[products[i].id];
+          if (branchPrice != null && branchPrice > 0) {
+            products[i] = products[i].copyWith(defaultPrice: branchPrice);
+          }
         }
       } catch (_) {
-        // Inventory table might not exist yet
+        // Tables might not exist yet
       }
     }
     return products;

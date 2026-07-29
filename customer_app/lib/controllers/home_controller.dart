@@ -351,13 +351,38 @@ class HomeController extends GetxController {
 
     try {
       isLoadingProducts(true);
+
+      final branchId = selectedBranch.value!['id'];
       final response = await supabase
           .from('products')
           .select('*, branch_inventory!inner(actual_stock, branch_id)')
-          .eq('branch_inventory.branch_id', selectedBranch.value!['id']);
+          .eq('branch_inventory.branch_id', branchId);
 
       if (response.isNotEmpty) {
-        allProducts.value = List<Map<String, dynamic>>.from(response);
+        final productList = List<Map<String, dynamic>>.from(response);
+
+        // Fetch branch-specific price overrides
+        final bpResponse = await supabase
+            .from('branch_product_prices')
+            .select('product_id, price')
+            .eq('branch_id', branchId);
+
+        final Map<String, dynamic> priceOverrides = {};
+        if (bpResponse.isNotEmpty) {
+          for (final bp in bpResponse) {
+            priceOverrides[bp['product_id']] = bp['price'];
+          }
+        }
+
+        // Apply branch-specific prices (fallback to default_price/price)
+        for (final product in productList) {
+          final overridePrice = priceOverrides[product['id']];
+          if (overridePrice != null) {
+            product['price'] = overridePrice;
+          }
+        }
+
+        allProducts.value = productList;
         filterProducts();
       } else {
         allProducts.value = [];

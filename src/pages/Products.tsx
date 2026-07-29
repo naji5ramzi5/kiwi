@@ -4,8 +4,15 @@ import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import type { Category, Branch } from '../lib/types'
 
-const UNITS = ['كيلو', 'حبة', 'كرتونة', 'ربطة', 'كيس', 'غرام']
-const UNIT_TYPES = ['kg', 'piece'] as const
+const UNIT_OPTIONS: Array<{ label: string; unit: string; unit_type: string }> = [
+  { label: 'كيلو (kg)', unit: 'كيلو', unit_type: 'kg' },
+  { label: 'غرام (g)', unit: 'غرام', unit_type: 'kg' },
+  { label: 'حبة (piece)', unit: 'حبة', unit_type: 'piece' },
+  { label: 'قطعة (unit)', unit: 'قطعة', unit_type: 'piece' },
+  { label: 'ربطة', unit: 'ربطة', unit_type: 'piece' },
+  { label: 'كرتونة', unit: 'كرتونة', unit_type: 'piece' },
+  { label: 'كيس', unit: 'كيس', unit_type: 'piece' },
+]
 const PAGE_SIZE = 12
 
 export default function Products() {
@@ -232,14 +239,15 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
     category: product?.category || (categories[0]?.name || ''),
     unit: product?.unit || 'كيلو',
     unit_type: product?.unit_type || 'kg',
-    default_price: product?.default_price || product?.price || 0,
+    default_price: product?.default_price ?? product?.price ?? '',
     image_url: product?.image_url || '',
     is_active: product?.is_active ?? true,
     is_offer: product?.is_offer || false
   })
 
   async function handleSubmit() {
-    if (!form.name || form.default_price <= 0) { toast.error('يرجى إكمال البيانات'); return }
+    const price = +form.default_price || 0
+    if (!form.name || price <= 0) { toast.error('يرجى إكمال البيانات'); return }
     setLoading(true)
     try {
       const payload = {
@@ -247,8 +255,8 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
         category: form.category,
         unit: form.unit,
         unit_type: form.unit_type,
-        default_price: form.default_price,
-        price: form.default_price,
+        default_price: price,
+        price: price,
         image_url: form.image_url,
         is_active: form.is_active,
         is_offer: form.is_offer
@@ -311,24 +319,16 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div className="form-group">
             <label className="form-label">السعر الافتراضي (د.ع)</label>
-            <input className="form-input" type="number" value={form.default_price} onChange={e => setForm({...form, default_price: +e.target.value})} />
+            <input className="form-input" type="number" value={form.default_price} onChange={e => setForm({...form, default_price: e.target.value === '' ? '' : +e.target.value})} />
           </div>
           <div className="form-group">
-            <label className="form-label">نوع الوحدة</label>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 16px', borderRadius: 8, border: `2px solid ${form.unit === 'كيلو' ? 'var(--g500)' : 'var(--gray200)'}`, background: form.unit === 'كيلو' ? 'var(--g50)' : 'transparent' }}>
-                <input type="radio" name="unit_type" checked={form.unit === 'كيلو'} onChange={() => setForm({...form, unit: 'كيلو', unit_type: 'kg'})} style={{ accentColor: 'var(--g500)' }} />
-                <span style={{ fontWeight: form.unit === 'كيلو' ? 700 : 400, fontSize: 14 }}>كيلو (kg)</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 16px', borderRadius: 8, border: `2px solid ${form.unit === 'حبة' ? 'var(--g500)' : 'var(--gray200)'}`, background: form.unit === 'حبة' ? 'var(--g50)' : 'transparent' }}>
-                <input type="radio" name="unit_type" checked={form.unit === 'حبة'} onChange={() => setForm({...form, unit: 'حبة', unit_type: 'piece'})} style={{ accentColor: 'var(--g500)' }} />
-                <span style={{ fontWeight: form.unit === 'حبة' ? 700 : 400, fontSize: 14 }}>حبة (piece)</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 16px', borderRadius: 8, border: `2px solid ${form.unit === 'قطعة' ? 'var(--g500)' : 'var(--gray200)'}`, background: form.unit === 'قطعة' ? 'var(--g50)' : 'transparent' }}>
-                <input type="radio" name="unit_type" checked={form.unit === 'قطعة'} onChange={() => setForm({...form, unit: 'قطعة', unit_type: 'piece'})} style={{ accentColor: 'var(--g500)' }} />
-                <span style={{ fontWeight: form.unit === 'قطعة' ? 700 : 400, fontSize: 14 }}>قطعة (unit)</span>
-              </label>
-            </div>
+            <label className="form-label">وحدة القياس</label>
+            <select className="form-select" value={form.unit} onChange={e => {
+              const opt = UNIT_OPTIONS.find(o => o.unit === e.target.value)
+              if (opt) setForm({...form, unit: opt.unit, unit_type: opt.unit_type})
+            }}>
+              {UNIT_OPTIONS.map(o => <option key={o.unit} value={o.unit}>{o.label}</option>)}
+            </select>
           </div>
         </div>
 

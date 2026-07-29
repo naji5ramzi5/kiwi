@@ -25,6 +25,7 @@ import Ratings from './pages/Ratings'
 import Login from './pages/Login'
 import OrderForm from './pages/OrderForm'
 import DeliveryZones from './pages/DeliveryZones'
+import BranchPrices from './pages/BranchPrices'
 import Profile from './pages/Profile'
 
 export default function App() {
@@ -104,6 +105,7 @@ export default function App() {
           <Route path="purchases" element={<Purchases />} />
           <Route path="categories" element={<Categories />} />
           <Route path="delivery-zones" element={<DeliveryZones />} />
+          <Route path="branch-prices" element={<BranchPrices />} />
           <Route path="ratings" element={<Ratings />} />
           <Route path="ai-chat" element={<AIChat />} />
           <Route path="checkout" element={<OrderForm />} />

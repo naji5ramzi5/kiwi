@@ -3,13 +3,13 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../services/notification_storage.dart';
+import '../main.dart' show fcmMessageNotifier;
 import 'home/widgets/stories_section.dart';
 import 'home/widgets/banners_section.dart';
 import 'home/widgets/categories_section.dart';
@@ -45,6 +45,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadNotificationCount();
+    // Reactively refresh badge when a new FCM message arrives
+    fcmMessageNotifier.addListener(_onFcmMessage);
+  }
+
+  @override
+  void dispose() {
+    fcmMessageNotifier.removeListener(_onFcmMessage);
+    super.dispose();
+  }
+
+  void _onFcmMessage() {
+    _loadNotificationCount();
   }
 
   Future<void> _loadNotificationCount() async {
@@ -63,11 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final localUnread = await NotificationStorage.getUnreadCount();
       final int totalUnread = serverUnread + localUnread;
 
-      final prefs = await SharedPreferences.getInstance();
-      final int lastSeenCount = prefs.getInt('last_seen_notification_count') ?? 0;
-
       notificationCount.value = totalUnread;
-      hasNewNotification.value = totalUnread > 0 && totalUnread != lastSeenCount;
+      hasNewNotification.value = totalUnread > 0;
     } catch (_) {
       notificationCount.value = 0;
       hasNewNotification.value = false;
@@ -75,10 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showNotifications(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('last_seen_notification_count', notificationCount.value);
-    hasNewNotification.value = false;
-    Get.to(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
+    await Get.to(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
+    _loadNotificationCount();
   }
 
   @override

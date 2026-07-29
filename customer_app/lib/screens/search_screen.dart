@@ -273,6 +273,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     'image': imageUrl,
                     'category': p['category'],
                     'unit': p['unit'] ?? 'unit_piece'.tr,
+                    'unit_type': p['unit_type']?.toString() ?? 'kg',
                     'stock': quantity,
                   };
 

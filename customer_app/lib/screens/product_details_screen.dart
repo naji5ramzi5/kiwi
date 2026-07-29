@@ -20,10 +20,19 @@ class ProductDetailsScreen extends StatefulWidget {
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
-  int _quantity = 1;
+  late num _quantity;
   final CartController cartController = Get.find<CartController>();
   final HomeController homeController = Get.find<HomeController>();
   bool _isLiked = false;
+
+  String get _unitType => widget.product['unit_type']?.toString() ?? 'kg';
+  num get _qtyStep => _unitType == 'kg' ? 0.5 : 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantity = _qtyStep;
+  }
 
   String formatPrice(dynamic price) {
     if (price == null) return '0';
@@ -254,24 +263,45 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ],
             ),
-            Text(
-              'per_unit'.trParams({'unit': (widget.product['unit'] ?? 'unit_kg'.tr)}),
-              style: TextStyle(
-                fontSize: 11,
-                color: themeTextSecColor.withOpacity(0.6),
-                fontFamily: 'Cairo',
-              ),
+            Row(
+              children: [
+                Text(
+                  'per_unit'.trParams({'unit': (widget.product['unit'] ?? 'unit_kg'.tr)}),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: themeTextSecColor.withOpacity(0.6),
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _unitType == 'kg' ? Colors.blue.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    _unitType == 'kg' ? 'unit_kg'.tr : 'unit_piece'.tr,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _unitType == 'kg' ? Colors.blue : Colors.amber.shade800,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         ProductQuantitySelector(
           quantity: _quantity,
-          maxStock: (widget.product['stock'] as num?)?.toInt() ?? 0,
+          maxStock: (widget.product['stock'] as num?) ?? 0,
           onDecrement: () {
-            if (_quantity > 1) setState(() => _quantity--);
+            if (_quantity > _qtyStep) setState(() => _quantity -= _qtyStep);
           },
           onIncrement: () {
-            final int stock = (widget.product['stock'] as num?)?.toInt() ?? 0;
+            final num stock = (widget.product['stock'] as num?) ?? 0;
             if (_quantity >= stock) {
               Get.snackbar(
                 'quantity_not_available'.tr,
@@ -283,7 +313,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               );
               return;
             }
-            setState(() => _quantity++);
+            setState(() => _quantity += _qtyStep);
           },
         ),
       ],
@@ -382,6 +412,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             'image': item['image_url'],
             'category': item['category'],
             'unit': item['unit'] ?? 'unit_piece'.tr,
+            'unit_type': item['unit_type']?.toString() ?? 'kg',
           };
           return GestureDetector(
             onTap: () => Get.off(

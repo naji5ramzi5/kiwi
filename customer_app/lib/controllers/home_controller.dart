@@ -158,13 +158,16 @@ class HomeController extends GetxController {
         // Check Point-in-Polygon
         if (zones.isNotEmpty) {
           final userPoint = [position.longitude.toDouble(), position.latitude.toDouble()];
+          debugPrint('findBestBranchByLocation: checking ${zones.length} zones, userPoint=$userPoint');
           for (var zone in zones) {
             final geojson = zone['geojson'];
-            if (geojson == null) continue;
+            if (geojson == null) { debugPrint('  zone ${zone['id']}: geojson is null'); continue; }
             try {
               final polygons = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
+              debugPrint('  zone ${zone['id']}: geojsonType=${geojson['type']}, parsed=${polygons != null}');
               if (polygons != null && TurfHelper.pointInAnyPolygon(userPoint, polygons)) {
                 matchedBranchId = zone['branch_id'];
+                debugPrint('  >> MATCHED branch_id=$matchedBranchId');
                 break;
               }
             } catch (e) {
@@ -233,13 +236,16 @@ class HomeController extends GetxController {
       // Check Point-in-Polygon
       if (zones.isNotEmpty) {
         final userPoint = [lng, lat];
+        debugPrint('updateUserLocation: checking ${zones.length} zones, userPoint=$userPoint');
         for (var zone in zones) {
           final geojson = zone['geojson'];
-          if (geojson == null) continue;
+          if (geojson == null) { debugPrint('  zone ${zone['id']}: geojson is null'); continue; }
           try {
             final polygons = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
+            debugPrint('  zone ${zone['id']}: geojsonType=${geojson['type']}, parsed=${polygons != null}');
             if (polygons != null && TurfHelper.pointInAnyPolygon(userPoint, polygons)) {
               matchedBranchId = zone['branch_id'];
+              debugPrint('  >> MATCHED branch_id=$matchedBranchId');
               break;
             }
           } catch (e) {
@@ -432,14 +438,25 @@ class HomeController extends GetxController {
       if (coords is! List || coords.isEmpty) return null;
 
       if (geomType == 'MultiPolygon') {
-        // MultiPolygon: [[[[lng,lat],...]],[[[lng,lat],...]]]
-        return (coords as List).cast<List<List<List<double>>>>();
+        final multi = coords;
+        return multi.map((poly) => _convertPolygonCoords(poly)).toList();
       }
 
-      // Polygon: [[[lng,lat],...]]
-      return [coords as List<List<List<double>>>];
-    } catch (_) {
+      return [_convertPolygonCoords(coords)];
+    } catch (e) {
+      debugPrint('Error parsing GeoJSON: $e');
       return null;
     }
+  }
+
+  /// Converts raw JSON-decoded polygon coordinates [[[lng,lat],...]] to typed List<List<List<double>>>.
+  List<List<List<double>>> _convertPolygonCoords(List<dynamic> rings) {
+    return rings.map((ring) {
+      final r = ring as List<dynamic>;
+      return r.map((point) {
+        final p = point as List<dynamic>;
+        return p.map<double>((v) => v.toDouble()).toList();
+      }).toList();
+    }).toList();
   }
 }

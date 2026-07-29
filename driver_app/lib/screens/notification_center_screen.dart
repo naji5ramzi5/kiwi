@@ -162,84 +162,89 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
               ),
             ],
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+              if (item.imageUrl != null)
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: CachedNetworkImage(
+                    imageUrl: item.imageUrl!,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    placeholder: (c, u) => Container(height: 160, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                    errorWidget: (c, u, e) => const SizedBox.shrink(),
+                  ),
                 ),
-                child: const Icon(Icons.notifications_active, color: Color(0xFF10B981), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.notifications_active, color: Color(0xFF10B981), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ),
+                              if (!item.isRead)
+                                Container(
+                                  width: 8, height: 8,
+                                  decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.body,
                             style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              fontSize: 12,
+                              color: isDark ? Colors.white60 : Colors.grey.shade600,
                               fontFamily: 'Cairo',
                             ),
                           ),
-                        ),
-                        if (!item.isRead)
-                          Container(
-                            width: 8, height: 8,
-                            decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                          const SizedBox(height: 6),
+                          Text(
+                            _formatTimestamp(item.timestamp),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark ? Colors.white30 : Colors.grey.shade400,
+                              fontFamily: 'Cairo',
+                            ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.body,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white60 : Colors.grey.shade600,
-                        fontFamily: 'Cairo',
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _formatTimestamp(item.timestamp),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark ? Colors.white30 : Colors.grey.shade400,
-                        fontFamily: 'Cairo',
-                      ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () async {
+                        await NotificationStorage.delete(item.id);
+                        setState(() => _notifications.removeWhere((n) => n.id == item.id));
+                      },
+                      child: Icon(Icons.done_all, size: 20, color: const Color(0xFF10B981).withOpacity(0.6)),
                     ),
                   ],
                 ),
-              ),
-              if (item.imageUrl != null) ...[
-                const SizedBox(width: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: item.imageUrl!,
-                    width: 50, height: 50, fit: BoxFit.cover,
-                    placeholder: (c, u) => Container(width: 50, height: 50, color: Colors.grey.shade200),
-                    errorWidget: (c, u, e) => Container(width: 50, height: 50, color: Colors.grey.shade200, child: const Icon(Icons.image, size: 20)),
-                  ),
-                ),
-              ],
-              const SizedBox(width: 6),
-              GestureDetector(
-                onTap: () async {
-                  await NotificationStorage.delete(item.id);
-                  setState(() => _notifications.removeWhere((n) => n.id == item.id));
-                },
-                child: Icon(Icons.done_all, size: 20, color: const Color(0xFF10B981).withOpacity(0.6)),
               ),
             ],
           ),

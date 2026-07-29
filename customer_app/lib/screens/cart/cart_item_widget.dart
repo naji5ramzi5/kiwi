@@ -12,7 +12,7 @@ class CartItemWidget extends StatelessWidget {
   final VoidCallback onRemove;
   final VoidCallback onRemoveAll;
   final VoidCallback onAdd;
-  final int quantity;
+  final num quantity;
 
   const CartItemWidget({
     super.key,
@@ -89,9 +89,25 @@ class CartItemWidget extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${item['unit'] ?? 'unit_kg'.tr}',
-                  style: TextStyle(fontSize: 11, color: themeTextSecColor, fontFamily: 'Cairo'),
+                Row(
+                  children: [
+                    Text(
+                      '${item['unit'] ?? 'unit_kg'.tr}',
+                      style: TextStyle(fontSize: 11, color: themeTextSecColor, fontFamily: 'Cairo'),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: (item['unit_type']?.toString() ?? 'kg') == 'kg' ? Colors.blue.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        (item['unit_type']?.toString() ?? 'kg') == 'kg' ? 'unit_kg'.tr : 'unit_piece'.tr,
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: (item['unit_type']?.toString() ?? 'kg') == 'kg' ? Colors.blue : Colors.amber.shade800, fontFamily: 'Cairo'),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -111,7 +127,7 @@ class CartItemWidget extends StatelessWidget {
                         _buildQuantityBtn(LucideIcons.minus, onTap: onRemove),
                         const SizedBox(width: 12),
                         Text(
-                          '$quantity',
+                          quantity == quantity.roundToDouble() ? '${quantity.toInt()}' : quantity.toStringAsFixed(1),
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: themeTextColor, fontFamily: 'Cairo'),
                         ),
                         const SizedBox(width: 12),

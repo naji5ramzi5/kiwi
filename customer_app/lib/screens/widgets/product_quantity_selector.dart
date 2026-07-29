@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
 
 class ProductQuantitySelector extends StatelessWidget {
-  final int quantity;
-  final int maxStock;
+  final num quantity;
+  final num maxStock;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
 
@@ -33,8 +32,8 @@ class ProductQuantitySelector extends StatelessWidget {
           _buildQtyButton(LucideIcons.minus, onDecrement, isPrimary: false),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text(
-              '$quantity',
+            child:             Text(
+              quantity == quantity.roundToDouble() ? '${quantity.toInt()}' : quantity.toStringAsFixed(1),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

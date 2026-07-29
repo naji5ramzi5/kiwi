@@ -23,6 +23,11 @@ class NotificationStorage {
   static Future<void> save(NotificationItem item) async {
     final prefs = await SharedPreferences.getInstance();
     final list = prefs.getStringList(_key) ?? [];
+    // Prevent duplicate entries by removing existing item with same id
+    final existingIndex = list.indexWhere((e) {
+      try { return NotificationItem.decode(e).id == item.id; } catch (_) { return false; }
+    });
+    if (existingIndex >= 0) list.removeAt(existingIndex);
     list.insert(0, item.encode());
     if (list.length > _maxItems) list.removeRange(_maxItems, list.length);
     await prefs.setStringList(_key, list);

@@ -102,19 +102,19 @@ class CartController extends GetxController {
 
   void addToCart(
     Map<String, dynamic> product, {
-    int qty = 1,
+    num qty = 1,
     bool showPopup = true,
   }) {
     final String id = product['id'].toString();
-    final int? stock = product['stock'] != null
-        ? (product['stock'] as num).toInt()
+    final num? stock = product['stock'] != null
+        ? (product['stock'] as num)
         : null;
 
-    final int currentQty = cartItems.containsKey(id)
-        ? (cartItems[id]!['quantity'] as int? ?? 0)
+    final num currentQty = cartItems.containsKey(id)
+        ? (cartItems[id]!['quantity'] as num? ?? 0)
         : 0;
     if (stock != null && currentQty + qty > stock) {
-      final int allowed = stock - currentQty;
+      final num allowed = stock - currentQty;
       if (allowed <= 0) {
         Get.snackbar(
           'stock_not_available'.tr,
@@ -139,15 +139,17 @@ class CartController extends GetxController {
 
     if (cartItems.containsKey(id)) {
       cartItems[id]!['quantity'] =
-          (cartItems[id]!['quantity'] as int? ?? 0) + qty;
+          (cartItems[id]!['quantity'] as num? ?? 0) + qty;
       if (stock != null) cartItems[id]!['stock'] = stock;
     } else {
+      final unitType = product['unit_type']?.toString() ?? 'kg';
       cartItems[id] = {
         'id': id,
         'title': product['title']?.toString() ?? '',
         'price': product['price'] ?? 0,
         'image': product['image']?.toString() ?? '',
         'unit': product['unit']?.toString() ?? 'unit_kg'.tr,
+        'unit_type': unitType,
         'quantity': qty,
         if (stock != null) 'stock': stock,
       };
@@ -172,11 +174,13 @@ class CartController extends GetxController {
 
   void removeFromCart(String id, {bool removeAll = false}) {
     if (!cartItems.containsKey(id)) return;
-    if (removeAll || (cartItems[id]!['quantity'] as int? ?? 0) <= 1) {
+    final unitType = cartItems[id]!['unit_type']?.toString() ?? 'kg';
+    final num step = unitType == 'kg' ? 0.5 : 1;
+    if (removeAll || (cartItems[id]!['quantity'] as num? ?? 0) <= step) {
       cartItems.remove(id);
     } else {
       cartItems[id]!['quantity'] =
-          (cartItems[id]!['quantity'] as int? ?? 0) - 1;
+          (cartItems[id]!['quantity'] as num? ?? 0) - step;
     }
     cartItems.refresh();
     _saveCart();
@@ -195,7 +199,7 @@ class CartController extends GetxController {
     cartItems.forEach((key, value) {
       total +=
           ((value['price'] as num?)?.toDouble() ?? 0) *
-          ((value['quantity'] as int?) ?? 0);
+          ((value['quantity'] as num?)?.toDouble() ?? 0);
     });
     return total;
   }
@@ -310,7 +314,7 @@ class CartController extends GetxController {
   int get itemCount {
     int count = 0;
     for (final item in cartItems.values) {
-      count += (item['quantity'] as int?) ?? 0;
+      count += ((item['quantity'] as num?) ?? 0).ceil();
     }
     return count;
   }
@@ -436,7 +440,9 @@ class CartController extends GetxController {
             'product_id': item['id'],
             'quantity': item['quantity'],
             'unit_price': item['price'],
-            'total_price': (item['price'] as num) * (item['quantity'] as int),
+            'unit': item['unit']?.toString() ?? 'unit_kg'.tr,
+            'unit_type': item['unit_type']?.toString() ?? 'kg',
+            'total_price': (item['price'] as num) * (item['quantity'] as num),
           });
         });
 
@@ -447,7 +453,7 @@ class CartController extends GetxController {
           try {
             for (final item in itemsToInsert) {
               final productId = item['product_id'];
-              final qty = item['quantity'] as int;
+              final qty = (item['quantity'] as num).toDouble();
               await supabase.rpc(
                 'decrement_branch_inventory',
                 params: {

@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../theme/app_theme.dart';
 import '../controllers/main_screen_controller.dart';
 
-void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formattedPrice) {
+void showAddedToCartDialog(Map<String, dynamic> product, num qty, String formattedPrice) {
   Get.dialog(
     Dialog(
       backgroundColor: Colors.transparent,
@@ -91,7 +91,7 @@ void showAddedToCartDialog(Map<String, dynamic> product, int qty, String formatt
                         Row(
                           children: [
                             Text(
-                              'quantity_label'.trParams({'qty': qty.toString()}),
+                              'quantity_label'.trParams({'qty': qty is double && qty == qty.roundToDouble() ? qty.toInt().toString() : qty.toStringAsFixed(1)}),
                               style: TextStyle(fontSize: 12, color: Get.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600, fontFamily: 'Cairo'),
                             ),
                             const SizedBox(width: 12),

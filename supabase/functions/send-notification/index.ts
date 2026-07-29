@@ -46,11 +46,20 @@ serve(async (req) => {
     if (!tokens.length) return new Response(JSON.stringify({ error: 'No FCM tokens found', successful: 0, total: 0 }), { status: 200, headers: h })
     const accessToken = await getAccessToken()
     const fcmUrl = 'https://fcm.googleapis.com/v1/projects/' + FCM_PROJECT_ID + '/messages:send'
-    const results = await Promise.all(tokens.map(async (r) => {
-      const res = await fetch(fcmUrl, { method: 'POST', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: { token: r.token, notification: { title, body }, data: data || {}, android: { priority: 'high', notification: { sound: 'default' } }, apns: { payload: { aps: { sound: 'default' } } } } }) })
-      if (!res.ok) return { token: r.token, success: false, error: await res.text() }
-      return { token: r.token, success: true, response: await res.json() }
-    }))
+      const results = await Promise.all(tokens.map(async (r) => {
+        // Merge all notification content into data to prevent duplicate OS+app display
+        const dataPayload: Record<string, string> = {
+          title,
+          body,
+          image: (data as Record<string, string>)?.image || '',
+          type: (data as Record<string, string>)?.type || '',
+          orderId: (data as Record<string, string>)?.orderId || '',
+          status: (data as Record<string, string>)?.status || '',
+        };
+        const res = await fetch(fcmUrl, { method: 'POST', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: { token: r.token, data: dataPayload, android: { priority: 'high' } } }) })
+        if (!res.ok) return { token: r.token, success: false, error: await res.text() }
+        return { token: r.token, success: true, response: await res.json() }
+      }))
     const successful = results.filter(r => r.success).length
     return new Response(JSON.stringify({ successful, total: results.length, broadcast: !!broadcast, results }), { headers: h })
   } catch (error) {

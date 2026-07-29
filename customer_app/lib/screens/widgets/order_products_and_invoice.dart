@@ -62,6 +62,8 @@ class OrderProductsSection extends StatelessWidget {
     final unitPrice = item['unit_price'] ?? 0;
     final totalPrice = item['total_price'] ?? 0;
     final imageUrl = item['image_url']?.toString() ?? '';
+    final unitLabel = item['unit']?.toString() ?? 'unit_kg'.tr;
+    final qtyDisplay = (qty is num && qty == qty.roundToDouble()) ? '${qty.toInt()}' : qty.toString();
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -94,7 +96,7 @@ class OrderProductsSection extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text('$qty × $unitPrice ${'currency_iqd'.tr}', style: TextStyle(fontSize: 11, color: textSecColor, fontFamily: 'Cairo')),
+                    Text('$qtyDisplay $unitLabel × $unitPrice ${'currency_iqd'.tr}', style: TextStyle(fontSize: 11, color: textSecColor, fontFamily: 'Cairo')),
                   ],
                 ),
               ],

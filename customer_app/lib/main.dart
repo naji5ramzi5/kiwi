@@ -26,26 +26,41 @@ import 'services/notification_service.dart';
 // Global FCM message notifier
 final ValueNotifier<RemoteMessage?> fcmMessageNotifier = ValueNotifier(null);
 
+/// Extracts title, body, and image from a RemoteMessage, supporting both
+/// FCM notification payload and data-only payload interchangeably.
+Map<String, dynamic> _extractNotificationData(RemoteMessage message) {
+  if (message.notification != null) {
+    return {
+      'title': message.notification?.title ?? '',
+      'body': message.notification?.body ?? '',
+      'imageUrl': message.notification?.android?.imageUrl ??
+          message.notification?.apple?.imageUrl ??
+          message.data['image'] ?? '',
+    };
+  }
+  return {
+    'title': message.data['title'] ?? '',
+    'body': message.data['body'] ?? '',
+    'imageUrl': message.data['image'] ?? '',
+  };
+}
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await NotificationService.init();
-  final title = message.notification?.title ?? 'New Notification';
-  final body = message.notification?.body ?? '';
-  final imageUrl = message.notification?.android?.imageUrl ??
-      message.notification?.apple?.imageUrl ??
-      message.data['image'];
+  final data = _extractNotificationData(message);
   NotificationService.show(
     id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
-    title: title,
-    body: body,
-    imageUrl: imageUrl,
+    title: data['title'],
+    body: data['body'],
+    imageUrl: data['imageUrl'],
     payload: message.data['type'] ?? '',
   );
   NotificationStorage.save(NotificationItem(
     id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-    title: title,
-    body: body,
-    imageUrl: imageUrl,
+    title: data['title'],
+    body: data['body'],
+    imageUrl: data['imageUrl'],
     timestamp: DateTime.now(),
   ));
 }
@@ -146,45 +161,53 @@ Future<void> _setupFCM() async {
     // Handle foreground messages - save to inbox, show system notification + snackbar
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       fcmMessageNotifier.value = message;
-      if (message.notification != null) {
-        final title = message.notification?.title ?? 'new_notification'.tr;
-        final body = message.notification?.body ?? '';
-        final imageUrl = message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl ?? message.data['image'];
-        // Save to local notification inbox
-        NotificationStorage.save(NotificationItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: title,
-          body: body,
-          imageUrl: imageUrl,
-          timestamp: DateTime.now(),
-        ));
-        // Show system notification with BigPictureStyle
-        NotificationService.show(
-          id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
-          title: title,
-          body: body,
-          imageUrl: imageUrl,
-          payload: message.data['type'] ?? '',
+      final notifData = _extractNotificationData(message);
+      final title = notifData['title'].toString().isNotEmpty ? notifData['title'] : 'new_notification'.tr;
+      final body = notifData['body'] ?? '';
+      final imageUrl = notifData['imageUrl'] ?? '';
+      // Save to local notification inbox
+      NotificationStorage.save(NotificationItem(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        body: body,
+        imageUrl: imageUrl,
+        timestamp: DateTime.now(),
+      ));
+      // Show system notification with BigPictureStyle
+      NotificationService.show(
+        id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+        title: title,
+        body: body,
+        imageUrl: imageUrl,
+        payload: message.data['type'] ?? '',
+      );
+      // Show snackbar via GetX if app is running
+      if (Get.key.currentContext != null) {
+        Get.snackbar(
+          title,
+          body,
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: AppTheme.primary.withOpacity(0.95),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+          margin: const EdgeInsets.all(12),
+          borderRadius: 12,
         );
-        // Show snackbar via GetX if app is running
-        if (Get.key.currentContext != null) {
-          Get.snackbar(
-            title,
-            body,
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: AppTheme.primary.withOpacity(0.95),
-            colorText: Colors.white,
-            duration: const Duration(seconds: 4),
-            margin: const EdgeInsets.all(12),
-            borderRadius: 12,
-          );
-        }
       }
     });
 
     // Handle notification tap when app is in background
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
       fcmMessageNotifier.value = message;
+      final notifData = _extractNotificationData(message);
+      // Ensure notification is saved to storage before navigating
+      await NotificationStorage.save(NotificationItem(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: notifData['title'],
+        body: notifData['body'],
+        imageUrl: notifData['imageUrl'],
+        timestamp: DateTime.now(),
+      ));
       // Navigate to notification center
       Get.to(() => const NotificationCenterScreen(), transition: Transition.fadeIn);
     });
@@ -193,15 +216,12 @@ Future<void> _setupFCM() async {
     RemoteMessage? initialMessage = await messaging.getInitialMessage();
     if (initialMessage != null) {
       fcmMessageNotifier.value = initialMessage;
-      // Ensure notification is saved to storage (background handler may not run for notification-only payloads)
-      final title = initialMessage.notification?.title ?? 'new_notification'.tr;
-      final body = initialMessage.notification?.body ?? '';
-      final imageUrl = initialMessage.notification?.android?.imageUrl ?? initialMessage.notification?.apple?.imageUrl ?? initialMessage.data['image'];
+      final notifData = _extractNotificationData(initialMessage);
       await NotificationStorage.save(NotificationItem(
         id: initialMessage.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        title: title,
-        body: body,
-        imageUrl: imageUrl,
+        title: notifData['title'],
+        body: notifData['body'],
+        imageUrl: notifData['imageUrl'],
         timestamp: DateTime.now(),
       ));
     }

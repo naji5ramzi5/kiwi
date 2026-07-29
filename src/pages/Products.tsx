@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import type { Category, Branch } from '../lib/types'
 
 const UNITS = ['كيلو', 'حبة', 'كرتونة', 'ربطة', 'كيس', 'غرام']
+const UNIT_TYPES = ['kg', 'piece'] as const
 const PAGE_SIZE = 12
 
 export default function Products() {
@@ -124,8 +125,13 @@ export default function Products() {
                       <ImageIcon size={40} />
                     </div>
                   )}
-                  <div style={{ position: 'absolute', top: 12, right: 12, background: 'white', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, boxShadow: 'var(--shadow-sm)' }}>
-                     {product.unit}
+                  <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 4 }}>
+                    <span style={{ background: 'white', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, boxShadow: 'var(--shadow-sm)' }}>
+                      {product.unit}
+                    </span>
+                    <span style={{ background: product.unit_type === 'kg' ? '#e0f2fe' : '#fef3c7', color: product.unit_type === 'kg' ? '#0369a1' : '#92400e', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, boxShadow: 'var(--shadow-sm)' }}>
+                      {product.unit_type || 'kg'}
+                    </span>
                   </div>
                   {product.is_offer && (
                     <div style={{ position: 'absolute', top: 12, left: 12, background: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
@@ -225,6 +231,7 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
     name: product?.name || '',
     category: product?.category || (categories[0]?.name || ''),
     unit: product?.unit || 'كيلو',
+    unit_type: product?.unit_type || 'kg',
     default_price: product?.default_price || product?.price || 0,
     image_url: product?.image_url || '',
     is_active: product?.is_active ?? true,
@@ -239,6 +246,8 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
         name: form.name,
         category: form.category,
         unit: form.unit,
+        unit_type: form.unit_type,
+        default_price: form.default_price,
         price: form.default_price,
         image_url: form.image_url,
         is_active: form.is_active,
@@ -305,10 +314,21 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
             <input className="form-input" type="number" value={form.default_price} onChange={e => setForm({...form, default_price: +e.target.value})} />
           </div>
           <div className="form-group">
-            <label className="form-label">وحدة القياس</label>
-            <select className="form-select" value={form.unit} onChange={e => setForm({...form, unit: e.target.value})}>
-              {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-            </select>
+            <label className="form-label">نوع الوحدة</label>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 16px', borderRadius: 8, border: `2px solid ${form.unit === 'كيلو' ? 'var(--g500)' : 'var(--gray200)'}`, background: form.unit === 'كيلو' ? 'var(--g50)' : 'transparent' }}>
+                <input type="radio" name="unit_type" checked={form.unit === 'كيلو'} onChange={() => setForm({...form, unit: 'كيلو', unit_type: 'kg'})} style={{ accentColor: 'var(--g500)' }} />
+                <span style={{ fontWeight: form.unit === 'كيلو' ? 700 : 400, fontSize: 14 }}>كيلو (kg)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 16px', borderRadius: 8, border: `2px solid ${form.unit === 'حبة' ? 'var(--g500)' : 'var(--gray200)'}`, background: form.unit === 'حبة' ? 'var(--g50)' : 'transparent' }}>
+                <input type="radio" name="unit_type" checked={form.unit === 'حبة'} onChange={() => setForm({...form, unit: 'حبة', unit_type: 'piece'})} style={{ accentColor: 'var(--g500)' }} />
+                <span style={{ fontWeight: form.unit === 'حبة' ? 700 : 400, fontSize: 14 }}>حبة (piece)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '8px 16px', borderRadius: 8, border: `2px solid ${form.unit === 'قطعة' ? 'var(--g500)' : 'var(--gray200)'}`, background: form.unit === 'قطعة' ? 'var(--g50)' : 'transparent' }}>
+                <input type="radio" name="unit_type" checked={form.unit === 'قطعة'} onChange={() => setForm({...form, unit: 'قطعة', unit_type: 'piece'})} style={{ accentColor: 'var(--g500)' }} />
+                <span style={{ fontWeight: form.unit === 'قطعة' ? 700 : 400, fontSize: 14 }}>قطعة (unit)</span>
+              </label>
+            </div>
           </div>
         </div>
 

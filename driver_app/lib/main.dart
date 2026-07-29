@@ -16,26 +16,41 @@ import 'services/notification_service.dart';
 /// Global notifier: when set to true, DriverMainScreen switches to orders tab and refreshes.
 final ValueNotifier<bool> fcmNavigateToOrders = ValueNotifier<bool>(false);
 
+/// Extracts title, body, and image from a RemoteMessage, supporting both
+/// FCM notification payload and data-only payload interchangeably.
+Map<String, dynamic> _extractNotificationData(RemoteMessage message) {
+  if (message.notification != null) {
+    return {
+      'title': message.notification?.title ?? '',
+      'body': message.notification?.body ?? '',
+      'imageUrl': message.notification?.android?.imageUrl ??
+          message.notification?.apple?.imageUrl ??
+          message.data['image'] ?? '',
+    };
+  }
+  return {
+    'title': message.data['title'] ?? '',
+    'body': message.data['body'] ?? '',
+    'imageUrl': message.data['image'] ?? '',
+  };
+}
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await NotificationService.init();
-  final title = message.notification?.title ?? 'New Notification';
-  final body = message.notification?.body ?? '';
-  final imageUrl = message.notification?.android?.imageUrl ??
-      message.notification?.apple?.imageUrl ??
-      message.data['image'];
+  final data = _extractNotificationData(message);
   NotificationService.show(
     id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
-    title: title,
-    body: body,
-    imageUrl: imageUrl,
+    title: data['title'],
+    body: data['body'],
+    imageUrl: data['imageUrl'],
     payload: message.data['type'] ?? '',
   );
   NotificationStorage.save(NotificationItem(
     id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-    title: title,
-    body: body,
-    imageUrl: imageUrl,
+    title: data['title'],
+    body: data['body'],
+    imageUrl: data['imageUrl'],
     timestamp: DateTime.now(),
   ));
 }
@@ -82,28 +97,27 @@ Future<void> main() async {
     // Foreground: save to local inbox + show system notification + snackbar + trigger refresh
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       fcmNavigateToOrders.value = true;
-      if (message.notification != null) {
-        final title = message.notification?.title ?? 'إشعار جديد';
-        final body = message.notification?.body ?? '';
-        final imageUrl = message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl ?? message.data['image'];
-        NotificationStorage.save(NotificationItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: title,
-          body: body,
-          imageUrl: imageUrl,
-          timestamp: DateTime.now(),
-        ));
-        NotificationService.show(
-          id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
-          title: title,
-          body: body,
-          imageUrl: imageUrl,
-          payload: message.data['type'] ?? '',
-        );
-      }
+      final notifData = _extractNotificationData(message);
+      final title = notifData['title'].toString().isNotEmpty ? notifData['title'] : 'إشعار جديد';
+      final body = notifData['body'] ?? '';
+      final imageUrl = notifData['imageUrl'] ?? '';
+      NotificationStorage.save(NotificationItem(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        body: body,
+        imageUrl: imageUrl,
+        timestamp: DateTime.now(),
+      ));
+      NotificationService.show(
+        id: message.messageId?.hashCode ?? DateTime.now().millisecondsSinceEpoch.hashCode,
+        title: title,
+        body: body,
+        imageUrl: imageUrl,
+        payload: message.data['type'] ?? '',
+      );
       Get.snackbar(
-        message.notification?.title ?? 'إشعار جديد',
-        message.notification?.body ?? '',
+        title,
+        body,
         backgroundColor: const Color(0xFF10b981),
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -112,22 +126,28 @@ Future<void> main() async {
     });
 
     // Background tap: navigate to orders tab
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
       fcmNavigateToOrders.value = true;
+      final notifData = _extractNotificationData(message);
+      await NotificationStorage.save(NotificationItem(
+        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: notifData['title'],
+        body: notifData['body'],
+        imageUrl: notifData['imageUrl'],
+        timestamp: DateTime.now(),
+      ));
     });
 
     // Cold start from notification
     final initialMessage = await messaging.getInitialMessage();
     if (initialMessage != null) {
       fcmNavigateToOrders.value = true;
-      final title = initialMessage.notification?.title ?? 'إشعار جديد';
-      final body = initialMessage.notification?.body ?? '';
-      final imageUrl = initialMessage.notification?.android?.imageUrl ?? initialMessage.notification?.apple?.imageUrl ?? initialMessage.data['image'];
+      final notifData = _extractNotificationData(initialMessage);
       await NotificationStorage.save(NotificationItem(
         id: initialMessage.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        title: title,
-        body: body,
-        imageUrl: imageUrl,
+        title: notifData['title'],
+        body: notifData['body'],
+        imageUrl: notifData['imageUrl'],
         timestamp: DateTime.now(),
       ));
     }

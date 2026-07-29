@@ -56,7 +56,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     try {
       final items = await supabase
           .from('order_items')
-          .select('product_id, quantity, unit_price, product_name')
+          .select('product_id, quantity, unit_price, product_name, unit, unit_type')
           .eq('order_id', orderId);
 
       if (items.isEmpty) {
@@ -93,7 +93,8 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
           'price': item['unit_price'] ?? 0,
           'image': '',
           'unit': item['unit']?.toString() ?? 'unit_kg'.tr,
-        }, qty: (item['quantity'] as num? ?? 1).toInt(), showPopup: false);
+          'unit_type': item['unit_type']?.toString() ?? 'kg',
+        }, qty: (item['quantity'] as num? ?? 1), showPopup: false);
         added++;
       }
 

@@ -125,20 +125,25 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   pw.SizedBox(height: 8),
                   pw.Text('products'.tr, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 8),
-                  ...orderItems.map((item) => pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                    child: pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Expanded(
-                          child: pw.Text(
-                            '${item['product_name'] ?? ''}  (${item['quantity'] ?? 0} × ${item['unit_price'] ?? 0})',
+                  ...orderItems.map((item) {
+                    final itemQty = item['quantity'] ?? 0;
+                    final unitLabel = item['unit']?.toString() ?? 'unit_kg'.tr;
+                    final qtyStr = (itemQty is num && itemQty == itemQty.roundToDouble()) ? '${itemQty.toInt()}' : itemQty.toString();
+                    return pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                      child: pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Expanded(
+                            child: pw.Text(
+                              '${item['product_name'] ?? ''}  ($qtyStr $unitLabel × ${item['unit_price'] ?? 0})',
+                            ),
                           ),
-                        ),
-                        pw.Text('${item['total_price'] ?? 0} ${'currency_iqd'.tr}'),
-                      ],
-                    ),
-                  )),
+                          pw.Text('${item['total_price'] ?? 0} ${'currency_iqd'.tr}'),
+                        ],
+                      ),
+                    );
+                  }),
                   pw.SizedBox(height: 8),
                   pw.Divider(),
                   pw.SizedBox(height: 8),

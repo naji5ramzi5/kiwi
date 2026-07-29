@@ -168,7 +168,7 @@ export default function NotificationsTab() {
         <div className="card-body" style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 40, borderRadius: '0 0 16px 16px' }}>
           <div style={{ background: 'white', width: 320, borderRadius: 16, boxShadow: '0 10px 25px rgba(0,0,0,.12)', overflow: 'hidden' }}>
             <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--gray50)', background: '#f8fafc' }}>
-              <img src="/kiwi-icon.svg" alt="Kiwi" style={{ width: 24, height: 24, borderRadius: 6, objectFit: 'contain' }} />
+              <img src="/kiwi-logo.jpg" alt="Kiwi" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'cover' }} />
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--g700)' }}>Kiwi App</span>
               <span style={{ fontSize: 10, color: 'var(--gray400)', marginRight: 'auto' }}>الآن</span>
             </div>

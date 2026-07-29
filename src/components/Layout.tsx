@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, GitBranch, ShoppingCart, Activity,
   Truck, Megaphone, DollarSign, Users, Bell, Search, Settings, FileText, Box, Leaf,
   X, CheckCheck, Trash2, ShieldAlert, Tag, UserCheck, Printer, MapPin, Star,
-  Moon, Sun, ChevronDown, ChevronLeft, LogOut, User, Home
+  Moon, Sun, ChevronDown, ChevronLeft, LogOut, User, Home, TrendingUp
 } from 'lucide-react'
 import { useNotifications } from '../lib/notifications'
 import type { AppNotification } from '../lib/notifications'

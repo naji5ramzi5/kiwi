@@ -16,6 +16,7 @@ import 'purchases/purchases_screen.dart';
 import 'statistics_screen.dart';
 import '../features/settings/settings_page.dart';
 import 'stock_entry.dart';
+import 'price_checker_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -154,6 +155,7 @@ class _MainLayoutState extends State<MainLayout> {
                           _buildNavItem(4, LucideIcons.truck, 'المشتريات', controller),
                           _buildNavItem(5, LucideIcons.barChart3, 'الإحصائيات', controller),
                           _buildNavItem(6, LucideIcons.settings, 'إعدادات الأجهزة', controller),
+                          _buildNavItem(7, LucideIcons.scan, 'Price Checker', controller),
 
                           const Spacer(),
 
@@ -294,6 +296,8 @@ class _MainLayoutState extends State<MainLayout> {
                             return const StatisticsScreen();
                           case 6:
                             return const SettingsPage();
+                          case 7:
+                            return const PriceCheckerScreen();
                           default:
                             return const Center(
                               child: Text(

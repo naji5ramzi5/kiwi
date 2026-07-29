@@ -38,7 +38,7 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
 
       final productsResponse = await supabase
           .from('products')
-          .select('id, name, unit, default_price, price')
+          .select('id, name, unit, unit_type, default_price, price')
           .eq('is_active', true)
           .order('name');
 
@@ -255,6 +255,7 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
     final pid = product['id'].toString();
     final currentStock = (product['current_stock'] as double?) ?? 0;
     final unit = product['unit'] ?? '';
+    final unitType = product['unit_type']?.toString() ?? 'kilogram';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -289,7 +290,7 @@ class _StockEntryScreenState extends State<StockEntryScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  currentStock.toStringAsFixed(0),
+                  '${currentStock.toStringAsFixed(currentStock == currentStock.roundToDouble() ? 0 : 1)} $unit',
                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primary),
                 ),
               ),

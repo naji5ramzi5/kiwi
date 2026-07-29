@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../theme/app_theme.dart';
+import '../../controllers/auth_controller.dart';
 import 'general_settings_page.dart';
 import 'thermal_printer_full_page.dart';
 import 'barcode_printer_full_page.dart';
@@ -26,6 +28,27 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   SettingsSection _selectedSection = SettingsSection.general;
+  final AuthController _authController = Get.find<AuthController>();
+
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تسجيل الخروج'),
+        content: Text('هل أنت متأكد من تسجيل الخروج من فرع: ${_authController.currentBranchName.value}؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _authController.logout();
+            },
+            child: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   final List<_SidebarItem> _sidebarItems = [
     _SidebarItem(
@@ -161,13 +184,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'الإعدادات',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
@@ -175,10 +198,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                               Text(
                                 'لوحة التحكم',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: AppTheme.primaryLight,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                'فرع: ${_authController.currentBranchName.value}',
+                                style: const TextStyle(
+                                  color: AppTheme.primaryLight,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ],
@@ -205,6 +236,44 @@ class _SettingsPageState extends State<SettingsPage> {
                         final isSelected = _selectedSection == item.section;
                         return _buildSidebarItem(item, isSelected);
                       },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Logout button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _logout,
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36, height: 36,
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(LucideIcons.logOut, color: Colors.red, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'تسجيل الخروج',
+                                  style: TextStyle(color: Colors.grey[400], fontSize: 14, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              Text(
+                                _authController.currentBranchName.value,
+                                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),

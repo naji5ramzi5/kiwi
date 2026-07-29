@@ -96,17 +96,21 @@ class CartItemWidget extends StatelessWidget {
                       style: TextStyle(fontSize: 11, color: themeTextSecColor, fontFamily: 'Cairo'),
                     ),
                     const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: (item['unit_type']?.toString() ?? 'kg') == 'kg' ? Colors.blue.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        (item['unit_type']?.toString() ?? 'kg') == 'kg' ? 'unit_kg'.tr : 'unit_piece'.tr,
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: (item['unit_type']?.toString() ?? 'kg') == 'kg' ? Colors.blue : Colors.amber.shade800, fontFamily: 'Cairo'),
-                      ),
-                    ),
+                    Builder(builder: (context) {
+                      final unitType = item['unit_type']?.toString() ?? 'kilogram';
+                      final isDecimal = ['kilogram', 'gram', 'liter', 'milliliter'].contains(unitType);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isDecimal ? Colors.blue.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          item['unit']?.toString() ?? (isDecimal ? 'unit_kg'.tr : 'unit_piece'.tr),
+                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isDecimal ? Colors.blue : Colors.amber.shade800, fontFamily: 'Cairo'),
+                        ),
+                      );
+                    }),
                   ],
                 ),
                 const SizedBox(height: 6),

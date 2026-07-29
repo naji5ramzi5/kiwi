@@ -5,13 +5,21 @@ import toast from 'react-hot-toast'
 import type { Category, Branch } from '../lib/types'
 
 const UNIT_OPTIONS: Array<{ label: string; unit: string; unit_type: string }> = [
-  { label: 'كيلو (kg)', unit: 'كيلو', unit_type: 'kg' },
-  { label: 'غرام (g)', unit: 'غرام', unit_type: 'kg' },
+  { label: 'كيلو (kg)', unit: 'كيلو', unit_type: 'kilogram' },
+  { label: 'غرام (g)', unit: 'غرام', unit_type: 'gram' },
   { label: 'حبة (piece)', unit: 'حبة', unit_type: 'piece' },
-  { label: 'قطعة (unit)', unit: 'قطعة', unit_type: 'piece' },
-  { label: 'ربطة', unit: 'ربطة', unit_type: 'piece' },
-  { label: 'كرتونة', unit: 'كرتونة', unit_type: 'piece' },
-  { label: 'كيس', unit: 'كيس', unit_type: 'piece' },
+  { label: 'قطعة (unit)', unit: 'قطعة', unit_type: 'unit' },
+  { label: 'علبة (box)', unit: 'علبة', unit_type: 'box' },
+  { label: 'كرتونة (carton)', unit: 'كرتونة', unit_type: 'carton' },
+  { label: 'باكيت (pack)', unit: 'باكيت', unit_type: 'pack' },
+  { label: 'قنينة (bottle)', unit: 'قنينة', unit_type: 'bottle' },
+  { label: 'علبة معدنية (can)', unit: 'علبة معدنية', unit_type: 'can' },
+  { label: 'كيس (bag)', unit: 'كيس', unit_type: 'bag' },
+  { label: 'صينية (tray)', unit: 'صينية', unit_type: 'tray' },
+  { label: 'ربطة (bundle)', unit: 'ربطة', unit_type: 'bundle' },
+  { label: 'شوال (sack)', unit: 'شوال', unit_type: 'sack' },
+  { label: 'لتر (L)', unit: 'لتر', unit_type: 'liter' },
+  { label: 'ميليلتر (ml)', unit: 'ميليلتر', unit_type: 'milliliter' },
 ]
 const PAGE_SIZE = 12
 
@@ -238,9 +246,11 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
     name: product?.name || '',
     category: product?.category || (categories[0]?.name || ''),
     unit: product?.unit || 'كيلو',
-    unit_type: product?.unit_type || 'kg',
+    unit_type: product?.unit_type || 'kilogram',
     default_price: product?.default_price ?? product?.price ?? '',
     image_url: product?.image_url || '',
+    barcode: product?.barcode || '',
+    description: product?.description || '',
     is_active: product?.is_active ?? true,
     is_offer: product?.is_offer || false
   })
@@ -258,6 +268,8 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
         default_price: price,
         price: price,
         image_url: form.image_url,
+        barcode: form.barcode || null,
+        description: form.description || null,
         is_active: form.is_active,
         is_offer: form.is_offer
       }
@@ -329,6 +341,17 @@ function ProductCatalogModal({ product, categories, onClose, onSave }: ProductCa
             }}>
               {UNIT_OPTIONS.map(o => <option key={o.unit} value={o.unit}>{o.label}</option>)}
             </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="form-group">
+            <label className="form-label">الباركود (Barcode)</label>
+            <input className="form-input" value={form.barcode} onChange={e => setForm({...form, barcode: e.target.value})} placeholder="اختياري" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">الوصف</label>
+            <input className="form-input" value={form.description} onChange={e => setForm({...form, description: e.target.value})} placeholder="اختياري" />
           </div>
         </div>
 

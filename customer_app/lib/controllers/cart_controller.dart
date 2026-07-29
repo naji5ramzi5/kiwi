@@ -142,7 +142,7 @@ class CartController extends GetxController {
           (cartItems[id]!['quantity'] as num? ?? 0) + qty;
       if (stock != null) cartItems[id]!['stock'] = stock;
     } else {
-      final unitType = product['unit_type']?.toString() ?? 'kg';
+      final unitType = product['unit_type']?.toString() ?? 'kilogram';
       cartItems[id] = {
         'id': id,
         'title': product['title']?.toString() ?? '',
@@ -164,6 +164,8 @@ class CartController extends GetxController {
     }
   }
 
+  bool _isDecimalUnit(String unitType) => ['kilogram', 'gram', 'liter', 'milliliter'].contains(unitType);
+
   String formatPrice(dynamic price) {
     if (price == null) return '0';
     if (price is num) return price.toInt().toString();
@@ -174,8 +176,8 @@ class CartController extends GetxController {
 
   void removeFromCart(String id, {bool removeAll = false}) {
     if (!cartItems.containsKey(id)) return;
-    final unitType = cartItems[id]!['unit_type']?.toString() ?? 'kg';
-    final num step = unitType == 'kg' ? 0.5 : 1;
+    final unitType = cartItems[id]!['unit_type']?.toString() ?? 'kilogram';
+    final num step = _isDecimalUnit(unitType) ? 0.5 : 1;
     if (removeAll || (cartItems[id]!['quantity'] as num? ?? 0) <= step) {
       cartItems.remove(id);
     } else {
@@ -441,7 +443,7 @@ class CartController extends GetxController {
             'quantity': item['quantity'],
             'unit_price': item['price'],
             'unit': item['unit']?.toString() ?? 'unit_kg'.tr,
-            'unit_type': item['unit_type']?.toString() ?? 'kg',
+            'unit_type': item['unit_type']?.toString() ?? 'kilogram',
             'total_price': (item['price'] as num) * (item['quantity'] as num),
           });
         });

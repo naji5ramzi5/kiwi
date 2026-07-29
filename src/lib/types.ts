@@ -40,6 +40,8 @@ export interface Database {
           name: string
           category: string
           unit: string
+          unit_type: string
+          default_price: number
           price: number
           cost: number | null
           is_active: boolean

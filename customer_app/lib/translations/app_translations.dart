@@ -257,7 +257,20 @@ class AppTranslations extends Translations {
 
           // Units
           'unit_kg': 'kg',
+          'unit_gram': 'g',
           'unit_piece': 'piece',
+          'unit_unit': 'unit',
+          'unit_box': 'box',
+          'unit_carton': 'carton',
+          'unit_pack': 'pack',
+          'unit_bottle': 'bottle',
+          'unit_can': 'can',
+          'unit_bag': 'bag',
+          'unit_tray': 'tray',
+          'unit_bundle': 'bundle',
+          'unit_sack': 'sack',
+          'unit_liter': 'L',
+          'unit_milliliter': 'ml',
 
           // Static Products
           'product_fresh_tomatoes': 'Fresh Tomatoes',
@@ -795,7 +808,20 @@ class AppTranslations extends Translations {
 
           // Units
           'unit_kg': 'كغ',
+          'unit_gram': 'غم',
           'unit_piece': 'حبة',
+          'unit_unit': 'قطعة',
+          'unit_box': 'علبة',
+          'unit_carton': 'كرتونة',
+          'unit_pack': 'باكيت',
+          'unit_bottle': 'قنينة',
+          'unit_can': 'علبة',
+          'unit_bag': 'كيس',
+          'unit_tray': 'صينية',
+          'unit_bundle': 'ربطة',
+          'unit_sack': 'شوال',
+          'unit_liter': 'لتر',
+          'unit_milliliter': 'مل',
 
           // Static Products
           'product_fresh_tomatoes': 'طماطم طازجة',

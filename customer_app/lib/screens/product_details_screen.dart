@@ -25,8 +25,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final HomeController homeController = Get.find<HomeController>();
   bool _isLiked = false;
 
-  String get _unitType => widget.product['unit_type']?.toString() ?? 'kg';
-  num get _qtyStep => _unitType == 'kg' ? 0.5 : 1;
+  String get _unitType => widget.product['unit_type']?.toString() ?? 'kilogram';
+  bool get _isDecimalUnit => ['kilogram', 'gram', 'liter', 'milliliter'].contains(_unitType);
+  num get _qtyStep => _isDecimalUnit ? 0.5 : 1;
 
   @override
   void initState() {
@@ -277,15 +278,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _unitType == 'kg' ? Colors.blue.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+                    color: _isDecimalUnit ? Colors.blue.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    _unitType == 'kg' ? 'unit_kg'.tr : 'unit_piece'.tr,
+                    widget.product['unit']?.toString() ?? (_isDecimalUnit ? 'unit_kg'.tr : 'unit_piece'.tr),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: _unitType == 'kg' ? Colors.blue : Colors.amber.shade800,
+                      color: _isDecimalUnit ? Colors.blue : Colors.amber.shade800,
                       fontFamily: 'Cairo',
                     ),
                   ),

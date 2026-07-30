@@ -27,6 +27,7 @@ import OrderForm from './pages/OrderForm'
 import DeliveryZones from './pages/DeliveryZones'
 import BranchPrices from './pages/BranchPrices'
 import Profile from './pages/Profile'
+import TransferDelivery from './pages/TransferDelivery'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -96,6 +97,7 @@ export default function App() {
           <Route path="branches/:id" element={<BranchDetail />} />
           <Route path="orders" element={<Orders />} />
           <Route path="drivers" element={<Drivers />} />
+          <Route path="transfer-delivery" element={<TransferDelivery />} />
           <Route path="marketing" element={<Marketing />} />
           <Route path="finance" element={<Finance />} />
           <Route path="financial-dashboard" element={<FinancialDashboard />} />

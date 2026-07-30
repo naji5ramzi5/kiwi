@@ -6,12 +6,14 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Map<String, dynamic>? driverProfile;
   final bool isOnline;
   final ValueChanged<bool> onToggleOnline;
+  final String? branchName;
 
   const DriverAppBar({
     super.key,
     required this.driverProfile,
     required this.isOnline,
     required this.onToggleOnline,
+    this.branchName,
   });
 
   @override
@@ -57,6 +59,16 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
                         Text(driverProfile?['plate_number'] ?? 'جاهز للانطلاق', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                       ],
                     ),
+                    if (branchName != null) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(LucideIcons.store, size: 12, color: const Color(0xFF10b981)),
+                          const SizedBox(width: 4),
+                          Text(branchName!, style: TextStyle(fontSize: 11, color: const Color(0xFF10b981), fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

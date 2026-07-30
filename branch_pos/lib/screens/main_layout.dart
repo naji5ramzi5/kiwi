@@ -17,6 +17,7 @@ import 'statistics_screen.dart';
 import '../features/settings/settings_page.dart';
 import 'stock_entry.dart';
 import 'price_checker_screen.dart';
+import 'delivery_employees_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -150,6 +151,7 @@ class _MainLayoutState extends State<MainLayout> {
                           // Navigation items
                           _buildNavItem(0, LucideIcons.monitor, 'شاشة الكاشير', controller),
                           _buildNavItem(1, LucideIcons.shoppingBag, 'طلبات التوصيل', controller),
+                          _buildNavItem(8, LucideIcons.truck, 'مناديب التوصيل', controller),
                           _buildNavItem(2, LucideIcons.package, 'إدارة المخزون', controller),
                           _buildNavItem(3, LucideIcons.box, 'إدخال المخزون', controller),
                           _buildNavItem(4, LucideIcons.truck, 'المشتريات', controller),
@@ -298,6 +300,8 @@ class _MainLayoutState extends State<MainLayout> {
                             return const SettingsPage();
                           case 7:
                             return const PriceCheckerScreen();
+                          case 8:
+                            return const DeliveryEmployeesScreen();
                           default:
                             return const Center(
                               child: Text(

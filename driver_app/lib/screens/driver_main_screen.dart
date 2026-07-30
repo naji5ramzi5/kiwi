@@ -33,13 +33,16 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
   Timer? _locationTimer;
   RealtimeChannel? _ordersChannel;
   RealtimeChannel? _assignmentsChannel;
+  RealtimeChannel? _employeeChannel;
+  String? branchName;
+  int dailyDeliveries = 0;
+  int monthlyDeliveries = 0;
 
   @override
   void initState() {
     super.initState();
     _fetchProfileAndOrders();
     _setupRealtime();
-    // Listen for FCM navigation signals (foreground, background tap, cold start)
     fcmNavigateToOrders.addListener(_onFcmNavigate);
   }
 
@@ -47,7 +50,6 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     if (fcmNavigateToOrders.value) {
       setState(() => _currentTab = 0);
       _refreshAll();
-      // Reset so it can fire again
       fcmNavigateToOrders.value = false;
     }
   }
@@ -60,6 +62,9 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     }
     if (_assignmentsChannel != null) {
       supabase.removeChannel(_assignmentsChannel!);
+    }
+    if (_employeeChannel != null) {
+      supabase.removeChannel(_employeeChannel!);
     }
     fcmNavigateToOrders.removeListener(_onFcmNavigate);
     super.dispose();
@@ -117,11 +122,43 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
         driverProfile = profile;
         isOnline = profile['is_online'] ?? false;
       });
+      // Fetch delivery employee record with branch info
+      await _fetchDeliveryEmployeeInfo(user.id);
       _fetchRating(user.id);
       _fetchEarnings(user.id);
     }
     await fetchOrders();
     await fetchHistory();
+  }
+
+  Future<void> _fetchDeliveryEmployeeInfo(String userId) async {
+    try {
+      final emp = await supabase
+          .from('delivery_employees')
+          .select('branch_id, status, total_deliveries, branches!inner(name)')
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (emp != null) {
+        setState(() {
+          branchName = emp['branches']?['name'] as String?;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching delivery employee info: $e');
+    }
+    // Fallback: try profiles.branch_id
+    if (branchName == null && driverProfile != null && driverProfile!['branch_id'] != null) {
+      try {
+        final branch = await supabase
+            .from('branches')
+            .select('name')
+            .eq('id', driverProfile!['branch_id'])
+            .maybeSingle();
+        if (branch != null) {
+          setState(() => branchName = branch['name'] as String?);
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> _fetchRating(String driverId) async {
@@ -147,17 +184,33 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     try {
       final delivered = await supabase
           .from('orders')
-          .select('delivery_fee')
+          .select('delivery_fee, delivered_at')
           .eq('driver_id', driverId)
           .eq('status', 'delivered');
       if (delivered is List) {
         double total = 0;
+        int daily = 0;
+        int monthly = 0;
+        final now = DateTime.now();
         for (var o in delivered) {
           total += (o['delivery_fee'] as num?)?.toDouble() ?? 0;
+          if (o['delivered_at'] != null) {
+            final d = DateTime.tryParse(o['delivered_at'].toString());
+            if (d != null) {
+              if (d.year == now.year && d.month == now.month && d.day == now.day) {
+                daily++;
+              }
+              if (d.year == now.year && d.month == now.month) {
+                monthly++;
+              }
+            }
+          }
         }
         setState(() {
           deliveryCount = delivered.length;
           totalEarnings = total;
+          dailyDeliveries = daily;
+          monthlyDeliveries = monthly;
         });
       }
     } catch (_) {}
@@ -167,7 +220,6 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     final driverId = supabase.auth.currentUser?.id;
     if (driverId == null) return;
 
-    // Subscribe to order changes relevant to this driver
     _ordersChannel = supabase
         .channel('driver-orders-$driverId')
         .onPostgresChanges(
@@ -187,7 +239,6 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
         )
         .subscribe();
 
-    // Also listen for new orders assigned to this driver (status changes to 'picked_up')
     _assignmentsChannel = supabase
         .channel('driver-assignments-$driverId')
         .onPostgresChanges(
@@ -205,6 +256,26 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
           },
         )
         .subscribe();
+
+    // Real-time subscription for delivery_employees (branch changes, status)
+    _employeeChannel = supabase
+        .channel('driver-employee-$driverId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'delivery_employees',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: driverId,
+          ),
+          callback: (payload) {
+            if (driverProfile != null) {
+              _fetchDeliveryEmployeeInfo(driverProfile!['id']);
+            }
+          },
+        )
+        .subscribe();
   }
 
   Future<void> fetchOrders() async {
@@ -212,7 +283,7 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
       final response = await supabase
           .from('orders')
           .select()
-          .inFilter('status', ['shipped', 'picked_up'])
+          .inFilter('status', ['shipped', 'picked_up', 'assigned'])
           .eq('driver_id', supabase.auth.currentUser!.id)
           .order('created_at', ascending: false);
       setState(() {
@@ -247,6 +318,11 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
         .from('profiles')
         .update({'is_online': value})
         .eq('id', supabase.auth.currentUser!.id);
+    // Also update delivery_employees status
+    await supabase
+        .from('delivery_employees')
+        .update({'status': value ? 'online' : 'offline'})
+        .eq('user_id', supabase.auth.currentUser!.id);
     if (value) {
       _startLocationTracking();
       Get.snackbar(
@@ -265,7 +341,10 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
   void _refreshAll() {
     fetchOrders();
     fetchHistory();
-    if (driverProfile != null) _fetchEarnings(driverProfile!['id']);
+    if (driverProfile != null) {
+      _fetchEarnings(driverProfile!['id']);
+      _fetchDeliveryEmployeeInfo(driverProfile!['id']);
+    }
   }
 
   @override
@@ -278,6 +357,8 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
         avgRating: avgRating,
         totalRatings: totalRatings,
         onRefresh: _refreshAll,
+        dailyDeliveries: dailyDeliveries,
+        monthlyDeliveries: monthlyDeliveries,
       ),
       DriverEarningsTab(
         totalEarnings: totalEarnings,
@@ -295,6 +376,7 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
         driverProfile: driverProfile,
         isOnline: isOnline,
         onToggleOnline: _toggleOnline,
+        branchName: branchName,
       ),
       body: screens[_currentTab],
       bottomNavigationBar: BottomNavigationBar(

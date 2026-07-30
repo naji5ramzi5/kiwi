@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, GitBranch, ShoppingCart, Activity,
   Truck, Megaphone, DollarSign, Users, Bell, Search, Settings, FileText, Box, Leaf,
   X, CheckCheck, Trash2, ShieldAlert, Tag, UserCheck, Printer, MapPin, Star,
-  Moon, Sun, ChevronDown, ChevronLeft, LogOut, User, Home, TrendingUp
+  Moon, Sun, ChevronDown, ChevronLeft, LogOut, User, Home, TrendingUp, ArrowLeftRight
 } from 'lucide-react'
 import { useNotifications } from '../lib/notifications'
 import type { AppNotification } from '../lib/notifications'
@@ -22,6 +22,7 @@ const NAV = [
   { label: 'مناطق التوصيل', path: '/delivery-zones', icon: MapPin, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'أسعار الفروع', path: '/branch-prices', icon: DollarSign, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'المناديب والسائقين', path: '/drivers', icon: Truck, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
+  { label: 'نقل المناديب', path: '/transfer-delivery', icon: ArrowLeftRight, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'التقييمات', path: '/ratings', icon: Star, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   { label: 'العملاء', path: '/customers', icon: Users, section: 'الموارد البشرية والفروع', color: '#f59e0b' },
   
@@ -43,6 +44,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/branches': 'إدارة الفروع',
   '/delivery-zones': 'مناطق التوصيل',
   '/drivers': 'إدارة فريق التوصيل',
+  '/transfer-delivery': 'نقل المناديب بين الفروع',
   '/ratings': 'التقييمات والتعليقات',
   '/customers': 'قاعدة العملاء',
   '/finance': 'التقارير المالية والشركاء',
@@ -61,6 +63,7 @@ const BREADCRUMBS: Record<string, { parent: string; parentPath: string; current:
   '/branches': { parent: 'الفروع', parentPath: '/branches', current: 'إدارة الفروع' },
   '/delivery-zones': { parent: 'الفروع', parentPath: '/branches', current: 'مناطق التوصيل' },
   '/drivers': { parent: 'الفروع', parentPath: '/branches', current: 'المناديب' },
+  '/transfer-delivery': { parent: 'الفروع', parentPath: '/branches', current: 'نقل المناديب' },
   '/ratings': { parent: 'الفروع', parentPath: '/branches', current: 'التقييمات' },
   '/customers': { parent: 'الفروع', parentPath: '/branches', current: 'العملاء' },
   '/finance': { parent: 'المالية', parentPath: '/finance', current: 'التقارير' },

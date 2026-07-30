@@ -14,6 +14,8 @@ class DriverHomeTab extends StatefulWidget {
   final String avgRating;
   final int totalRatings;
   final VoidCallback onRefresh;
+  final int dailyDeliveries;
+  final int monthlyDeliveries;
 
   const DriverHomeTab({
     super.key,
@@ -23,6 +25,8 @@ class DriverHomeTab extends StatefulWidget {
     required this.avgRating,
     required this.totalRatings,
     required this.onRefresh,
+    this.dailyDeliveries = 0,
+    this.monthlyDeliveries = 0,
   });
 
   @override
@@ -39,10 +43,16 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
     _startCountdowns();
   }
 
+  @override
+  void didUpdateWidget(DriverHomeTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _startCountdowns();
+  }
+
   void _startCountdowns() {
     for (final order in widget.activeOrders) {
       final id = order['id'].toString();
-      if ((order['status'] == 'pending' || order['status'] == 'preparing') && !_timers.containsKey(id)) {
+      if ((order['status'] == 'assigned' || order['status'] == 'pending' || order['status'] == 'preparing') && !_timers.containsKey(id)) {
         _countdowns[id] = 30;
         _timers[id] = Timer.periodic(const Duration(seconds: 1), (timer) {
           if (!mounted) { timer.cancel(); return; }
@@ -58,17 +68,38 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
         });
       }
     }
+    // Clean up timers for orders no longer in the list
+    final activeIds = widget.activeOrders.map((o) => o['id'].toString()).toSet();
+    _timers.removeWhere((id, timer) {
+      if (!activeIds.contains(id)) {
+        timer.cancel();
+        return true;
+      }
+      return false;
+    });
+    _countdowns.removeWhere((id, _) => !activeIds.contains(id));
   }
 
   Future<void> _autoRejectOrder(String orderId) async {
     try {
-      await Supabase.instance.client.from('orders').update({'status': 'rejected'}).eq('id', orderId);
+      // Release order back to branch
+      await Supabase.instance.client.rpc('release_order_from_delivery', params: {'p_order_id': orderId});
       widget.onRefresh();
       if (mounted) {
-        Get.snackbar('انتهت المهلة', 'تم رفض الطلب تلقائياً لعدم الرد',
+        Get.snackbar('انتهت المهلة', 'تم إرجاع الطلب للفرع لعدم الرد',
             backgroundColor: Colors.orange, colorText: Colors.white, snackPosition: SnackPosition.TOP);
       }
-    } catch (_) {}
+    } catch (_) {
+      // Fallback: reset order
+      try {
+        await Supabase.instance.client.from('orders').update({
+          'assigned_delivery_id': null,
+          'driver_id': null,
+          'status': 'ready',
+          'assigned_at': null,
+        }).eq('id', orderId);
+      } catch (_) {}
+    }
   }
 
   @override
@@ -112,18 +143,20 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
           ),
 
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Row(
             children: [
-              _buildStatCard('الطلبات المتاحة', widget.activeOrders.length.toString(), LucideIcons.package, const Color(0xFF3B82F6)),
-              const SizedBox(width: 16),
-              _buildRatingCard(),
+              _buildStatCard('الطلبات الحالية', widget.activeOrders.length.toString(), LucideIcons.package, const Color(0xFF3B82F6)),
+              const SizedBox(width: 12),
+              _buildStatCard('توصيل اليوم', widget.dailyDeliveries.toString(), LucideIcons.calendarCheck, const Color(0xFF10b981)),
+              const SizedBox(width: 12),
+              _buildStatCard('توصيل الشهر', widget.monthlyDeliveries.toString(), LucideIcons.trendingUp, const Color(0xFF8B5CF6)),
             ],
           ),
         ),
 
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           child: Row(
             children: [
               const Text('الطلبات الحالية', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
@@ -163,9 +196,10 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
   Widget _buildOrderCard(Map<String, dynamic> order) {
     bool isDelivering = order['status'] == 'shipped';
     bool isAssigned = order['status'] == 'picked_up';
-    bool isNew = order['status'] == 'pending' || order['status'] == 'preparing';
+    bool isNew = order['status'] == 'assigned' || order['status'] == 'pending' || order['status'] == 'preparing';
     final orderId = order['id'].toString();
     final countdown = _countdowns[orderId];
+    final bool showAcceptReject = order['status'] == 'assigned';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -184,7 +218,6 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
       ),
       child: Column(
         children: [
-          // Countdown timer for new orders
           if (isNew && countdown != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -238,25 +271,31 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
                       decoration: BoxDecoration(
                         color: isDelivering || isAssigned
                             ? const Color(0xFF10b981).withOpacity(0.1)
-                            : isNew
-                                ? Colors.orange.withOpacity(0.1)
-                                : Colors.blue.withOpacity(0.1),
+                            : showAcceptReject
+                                ? Colors.blue.withOpacity(0.1)
+                                : isNew
+                                    ? Colors.orange.withOpacity(0.1)
+                                    : Colors.blue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        isDelivering
-                            ? 'تم الاستلام من الفرع'
-                            : isAssigned
-                                ? 'تم الإسناد'
-                                : isNew
-                                    ? 'طلب جديد'
-                                    : order['status'],
+                        showAcceptReject
+                            ? 'بانتظار القبول'
+                            : isDelivering
+                                ? 'في الطريق'
+                                : isAssigned
+                                    ? 'تم الاستلام من الفرع'
+                                    : isNew
+                                        ? 'طلب جديد'
+                                        : order['status'],
                         style: TextStyle(
                           color: isDelivering || isAssigned
                               ? const Color(0xFF10b981)
-                              : isNew
-                                  ? Colors.orange
-                                  : Colors.blue,
+                              : showAcceptReject
+                                  ? Colors.blue
+                                  : isNew
+                                      ? Colors.orange
+                                      : Colors.blue,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -282,77 +321,128 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
             ),
           ),
 
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => Get.to(() => DeliveryMapScreen(order: order)),
-                    icon: Icon(isDelivering ? LucideIcons.map : LucideIcons.navigation, size: 18),
-                    label: Text(isDelivering ? 'عرض الخريطة' : 'استلام الطلب'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10b981),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                if (isAssigned) ...[
-                  const SizedBox(width: 12),
+          // Accept/Reject buttons for assigned orders
+          if (showAcceptReject)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))),
+              child: Row(
+                children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        await Supabase.instance.client
-                            .from('orders')
-                            .update({'status': 'shipped'})
-                            .eq('id', order['id']);
+                        await Supabase.instance.client.rpc('release_order_from_delivery', params: {'p_order_id': orderId});
                         widget.onRefresh();
-                        Get.snackbar(
-                          'تم الاستلام',
-                          'تم تأكيد استلام الطلب من الفرع، يمكنك البدء بالتوصيل.',
-                          backgroundColor: const Color(0xFF10b981),
-                          colorText: Colors.white,
-                          margin: const EdgeInsets.all(16),
-                        );
+                        Get.snackbar('تم الرفض', 'تم إرجاع الطلب للفرع', backgroundColor: Colors.orange, colorText: Colors.white, margin: const EdgeInsets.all(16));
                       },
-                      icon: const Icon(LucideIcons.packageCheck, size: 18),
-                      label: const Text('تأكيد الاستلام من الفرع'),
+                      icon: const Icon(LucideIcons.xCircle, size: 18),
+                      label: const Text('رفض'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF10b981),
-                        side: const BorderSide(color: Color(0xFF10b981)),
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
-                ],
-                if (isDelivering) ...[
                   const SizedBox(width: 12),
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: () async {
-                        await Supabase.instance.client.from('orders').update({'status': 'delivered'}).eq('id', order['id']);
+                        await Supabase.instance.client.rpc('accept_delivery_order', params: {
+                          'p_order_id': orderId,
+                          'p_employee_id': order['assigned_delivery_id'],
+                        });
                         widget.onRefresh();
-                        Get.snackbar('تم التوصيل', 'أحسنت عملاً! تمت إضافة الأرباح لرصيدك.', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, margin: const EdgeInsets.all(16));
+                        Get.snackbar('تم القبول', 'تم قبول الطلب، توجه إلى الفرع لاستلامه', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, margin: const EdgeInsets.all(16));
                       },
                       icon: const Icon(LucideIcons.checkCircle, size: 18),
-                      label: const Text('إنهاء'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF10b981),
-                        side: const BorderSide(color: Color(0xFF10b981)),
+                      label: const Text('قبول'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10b981),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
-          )
+
+          if (!showAcceptReject)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => Get.to(() => DeliveryMapScreen(order: order)),
+                      icon: Icon(isDelivering ? LucideIcons.map : LucideIcons.navigation, size: 18),
+                      label: Text(isDelivering ? 'عرض الخريطة' : 'استلام الطلب'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10b981),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  if (isAssigned) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await Supabase.instance.client
+                              .from('orders')
+                              .update({'status': 'shipped'})
+                              .eq('id', order['id']);
+                          widget.onRefresh();
+                          Get.snackbar(
+                            'تم الاستلام',
+                            'تم تأكيد استلام الطلب من الفرع، يمكنك البدء بالتوصيل.',
+                            backgroundColor: const Color(0xFF10b981),
+                            colorText: Colors.white,
+                            margin: const EdgeInsets.all(16),
+                          );
+                        },
+                        icon: const Icon(LucideIcons.packageCheck, size: 18),
+                        label: const Text('تأكيد الاستلام من الفرع'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF10b981),
+                          side: const BorderSide(color: Color(0xFF10b981)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (isDelivering) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await Supabase.instance.client.from('orders').update({'status': 'delivered'}).eq('id', order['id']);
+                          widget.onRefresh();
+                          Get.snackbar('تم التوصيل', 'أحسنت عملاً! تمت إضافة الأرباح لرصيدك.', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, margin: const EdgeInsets.all(16));
+                        },
+                        icon: const Icon(LucideIcons.checkCircle, size: 18),
+                        label: const Text('إنهاء'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF10b981),
+                          side: const BorderSide(color: Color(0xFF10b981)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            )
         ],
       ),
     );
@@ -361,10 +451,10 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Column(
@@ -372,53 +462,14 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
           children: [
             Row(
               children: [
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 16, color: color)),
+                Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, size: 14, color: color)),
                 const Spacer(),
-                Icon(LucideIcons.trendingUp, size: 16, color: Colors.grey.shade400),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1F2937))),
-            const SizedBox(height: 4),
-            Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRatingCard() {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF59E0B).withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(LucideIcons.star, size: 16, color: Color(0xFFF59E0B))),
-                const Spacer(),
-                Icon(LucideIcons.trendingUp, size: 16, color: Colors.grey.shade400),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(widget.avgRating, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1F2937))),
-                if (widget.totalRatings > 0) ...[
-                  const SizedBox(width: 4),
-                  Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('/5', style: TextStyle(fontSize: 12, color: Colors.grey.shade400, fontWeight: FontWeight.w600))),
-                ],
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(widget.totalRatings > 0 ? 'التقييم (${widget.totalRatings})' : 'التقييم', style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1F2937))),
+            const SizedBox(height: 2),
+            Text(title, style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

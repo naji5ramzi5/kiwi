@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/inventory_controller.dart';
@@ -34,34 +33,50 @@ class POSOrdersController extends GetxController {
 
   Future<void> fetchDrivers() async {
     try {
+      final branchId = authController.currentBranchId.value;
+      // Fetch active delivery employees for this branch
       final response = await supabase
-          .from('drivers')
-          .select('*, profiles(full_name)')
+          .from('delivery_employees')
+          .select('id, user_id, status, is_active, profiles!inner(full_name, phone, is_online)')
+          .eq('branch_id', branchId)
           .eq('is_active', true);
       drivers.value = List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint('Error fetching drivers: $e');
+      // Fallback: fetch all drivers (backward compat)
+      try {
+        final response = await supabase
+            .from('drivers')
+            .select('*, profiles(full_name)')
+            .eq('is_active', true);
+        drivers.value = List<Map<String, dynamic>>.from(response);
+      } catch (e2) {
+        debugPrint('Fallback fetch drivers also failed: $e2');
+      }
     }
   }
 
-  Future<void> assignDriver(String orderId, String driverId) async {
+  Future<void> assignDriver(String orderId, String employeeId) async {
     try {
-      await supabase
-          .from('orders')
-          .update({'driver_id': driverId, 'status': 'picked_up'})
-          .eq('id', orderId);
+      await supabase.rpc('assign_order_to_delivery', params: {
+        'p_order_id': orderId,
+        'p_employee_id': employeeId,
+      });
 
-      // Notify the assigned driver via FCM
+      // Notify the assigned driver via FCM (edge function)
       try {
-        await supabase.functions.invoke(
-          'send-notification',
-          body: {
-            'userId': driverId,
-            'title': 'طلب جديد تم إسناده إليك',
-            'body': 'تم إسناد طلب جديد لك. الرجاء التوجه لاستلامه من الفرع.',
-            'data': {'orderId': orderId, 'type': 'new_assignment'},
-          },
-        );
+        final emp = drivers.firstWhereOrNull((d) => d['id'] == employeeId);
+        if (emp != null) {
+          await supabase.functions.invoke(
+            'send-notification',
+            body: {
+              'userId': emp['user_id'],
+              'title': 'طلب جديد تم إسناده إليك',
+              'body': 'تم إسناد طلب جديد لك. الرجاء التوجه لاستلامه من الفرع.',
+              'data': {'orderId': orderId, 'type': 'new_assignment'},
+            },
+          );
+        }
       } catch (fcmErr) {
         debugPrint('Failed to send FCM to driver: $fcmErr');
       }

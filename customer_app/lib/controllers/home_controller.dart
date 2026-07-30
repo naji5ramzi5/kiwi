@@ -126,11 +126,30 @@ class HomeController extends GetxController {
   }
 
   Future<void> findBestBranchByLocation() async {
-    final savedBranchId = _box.read<String>(_selectedBranchKey);
-
     try {
-      isLocating(true);
       isLoadingBranches(true);
+
+      // Restore saved branch immediately, skip GPS if valid
+      final savedBranchId = _box.read<String>(_selectedBranchKey);
+      if (savedBranchId != null) {
+        final saved = await supabase
+            .from('branches')
+            .select()
+            .eq('status', 'نشط')
+            .eq('id', savedBranchId)
+            .maybeSingle();
+        if (saved != null) {
+          branches.value = [Map<String, dynamic>.from(saved)];
+          selectedBranch.value = branches.first;
+          isInDeliveryZone(true);
+          fetchDeliveryZone();
+          fetchProducts();
+          return;
+        }
+      }
+
+      // No saved branch or saved branch no longer exists — use GPS
+      isLocating(true);
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -153,7 +172,6 @@ class HomeController extends GetxController {
           userLng.value = position.longitude;
         }
 
-        // Fetch active delivery zones
         final zones = await supabase
             .from('delivery_zones')
             .select()
@@ -161,19 +179,15 @@ class HomeController extends GetxController {
 
         String? matchedBranchId;
 
-        // Check Point-in-Polygon
         if (zones.isNotEmpty) {
           final userPoint = [position.longitude.toDouble(), position.latitude.toDouble()];
-          debugPrint('findBestBranchByLocation: checking ${zones.length} zones, userPoint=$userPoint');
           for (var zone in zones) {
             final geojson = zone['geojson'];
-            if (geojson == null) { debugPrint('  zone ${zone['id']}: geojson is null'); continue; }
+            if (geojson == null) continue;
             try {
               final polygons = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
-              debugPrint('  zone ${zone['id']}: geojsonType=${geojson['type']}, parsed=${polygons != null}');
               if (polygons != null && TurfHelper.pointInAnyPolygon(userPoint, polygons)) {
                 matchedBranchId = zone['branch_id'];
-                debugPrint('  >> MATCHED branch_id=$matchedBranchId');
                 break;
               }
             } catch (e) {
@@ -188,28 +202,21 @@ class HomeController extends GetxController {
             .eq('status', 'نشط');
         branches.value = List<Map<String, dynamic>>.from(allBranches);
 
-        // Restore saved branch if available
-        String? effectiveBranchId = matchedBranchId;
-        if (effectiveBranchId == null && savedBranchId != null) {
-          final saved = branches.firstWhereOrNull((b) => b['id'] == savedBranchId);
-          if (saved != null) {
-            effectiveBranchId = savedBranchId;
-          }
-        }
-
-        if (effectiveBranchId != null) {
+        if (matchedBranchId != null) {
           final matched = branches.firstWhereOrNull(
-            (b) => b['id'] == effectiveBranchId,
+            (b) => b['id'] == matchedBranchId,
           );
           if (matched != null) {
             selectedBranch.value = matched;
-            isInDeliveryZone.value = effectiveBranchId == matchedBranchId;
+            _box.write(_selectedBranchKey, matched['id']);
+            isInDeliveryZone.value = true;
             fetchDeliveryZone();
           }
         } else {
           isInDeliveryZone.value = false;
           if (branches.isNotEmpty) {
             selectedBranch.value = branches.first;
+            _box.write(_selectedBranchKey, branches.first['id']);
             fetchDeliveryZone();
           }
         }

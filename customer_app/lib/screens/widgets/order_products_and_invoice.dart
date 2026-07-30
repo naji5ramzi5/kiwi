@@ -62,7 +62,7 @@ class OrderProductsSection extends StatelessWidget {
     final unitPrice = item['unit_price'] ?? 0;
     final totalPrice = item['total_price'] ?? 0;
     final imageUrl = item['image_url']?.toString() ?? '';
-    final unitLabel = item['unit']?.toString() ?? 'unit_kg'.tr;
+    final unitLabel = item['unit']?.toString() ?? 'unit_piece'.tr;
     final qtyDisplay = (qty is num && qty == qty.roundToDouble()) ? '${qty.toInt()}' : qty.toString();
 
     return Container(

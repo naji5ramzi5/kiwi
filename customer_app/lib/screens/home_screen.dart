@@ -1,8 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'dart:io' show Platform;
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../controllers/home_controller.dart';
@@ -29,7 +27,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int? _lastBackPress;
   final HomeController controller = Get.find<HomeController>();
   final CartController cartController = Get.isRegistered<CartController>()
       ? Get.find<CartController>()
@@ -91,29 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (_lastBackPress == null || now - _lastBackPress! > 2000) {
-          _lastBackPress = now;
-          Get.snackbar(
-            'exit_title'.tr,
-            'exit_message'.tr,
-            snackPosition: SnackPosition.TOP,
-            duration: const Duration(seconds: 1),
-          );
-          return;
-        }
-        Get.closeAllSnackbars();
-        if (Platform.isAndroid) {
-          SystemNavigator.pop();
-        } else {
-          Get.close(1);
-        }
-      },
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
@@ -149,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: const Icon(
                             LucideIcons.bell,
                             color: AppTheme.primary,
-                            size: 24,
+                            size: 20,
                           ),
                         ),
                         if (hasNewNotification.value)
@@ -215,7 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 

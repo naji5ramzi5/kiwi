@@ -92,8 +92,8 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
           'title': item['product_name']?.toString() ?? '',
           'price': item['unit_price'] ?? 0,
           'image': '',
-          'unit': item['unit']?.toString() ?? 'unit_kg'.tr,
-          'unit_type': item['unit_type']?.toString() ?? 'kg',
+            'unit': item['unit']?.toString() ?? 'unit_piece'.tr,
+            'unit_type': item['unit_type']?.toString() ?? 'kilogram',
         }, qty: (item['quantity'] as num? ?? 1), showPopup: false);
         added++;
       }

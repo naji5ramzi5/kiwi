@@ -273,7 +273,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     'image': imageUrl,
                     'category': p['category'],
                     'unit': p['unit'] ?? 'unit_piece'.tr,
-                    'unit_type': p['unit_type']?.toString() ?? 'kg',
+                    'unit_type': p['unit_type']?.toString() ?? 'kilogram',
                     'stock': quantity,
                   };
 
@@ -380,9 +380,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                               fontFamily: 'Cairo',
                                             ),
                                           ),
-                                          Text(
-                                            ' /${p['unit']}',
-                                            style: TextStyle(
+                  Text(
+                    ' /${p['unit'] ?? 'unit_piece'.tr}',
+                    style: TextStyle(
                                               fontSize: 11,
                                               color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
                                               fontWeight: FontWeight.bold,

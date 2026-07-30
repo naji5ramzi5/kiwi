@@ -26,7 +26,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   bool _isLiked = false;
 
   String get _unitType => widget.product['unit_type']?.toString() ?? 'kilogram';
-  bool get _isDecimalUnit => ['kilogram', 'gram', 'liter', 'milliliter'].contains(_unitType);
+  bool get _isDecimalUnit => ['kilogram', 'kg', 'gram', 'g', 'liter', 'l', 'milliliter', 'ml'].contains(_unitType.toLowerCase());
   num get _qtyStep => _isDecimalUnit ? 0.5 : 1;
 
   @override
@@ -413,7 +413,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             'image': item['image_url'],
             'category': item['category'],
             'unit': item['unit'] ?? 'unit_piece'.tr,
-            'unit_type': item['unit_type']?.toString() ?? 'kg',
+            'unit_type': item['unit_type']?.toString() ?? 'kilogram',
           };
           return GestureDetector(
             onTap: () => Get.off(

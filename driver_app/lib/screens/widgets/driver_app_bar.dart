@@ -67,9 +67,9 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
                     MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
                   );
                 },
-                child: Container(
+                  child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                  child: const Icon(LucideIcons.bell, color: Color(0xFF10b981), size: 24),
+                  child: const Icon(LucideIcons.bell, color: Color(0xFF10b981), size: 20),
                 ),
               ),
               Container(

@@ -111,7 +111,7 @@ class OffersSection extends StatelessWidget {
                       'image': imageUrl,
                       'category': offer['category'],
                       'unit': offer['unit'] ?? 'unit_piece'.tr,
-                      'unit_type': offer['unit_type']?.toString() ?? 'kg',
+                      'unit_type': offer['unit_type']?.toString() ?? 'kilogram',
                       'stock': offerStock,
                     };
                     Get.to(() => ProductDetailsScreen(product: detailsData), transition: Transition.fadeIn);
@@ -186,7 +186,7 @@ class OffersSection extends StatelessWidget {
                                           'image': imageUrl,
                                           'category': offer['category'],
                                           'unit': offer['unit'] ?? 'unit_piece'.tr,
-                                          'unit_type': offer['unit_type']?.toString() ?? 'kg',
+                                          'unit_type': offer['unit_type']?.toString() ?? 'kilogram',
                                           'stock': offerStock,
                                         };
                                         cartController.addToCart(productData);

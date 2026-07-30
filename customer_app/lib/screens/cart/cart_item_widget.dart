@@ -98,7 +98,7 @@ class CartItemWidget extends StatelessWidget {
                     const SizedBox(width: 6),
                     Builder(builder: (context) {
                       final unitType = item['unit_type']?.toString() ?? 'kilogram';
-                      final isDecimal = ['kilogram', 'gram', 'liter', 'milliliter'].contains(unitType);
+                      final isDecimal = ['kilogram', 'kg', 'gram', 'g', 'liter', 'l', 'milliliter', 'ml'].contains(unitType.toLowerCase());
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(

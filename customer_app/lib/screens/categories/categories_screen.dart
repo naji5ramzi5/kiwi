@@ -33,7 +33,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   final RxString searchQuery = ''.obs;
   final RxString catSearchQuery = ''.obs;
 
-  late final bool _isPushedRoute;
+  Worker? _categoryWorker;
 
   final Map<String, IconData> categoryIcons = {
     'category_fruits'.tr: LucideIcons.apple,
@@ -59,20 +59,23 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   @override
   void initState() {
     super.initState();
-    _isPushedRoute = widget.initialCategory != null;
-    if (_isPushedRoute && widget.initialCategory!.isNotEmpty) {
-      selectedCategory.value = widget.initialCategory!;
-    } else {
-      final catFromNav = navController.selectedCategory.value;
-      if (catFromNav.isNotEmpty) {
-        selectedCategory.value = catFromNav;
+    final catFromNav = navController.selectedCategory.value;
+    if (catFromNav.isNotEmpty) {
+      selectedCategory.value = catFromNav;
+      navController.selectedCategory.value = '';
+    }
+    // React to category selections from home screen (after initState has run once)
+    _categoryWorker = ever(navController.selectedCategory, (String cat) {
+      if (cat.isNotEmpty) {
+        selectedCategory.value = cat;
         navController.selectedCategory.value = '';
       }
-    }
+    });
   }
 
   @override
   void dispose() {
+    _categoryWorker?.dispose();
     searchController.dispose();
     catSearchController.dispose();
     super.dispose();
@@ -83,12 +86,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       selectedCategory.value = '';
       catSearchController.clear();
       catSearchQuery.value = '';
-    } else if (_isPushedRoute) {
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      } else {
-        Get.back();
-      }
     }
   }
 
@@ -101,7 +98,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final cardBgColor = isDark ? const Color(0xFF1E291F) : Colors.white;
 
     return PopScope(
-      canPop: _isPushedRoute ? selectedCategory.value.isEmpty : false,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (selectedCategory.value.isNotEmpty) {
@@ -124,12 +121,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           )),
           elevation: 0,
           backgroundColor: Colors.transparent,
-          leading: _isPushedRoute
-              ? IconButton(
-                  icon: Icon(Icons.arrow_back_ios_rounded, color: themeTextColor, size: 20),
-                  onPressed: _handleBack,
-                )
-              : null,
+          leading: Obx(() {
+            if (selectedCategory.value.isEmpty) return const SizedBox.shrink();
+            return IconButton(
+              icon: Icon(Icons.arrow_back_ios_rounded, color: themeTextColor, size: 20),
+              onPressed: _handleBack,
+            );
+          }),
         ),
         body: Obx(() {
           if (homeController.categories.isEmpty) {

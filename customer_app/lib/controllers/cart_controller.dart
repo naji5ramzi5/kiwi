@@ -164,7 +164,7 @@ class CartController extends GetxController {
     }
   }
 
-  bool _isDecimalUnit(String unitType) => ['kilogram', 'gram', 'liter', 'milliliter'].contains(unitType);
+  bool _isDecimalUnit(String unitType) => ['kilogram', 'kg', 'gram', 'g', 'liter', 'l', 'milliliter', 'ml'].contains(unitType.toLowerCase());
 
   String formatPrice(dynamic price) {
     if (price == null) return '0';
@@ -351,7 +351,12 @@ class CartController extends GetxController {
 
     if (isPlacingOrder.value) return false;
 
+    // Lock immediately to prevent concurrent submissions — must be
+    // set BEFORE any async gap so a second call cannot race past.
+    isPlacingOrder(true);
+
     if (isBelowMinOrder) {
+      isPlacingOrder(false);
       Get.snackbar(
         'minimum_order'.tr,
         'minimum_order_not_met'.trParams({'minOrder': minOrderAmount.toInt().toString(), 'subtotal': subtotal.toInt().toString()}),
@@ -366,6 +371,7 @@ class CartController extends GetxController {
 
     final hasActive = await getActiveOrderId();
     if (hasActive != null) {
+      isPlacingOrder(false);
       Get.snackbar(
         'active_order_exists'.tr,
         'active_order_exists_msg'.tr,
@@ -377,8 +383,6 @@ class CartController extends GetxController {
       );
       return false;
     }
-
-    isPlacingOrder(true);
     final userId = supabase.auth.currentUser!.id;
 
     String? branchId;

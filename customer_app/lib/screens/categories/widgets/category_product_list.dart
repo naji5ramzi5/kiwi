@@ -175,7 +175,7 @@ class CategoryProductList extends StatelessWidget {
                   'image': imageUrl,
                   'category': p['category'],
                   'unit': p['unit'] ?? 'unit_piece'.tr,
-                  'unit_type': p['unit_type']?.toString() ?? 'kg',
+                  'unit_type': p['unit_type']?.toString() ?? 'kilogram',
                   'stock': stockQty,
                 };
 

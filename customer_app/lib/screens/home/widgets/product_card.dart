@@ -269,7 +269,7 @@ class ProductCard extends StatelessWidget {
               ],
             ),
             Text(
-              'product_per_unit'.trParams({'unit': (product['unit'] ?? 'unit_kg'.tr)}),
+              'product_per_unit'.trParams({'unit': (productData['unit'] ?? 'unit_kg'.tr)}),
               style: TextStyle(
                 fontSize: 10,
                 color:

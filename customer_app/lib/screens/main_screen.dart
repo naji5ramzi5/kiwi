@@ -1,4 +1,6 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_theme.dart';
@@ -18,6 +20,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final MainScreenController nav = Get.put(MainScreenController());
+  int? _lastBackPress;
 
   final List<Widget> _pages = [
     HomeScreen(),
@@ -31,21 +34,46 @@ class _MainScreenState extends State<MainScreen> {
     final double screenWidth = MediaQuery.of(context).size.width;
     final bool isDesktop = screenWidth > 900;
 
-    return Obx(() => Scaffold(
-      extendBody: true,
-      body: Row(
-        children: [
-          if (isDesktop) _buildSidebar(),
-          Expanded(
-            child: IndexedStack(
-              index: nav.currentIndex.value,
-              children: _pages,
+    return PopScope(
+      canPop: nav.currentIndex.value != 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        // On non-home tabs, do nothing (tab-level PopScopes handle their own back)
+        if (nav.currentIndex.value != 0) return;
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (_lastBackPress == null || now - _lastBackPress! > 2000) {
+          _lastBackPress = now;
+          Get.snackbar(
+            'exit_title'.tr,
+            'exit_message'.tr,
+            snackPosition: SnackPosition.TOP,
+            duration: const Duration(seconds: 1),
+          );
+          return;
+        }
+        Get.closeAllSnackbars();
+        if (Platform.isAndroid) {
+          SystemNavigator.pop();
+        } else {
+          Get.close(1);
+        }
+      },
+      child: Obx(() => Scaffold(
+        extendBody: true,
+        body: Row(
+          children: [
+            if (isDesktop) _buildSidebar(),
+            Expanded(
+              child: IndexedStack(
+                index: nav.currentIndex.value,
+                children: _pages,
+              ),
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: isDesktop ? null : _buildFloatingIslandNavBar(),
-    ));
+          ],
+        ),
+        bottomNavigationBar: isDesktop ? null : _buildFloatingIslandNavBar(),
+      )),
+    );
   }
 
   Widget _buildSidebar() {

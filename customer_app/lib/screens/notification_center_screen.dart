@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/notification_item.dart';
 import '../services/notification_storage.dart';
+import '../main.dart' show fcmMessageNotifier;
 
 class NotificationCenterScreen extends StatefulWidget {
   const NotificationCenterScreen({super.key});
@@ -29,6 +30,21 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       _notifications = items;
       _isLoading = false;
     });
+    // Auto-open notification if opened from a notification tap
+    final pending = fcmMessageNotifier.value;
+    if (pending != null && mounted) {
+      fcmMessageNotifier.value = null;
+      final notifId = pending.messageId;
+      if (notifId != null) {
+        final match = _notifications.cast<NotificationItem?>().firstWhere(
+          (n) => n?.id == notifId,
+          orElse: () => null,
+        );
+        if (match != null && match.imageUrl != null) {
+          _showFullImage(match, Theme.of(context).brightness == Brightness.dark);
+        }
+      }
+    }
   }
 
   @override

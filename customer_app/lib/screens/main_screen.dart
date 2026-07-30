@@ -35,11 +35,11 @@ class _MainScreenState extends State<MainScreen> {
     final bool isDesktop = screenWidth > 900;
 
     return PopScope(
-      canPop: nav.currentIndex.value != 0,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        // On non-home tabs, do nothing (tab-level PopScopes handle their own back)
-        if (nav.currentIndex.value != 0) return;
+        // Never show "Press again to exit" on categories tab
+        if (nav.currentIndex.value == 1) return;
         final now = DateTime.now().millisecondsSinceEpoch;
         if (_lastBackPress == null || now - _lastBackPress! > 2000) {
           _lastBackPress = now;

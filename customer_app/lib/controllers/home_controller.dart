@@ -129,18 +129,19 @@ class HomeController extends GetxController {
     try {
       isLoadingBranches(true);
 
+      // Always fetch the full branch list first
+      final allBranches = await supabase
+          .from('branches')
+          .select()
+          .eq('status', 'نشط');
+      branches.value = List<Map<String, dynamic>>.from(allBranches);
+
       // Restore saved branch immediately, skip GPS if valid
       final savedBranchId = _box.read<String>(_selectedBranchKey);
       if (savedBranchId != null) {
-        final saved = await supabase
-            .from('branches')
-            .select()
-            .eq('status', 'نشط')
-            .eq('id', savedBranchId)
-            .maybeSingle();
+        final saved = branches.firstWhereOrNull((b) => b['id'] == savedBranchId);
         if (saved != null) {
-          branches.value = [Map<String, dynamic>.from(saved)];
-          selectedBranch.value = branches.first;
+          selectedBranch.value = saved;
           isInDeliveryZone(true);
           fetchDeliveryZone();
           fetchProducts();
@@ -148,7 +149,7 @@ class HomeController extends GetxController {
         }
       }
 
-      // No saved branch or saved branch no longer exists — use GPS
+      // No valid saved branch — use GPS
       isLocating(true);
 
       LocationPermission permission = await Geolocator.checkPermission();
@@ -195,12 +196,6 @@ class HomeController extends GetxController {
             }
           }
         }
-
-        final allBranches = await supabase
-            .from('branches')
-            .select()
-            .eq('status', 'نشط');
-        branches.value = List<Map<String, dynamic>>.from(allBranches);
 
         if (matchedBranchId != null) {
           final matched = branches.firstWhereOrNull(

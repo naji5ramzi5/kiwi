@@ -7,7 +7,7 @@ interface DeliveryEmployee {
   id: string; user_id: string; branch_id: string | null; phone: string | null;
   status: string; is_active: boolean; total_deliveries: number; joined_at: string;
   transferred_at: string | null;
-  profiles?: { full_name: string; avatar_url?: string; is_online?: boolean };
+  full_name?: string; avatar_url?: string; is_online?: boolean;
   branch_name?: string;
 }
 
@@ -41,12 +41,11 @@ export default function TransferDelivery() {
 
   async function fetchEmployees() {
     const { data, error } = await supabase
-      .from('delivery_employees')
-      .select('*, profiles!inner(full_name, avatar_url, is_online)')
+      .from('delivery_employees_with_profiles')
+      .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
     if (error) { toast.error('خطأ في جلب المناديب'); return }
-    // Fetch branch names separately
     const branchIds = [...new Set((data || []).map(d => d.branch_id).filter(Boolean))]
     const { data: branchData } = await supabase.from('branches').select('id, name').in('id', branchIds)
     const branchMap = Object.fromEntries((branchData || []).map((b: Branch) => [b.id, b.name]))
@@ -68,11 +67,11 @@ export default function TransferDelivery() {
   }
 
   function getEmployeeName(e: DeliveryEmployee) {
-    return (e as any).profiles?.full_name || 'مندوب'
+    return e.full_name || 'مندوب'
   }
 
   function getOnlineStatus(e: DeliveryEmployee) {
-    return (e as any).profiles?.is_online ?? false
+    return e.is_online ?? false
   }
 
   async function handleTransfer() {

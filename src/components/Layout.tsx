@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useNotifications } from '../lib/notifications'
 import type { AppNotification } from '../lib/notifications'
+import { supabase } from '../lib/supabase'
 
 const NAV = [
   { label: 'الرئيسية', path: '/dashboard', icon: LayoutDashboard, section: 'اللوحة المركزية', color: '#10b981' },
@@ -256,17 +257,17 @@ export default function Layout() {
                 background: 'var(--white)', borderRadius: 12, boxShadow: '0 -8px 30px rgba(0,0,0,.12)',
                 border: '1px solid var(--gray100)', marginBottom: 8, overflow: 'hidden', zIndex: 1000
               }}>
-                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)' }}
+                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeig[...]
                   onClick={() => { navigate('/profile'); setShowUserMenu(false) }}>
                   <User size={16} /> الملف الشخصي
                 </button>
-                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)' }}
+                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeig[...]
                   onClick={() => { navigate('/settings'); setShowUserMenu(false) }}>
                   <Settings size={16} /> الإعدادات
                 </button>
                 <div style={{ borderTop: '1px solid var(--gray100)' }}>
-                  <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#ef4444', fontFamily: 'var(--font-ar)' }}
-                    onClick={() => { localStorage.removeItem('token'); window.location.href = '/login' }}>
+                  <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWe[...]
+                    onClick={async () => { await supabase.auth.signOut(); navigate('/login') }}>
                     <LogOut size={16} /> تسجيل الخروج
                   </button>
                 </div>
@@ -314,7 +315,7 @@ export default function Layout() {
                     <Search size={16} color="var(--gray400)" />
                     <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                       placeholder="ابحث عن صفحة..." style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, fontSize: 13, fontFamily: 'var(--font-ar)' }} />
-                    {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--gray400)" /></button>}
+                    {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--gray400)" />[...]
                   </div>
                   {searchResults.length > 0 && (
                     <div style={{ maxHeight: 250, overflowY: 'auto' }}>
@@ -322,7 +323,7 @@ export default function Layout() {
                         const Icon = r.icon
                         return (
                           <button key={r.path} onClick={() => { navigate(r.path); setSearchExpanded(false); setSearchQuery('') }}
-                            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderBottom: '1px solid var(--gray50)', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)', textAlign: 'right' }}>
+                            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderBottom: '1px solid var(--gray50[...]
                             <Icon size={16} color={r.color} /> {r.label}
                           </button>
                         )

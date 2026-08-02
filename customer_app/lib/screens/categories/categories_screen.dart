@@ -82,13 +82,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   void _handleBack() {
-    if (selectedCategory.value.isNotEmpty) {
-      selectedCategory.value = '';
-      catSearchController.clear();
-      catSearchQuery.value = '';
-    } else {
-      navController.switchTab(0);
-    }
+    navController.switchTab(0);
   }
 
   @override

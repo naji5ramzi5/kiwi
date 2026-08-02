@@ -12,7 +12,8 @@ import 'cart/cart_screen.dart';
 import 'categories/categories_screen.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int initialTab;
+  const MainScreen({super.key, this.initialTab = 0});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -21,6 +22,16 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final MainScreenController nav = Get.put(MainScreenController());
   int? _lastBackPress;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.initialTab != 0) {
+        nav.switchTab(widget.initialTab);
+      }
+    });
+  }
 
   final List<Widget> _pages = [
     HomeScreen(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../theme/app_theme.dart';
 import '../controllers/main_screen_controller.dart';
+import '../screens/main_screen.dart';
 
 void showAddedToCartDialog(Map<String, dynamic> product, num qty, String formattedPrice) {
   Get.dialog(

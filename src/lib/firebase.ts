@@ -3,13 +3,13 @@ import { getMessaging, getToken, onMessage, type Messaging } from 'firebase/mess
 import { getAnalytics } from 'firebase/analytics'
 
 const firebaseConfig = {
-  apiKey:            'AIzaSyCE4WX7pdUsiqghBpDz9jfc0mLCbsfcGZI',
-  authDomain:        'fresh-enterprise.firebaseapp.com',
-  projectId:         'fresh-enterprise',
-  storageBucket:     'fresh-enterprise.firebasestorage.app',
-  messagingSenderId: '214305510491',
-  appId:             '1:214305510491:web:fe1e3ce1100ea92bec5b7e',
-  measurementId:     'G-7SW1QB3GS7',
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
 // Avoid duplicate initialization in HMR
@@ -39,7 +39,7 @@ export async function requestNotificationPermission(): Promise<string | null> {
     }
 
     const token = await getToken(messaging, {
-      vapidKey: 'BF7wkvaSEINXTN-SsV_3tcRMZVmsk0_JZdlYXzJXhiDTcagcid0pRQUAktchrsJy7hi5oKd-DwljxeYN-3GGaOc',
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
     })
 
     return token

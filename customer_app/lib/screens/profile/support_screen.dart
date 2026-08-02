@@ -52,19 +52,21 @@ class SupportScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  ClipOval(
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      width: 72,
-                      height: 72,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(16),
                         child: Image.asset(
                           'assets/images/kwi.png',
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Icon(LucideIcons.headphones, color: Colors.white, size: 32),
+                          errorBuilder: (_, __, ___) => const Icon(LucideIcons.headphones, color: Colors.white, size: 36),
                         ),
                       ),
                     ),

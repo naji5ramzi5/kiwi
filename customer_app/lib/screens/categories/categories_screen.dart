@@ -86,6 +86,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       selectedCategory.value = '';
       catSearchController.clear();
       catSearchQuery.value = '';
+    } else {
+      navController.switchTab(0);
     }
   }
 
@@ -101,11 +103,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (selectedCategory.value.isNotEmpty) {
-          selectedCategory.value = '';
-          catSearchController.clear();
-          catSearchQuery.value = '';
-        }
+        _handleBack();
       },
       child: Scaffold(
         backgroundColor: bgColor,

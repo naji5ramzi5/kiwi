@@ -113,47 +113,47 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               // Location bar moved to body for scrollability
               actions: [
-                GestureDetector(
-                  onTap: () => _showNotifications(context),
-                  child: Obx(
-                    () => Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 14),
-                          child: const Icon(
-                            LucideIcons.bell,
-                            color: AppTheme.primary,
-                            size: 20,
-                          ),
+                Obx(
+                  () => Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          LucideIcons.bell,
+                          color: AppTheme.primary,
+                          size: 20,
                         ),
-                        if (hasNewNotification.value)
-                          Positioned(
-                            top: 0,
-                            right: 12,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
+                        splashRadius: 22,
+                        splashColor: AppTheme.primary.withOpacity(0.15),
+                        highlightColor: Colors.transparent,
+                        onPressed: () => _showNotifications(context),
+                      ),
+                      if (hasNewNotification.value)
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '${notificationCount.value}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
                               ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: Text(
-                                '${notificationCount.value}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                 ),
               ],

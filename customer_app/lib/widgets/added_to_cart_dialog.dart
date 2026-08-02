@@ -135,7 +135,6 @@ void showAddedToCartDialog(Map<String, dynamic> product, num qty, String formatt
                     child: ElevatedButton(
                       onPressed: () {
                         Get.back();
-                        Get.until((route) => route.isFirst);
                         Get.find<MainScreenController>().switchTab(2);
                       },
                       style: ElevatedButton.styleFrom(

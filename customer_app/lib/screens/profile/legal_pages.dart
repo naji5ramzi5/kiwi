@@ -31,19 +31,24 @@ class AboutAppScreen extends StatelessWidget {
           children: [
             // Logo
             Container(
-              width: 120,
-              height: 120,
+              width: 140,
+              height: 140,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.06),
                 shape: BoxShape.circle,
                 border: Border.all(color: AppTheme.primary.withOpacity(0.15), width: 2),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Image.asset(
-                  'assets/images/kwi.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, size: 50, color: AppTheme.primary),
+              child: ClipOval(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      'assets/images/kwi.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, size: 50, color: AppTheme.primary),
+                    ),
+                  ),
                 ),
               ),
             ),

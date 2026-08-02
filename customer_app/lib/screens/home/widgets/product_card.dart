@@ -66,59 +66,19 @@ class ProductCard extends StatelessWidget {
                       ClipRRect(
                         borderRadius:
                             const BorderRadius.vertical(top: Radius.circular(22)),
-                        child: GestureDetector(
-                          onTap: () {
-                            if (imageUrl.isNotEmpty) {
-                              Get.dialog(Stack(children: [
-                                Positioned.fill(
-                                  child: CachedNetworkImage(
-                                    imageUrl: imageUrl,
-                                    fit: BoxFit.contain,
-                                    placeholder: (c, u) => const Center(
-                                        child: CircularProgressIndicator()),
-                                    errorWidget: (c, u, e) => const Center(
-                                        child:
-                                            Icon(Icons.broken_image, size: 60)),
-                                  ),
+                        child: imageUrl.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: isDark
+                                      ? Colors.grey[800]
+                                      : Colors.grey[100],
                                 ),
-                                Positioned(
-                                  top: 40,
-                                  right: 20,
-                                  child: IconButton(
-                                    icon: const Icon(Icons.close,
-                                        color: Colors.white, size: 28),
-                                    onPressed: () => Get.back(),
-                                  ),
-                                ),
-                              ]));
-                            }
-                          },
-                          child: imageUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: imageUrl,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    color: isDark
-                                        ? Colors.grey[800]
-                                        : Colors.grey[100],
-                                  ),
-                                  errorWidget: (context, url, error) =>
-                                      Container(
-                                    color: isDark
-                                        ? Colors.grey[800]
-                                        : const Color(0xFFF0FDF4),
-                                    child: const Center(
-                                      child: Icon(
-                                        LucideIcons.shoppingBag,
-                                        color: AppTheme.primary,
-                                        size: 40,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Container(
+                                errorWidget: (context, url, error) =>
+                                    Container(
                                   color: isDark
                                       ? Colors.grey[800]
                                       : const Color(0xFFF0FDF4),
@@ -130,7 +90,19 @@ class ProductCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                        ),
+                              )
+                            : Container(
+                                color: isDark
+                                    ? Colors.grey[800]
+                                    : const Color(0xFFF0FDF4),
+                                child: const Center(
+                                  child: Icon(
+                                    LucideIcons.shoppingBag,
+                                    color: AppTheme.primary,
+                                    size: 40,
+                                  ),
+                                ),
+                              ),
                       ),
                       Positioned(
                         top: 18,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { supabase } from './lib/supabase'
@@ -6,28 +6,29 @@ import type { Session } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
-import Dashboard from './pages/Dashboard'
-import Products from './pages/Products'
-import Branches from './pages/Branches'
-import BranchDetail from './pages/BranchDetail'
-import Orders from './pages/Orders'
-import Drivers from './pages/Drivers'
-import Marketing from './pages/Marketing'
-import Finance from './pages/Finance'
-import FinancialDashboard from './pages/FinancialDashboard'
-import Settings from './pages/Settings'
-import Customers from './pages/Customers'
-import Inventory from './pages/Inventory'
-import Purchases from './pages/Purchases'
-import Categories from './pages/Categories'
-import AIChat from './pages/AIChat'
-import Ratings from './pages/Ratings'
 import Login from './pages/Login'
-import OrderForm from './pages/OrderForm'
-import DeliveryZones from './pages/DeliveryZones'
-import BranchPrices from './pages/BranchPrices'
-import Profile from './pages/Profile'
-import TransferDelivery from './pages/TransferDelivery'
+
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Products = lazy(() => import('./pages/Products'))
+const Branches = lazy(() => import('./pages/Branches'))
+const BranchDetail = lazy(() => import('./pages/BranchDetail'))
+const Orders = lazy(() => import('./pages/Orders'))
+const Drivers = lazy(() => import('./pages/Drivers'))
+const Marketing = lazy(() => import('./pages/Marketing'))
+const Finance = lazy(() => import('./pages/Finance'))
+const FinancialDashboard = lazy(() => import('./pages/FinancialDashboard'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Customers = lazy(() => import('./pages/Customers'))
+const Inventory = lazy(() => import('./pages/Inventory'))
+const Purchases = lazy(() => import('./pages/Purchases'))
+const Categories = lazy(() => import('./pages/Categories'))
+const AIChat = lazy(() => import('./pages/AIChat'))
+const Ratings = lazy(() => import('./pages/Ratings'))
+const OrderForm = lazy(() => import('./pages/OrderForm'))
+const DeliveryZones = lazy(() => import('./pages/DeliveryZones'))
+const BranchPrices = lazy(() => import('./pages/BranchPrices'))
+const Profile = lazy(() => import('./pages/Profile'))
+const TransferDelivery = lazy(() => import('./pages/TransferDelivery'))
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -84,6 +85,7 @@ export default function App() {
         }}
       />
       <ErrorBoundary>
+      <Suspense fallback={<div className="loader-overlay"><div className="loader"></div></div>}>
       <Routes>
         <Route path="/" element={
           <>
@@ -114,6 +116,7 @@ export default function App() {
           <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
+      </Suspense>
       </ErrorBoundary>
     </BrowserRouter>
   )

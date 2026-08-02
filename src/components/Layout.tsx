@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Package, GitBranch, ShoppingCart, Activity,
-  Truck, Megaphone, DollarSign, Users, Bell, Search, Settings, FileText, Box, Leaf,
-  X, CheckCheck, Trash2, ShieldAlert, Tag, UserCheck, Printer, MapPin, Star,
+  LayoutDashboard, Package, GitBranch, Activity,
+  Truck, Megaphone, DollarSign, Users, Bell, Search, Settings, FileText, Box,
+  X, CheckCheck, Trash2, ShieldAlert, Tag, Printer, MapPin, Star,
   Moon, Sun, ChevronDown, ChevronLeft, LogOut, User, Home, TrendingUp, ArrowLeftRight
 } from 'lucide-react'
 import { useNotifications } from '../lib/notifications'
@@ -257,16 +257,16 @@ export default function Layout() {
                 background: 'var(--white)', borderRadius: 12, boxShadow: '0 -8px 30px rgba(0,0,0,.12)',
                 border: '1px solid var(--gray100)', marginBottom: 8, overflow: 'hidden', zIndex: 1000
               }}>
-                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeig[...]
+                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)' }}
                   onClick={() => { navigate('/profile'); setShowUserMenu(false) }}>
                   <User size={16} /> الملف الشخصي
                 </button>
-                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeig[...]
+                <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)' }}
                   onClick={() => { navigate('/settings'); setShowUserMenu(false) }}>
                   <Settings size={16} /> الإعدادات
                 </button>
                 <div style={{ borderTop: '1px solid var(--gray100)' }}>
-                  <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWe[...]
+                  <button style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#ef4444', fontFamily: 'var(--font-ar)' }}
                     onClick={async () => { await supabase.auth.signOut(); navigate('/login') }}>
                     <LogOut size={16} /> تسجيل الخروج
                   </button>
@@ -315,7 +315,7 @@ export default function Layout() {
                     <Search size={16} color="var(--gray400)" />
                     <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                       placeholder="ابحث عن صفحة..." style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, fontSize: 13, fontFamily: 'var(--font-ar)' }} />
-                    {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--gray400)" />[...]
+                    {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><X size={14} color="var(--gray400)" /></button>}
                   </div>
                   {searchResults.length > 0 && (
                     <div style={{ maxHeight: 250, overflowY: 'auto' }}>
@@ -323,7 +323,7 @@ export default function Layout() {
                         const Icon = r.icon
                         return (
                           <button key={r.path} onClick={() => { navigate(r.path); setSearchExpanded(false); setSearchQuery('') }}
-                            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderBottom: '1px solid var(--gray50[...]
+                            style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderBottom: '1px solid var(--gray50)', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--gray700)', fontFamily: 'var(--font-ar)', textAlign: 'right' }}>
                             <Icon size={16} color={r.color} /> {r.label}
                           </button>
                         )

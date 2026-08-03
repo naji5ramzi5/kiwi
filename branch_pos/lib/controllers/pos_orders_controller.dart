@@ -34,10 +34,10 @@ class POSOrdersController extends GetxController {
   Future<void> fetchDrivers() async {
     try {
       final branchId = authController.currentBranchId.value;
-      // Fetch active delivery employees for this branch
+      // Fetch active delivery employees for this branch (using view to avoid broken FK join)
       final response = await supabase
-          .from('delivery_employees')
-          .select('id, user_id, status, is_active, profiles!inner(full_name, phone, is_online)')
+          .from('delivery_employees_with_profiles')
+          .select('id, user_id, status, is_active, full_name, phone, is_online')
           .eq('branch_id', branchId)
           .eq('is_active', true);
       drivers.value = List<Map<String, dynamic>>.from(response);
@@ -93,14 +93,15 @@ class POSOrdersController extends GetxController {
       isLoading(true);
       final branchId = authController.currentBranchId.value;
 
-      // Fetch orders for this branch (including orders without branch_id for backward compatibility)
+      // Fetch recent orders for this branch (last 100 to keep it fast with high volume)
       final response = await supabase
           .from('orders')
           .select(
             '*, profiles(full_name, phone), order_items(*, products(name))',
           )
           .or('branch_id.eq.$branchId,and(branch_id.is.null,status.eq.pending)')
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .limit(100);
 
       orders.value = List<Map<String, dynamic>>.from(response);
       pendingCount.value = _pendingOrders;

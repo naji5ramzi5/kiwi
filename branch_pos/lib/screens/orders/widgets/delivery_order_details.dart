@@ -82,8 +82,8 @@ class DeliveryOrderDetails extends StatelessWidget {
                 final driver = controller.drivers[index];
                 return ListTile(
                   leading: const CircleAvatar(child: Icon(LucideIcons.truck)),
-                  title: Text(driver['profiles']?['full_name'] ?? 'مندوب'),
-                  subtitle: Text(driver['current_status'] ?? 'متاح'),
+                  title: Text(driver['full_name'] ?? 'مندوب'),
+                  subtitle: Text(driver['status'] == 'online' ? 'متاح' : 'غير متاح'),
                   trailing: const Icon(LucideIcons.chevronLeft),
                   onTap: () {
                     controller.assignDriver(order['id'], driver['id']);

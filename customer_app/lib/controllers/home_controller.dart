@@ -136,33 +136,28 @@ class HomeController extends GetxController {
           .eq('status', 'نشط');
       branches.value = List<Map<String, dynamic>>.from(allBranches);
 
-      // Restore saved branch immediately, skip GPS if valid
-      final savedBranchId = _box.read<String>(_selectedBranchKey);
-      if (savedBranchId != null) {
-        final saved = branches.firstWhereOrNull((b) => b['id'] == savedBranchId);
-        if (saved != null) {
-          selectedBranch.value = saved;
-          isInDeliveryZone(true);
-          fetchDeliveryZone();
-          fetchProducts();
-          return;
-        }
-      }
-
-      // No valid saved branch — use GPS
+      // Try GPS first so location is detected on every entry
       isLocating(true);
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      Position? position;
+      try {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+
+        if (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always) {
+          position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          );
+        }
+      } catch (e) {
+        debugPrint('GPS failed, falling back to saved branch: $e');
+        position = null;
       }
 
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-
+      if (position != null) {
         final resolvedAddr = await reverseGeocode(
           position.latitude,
           position.longitude,
@@ -216,8 +211,19 @@ class HomeController extends GetxController {
           }
         }
       } else {
-        await fetchAllBranches();
-        fetchDeliveryZone();
+        // GPS failed or permission denied — restore saved branch
+        final savedBranchId = _box.read<String>(_selectedBranchKey);
+        if (savedBranchId != null) {
+          final saved = branches.firstWhereOrNull((b) => b['id'] == savedBranchId);
+          if (saved != null) {
+            selectedBranch.value = saved;
+            isInDeliveryZone(true);
+            fetchDeliveryZone();
+          }
+        } else {
+          await fetchAllBranches();
+          fetchDeliveryZone();
+        }
       }
     } catch (e) {
       debugPrint('Error in smart selection: $e');

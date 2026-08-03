@@ -28,25 +28,45 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: h })
   if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: h })
   try {
-    const { userId, broadcast, title, body, data } = await req.json()
+    const { userId, broadcast, tokens, title, body, data } = await req.json()
     if (!title || !body) return new Response(JSON.stringify({ error: 'Missing title or body' }), { status: 400, headers: h })
-    if (!userId && !broadcast) return new Response(JSON.stringify({ error: 'Missing userId or broadcast' }), { status: 400, headers: h })
-    const tokens = []
+    if (!userId && !broadcast && !tokens) return new Response(JSON.stringify({ error: 'Missing userId, broadcast or tokens' }), { status: 400, headers: h })
+    const tokenList = Array.isArray(tokens) ? tokens : []
+    if (tokenList.length > 0) {
+      const results = await Promise.all(tokenList.map(async (token: string) => {
+        const dataPayload: Record<string, string> = {
+          title,
+          body,
+          image: (data as Record<string, string>)?.image || '',
+          type: (data as Record<string, string>)?.type || '',
+          orderId: (data as Record<string, string>)?.orderId || '',
+          status: (data as Record<string, string>)?.status || '',
+        };
+        const accessToken = await getAccessToken()
+        const fcmUrl = 'https://fcm.googleapis.com/v1/projects/' + FCM_PROJECT_ID + '/messages:send'
+        const res = await fetch(fcmUrl, { method: 'POST', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: { token, data: dataPayload, android: { priority: 'high' } } }) })
+        if (!res.ok) return { token, success: false, error: await res.text() }
+        return { token, success: true, response: await res.json() }
+      }))
+      const successful = results.filter(r => r.success).length
+      return new Response(JSON.stringify({ successful, total: results.length, broadcast: !!broadcast, results }), { headers: h })
+    }
+    const tokensAcc: { token: string; device_type: string }[] = []
     if (broadcast) {
       const { data: allTokens } = await supabase.from('user_fcm_tokens').select('token, device_type')
-      if (allTokens) tokens.push(...allTokens)
+      if (allTokens) tokensAcc.push(...allTokens)
       const { data: profiles } = await supabase.from('profiles').select('fcm_token').not('fcm_token', 'is', null)
-      if (profiles) for (const p of profiles) if (p.fcm_token && !tokens.some(t => t.token === p.fcm_token)) tokens.push({ token: p.fcm_token, device_type: 'android' })
+      if (profiles) for (const p of profiles) if (p.fcm_token && !tokensAcc.some(t => t.token === p.fcm_token)) tokensAcc.push({ token: p.fcm_token, device_type: 'android' })
     } else {
       const { data: ut } = await supabase.from('user_fcm_tokens').select('token, device_type').eq('user_id', userId)
-      if (ut) tokens.push(...ut)
+      if (ut) tokensAcc.push(...ut)
       const { data: pr } = await supabase.from('profiles').select('fcm_token').eq('id', userId).maybeSingle()
-      if (pr?.fcm_token && !tokens.some(t => t.token === pr.fcm_token)) tokens.push({ token: pr.fcm_token, device_type: 'android' })
+      if (pr?.fcm_token && !tokensAcc.some(t => t.token === pr.fcm_token)) tokensAcc.push({ token: pr.fcm_token, device_type: 'android' })
     }
-    if (!tokens.length) return new Response(JSON.stringify({ error: 'No FCM tokens found', successful: 0, total: 0 }), { status: 200, headers: h })
+    if (!tokensAcc.length) return new Response(JSON.stringify({ error: 'No FCM tokens found', successful: 0, total: 0 }), { status: 200, headers: h })
     const accessToken = await getAccessToken()
     const fcmUrl = 'https://fcm.googleapis.com/v1/projects/' + FCM_PROJECT_ID + '/messages:send'
-      const results = await Promise.all(tokens.map(async (r) => {
+      const results = await Promise.all(tokensAcc.map(async (r) => {
         // Merge all notification content into data to prevent duplicate OS+app display
         const dataPayload: Record<string, string> = {
           title,

@@ -10,9 +10,11 @@ class MainScreenController extends GetxController {
   }
 
   void switchTab(int index, {String? category}) {
-    currentIndex.value = index;
     if (category != null) {
       selectedCategory.value = category;
+    } else if (index == 1) {
+      selectedCategory.value = '';
     }
+    currentIndex.value = index;
   }
 }

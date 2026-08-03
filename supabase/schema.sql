@@ -438,13 +438,16 @@ BEGIN
 
     -- إرسال الإشعار إذا وجد التوكن
     IF v_token IS NOT NULL THEN
-      PERFORM
-        extensions.http_post(
-          'https://pftjlvtdzokbzuioqfug.functions.supabase.co/send-notification',
-          jsonb_build_object('tokens', ARRAY[v_token], 'title', v_title, 'body', v_body)::text,
-          'application/json',
-          '{"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYwODQ2OCwiZXhwIjoyMDk0MTg0NDY4fQ.kEetvZsaf7xdDrwnCCMtXOd7aky92BnBayl_VUNtnQQ"}'
-        );
+      BEGIN
+        PERFORM
+          extensions.http_post(
+            'https://pftjlvtdzokbzuioqfug.functions.supabase.co/send-notification',
+            jsonb_build_object('tokens', ARRAY[v_token], 'title', v_title, 'body', v_body)::text,
+            'application/json'
+          );
+      EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'notify_customer_on_status_change error: %', SQLERRM;
+      END;
     END IF;
   END IF;
 
@@ -479,13 +482,16 @@ BEGIN
     );
 
     -- استدعاء الوظيفة البرمجية
-    PERFORM
-      extensions.http_post(
-        'https://pftjlvtdzokbzuioqfug.functions.supabase.co/send-notification',
-        v_payload::text,
-        'application/json',
-        '{"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmdGpsdnRkem9rYnp1aW9xZnVnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODYwODQ2OCwiZXhwIjoyMDk0MTg0NDY4fQ.kEetvZsaf7xdDrwnCCMtXOd7aky92BnBayl_VUNtnQQ"}'
-      );
+    BEGIN
+      PERFORM
+        extensions.http_post(
+          'https://pftjlvtdzokbzuioqfug.functions.supabase.co/send-notification',
+          v_payload::text,
+          'application/json'
+        );
+    EXCEPTION WHEN OTHERS THEN
+      RAISE WARNING 'notify_drivers_on_new_order error: %', SQLERRM;
+    END;
   END IF;
 
   RETURN NEW;

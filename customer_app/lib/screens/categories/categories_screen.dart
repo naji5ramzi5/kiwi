@@ -62,13 +62,11 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final catFromNav = navController.selectedCategory.value;
     if (catFromNav.isNotEmpty) {
       selectedCategory.value = catFromNav;
-      navController.selectedCategory.value = '';
     }
-    // React to category selections from home screen (after initState has run once)
-    _categoryWorker = ever(navController.selectedCategory, (String cat) {
-      if (cat.isNotEmpty) {
-        selectedCategory.value = cat;
-        navController.selectedCategory.value = '';
+    // React to tab switches: show subcategory when selected, grid otherwise
+    _categoryWorker = ever(navController.currentIndex, (int idx) {
+      if (idx == 1) {
+        selectedCategory.value = navController.selectedCategory.value;
       }
     });
   }
@@ -82,7 +80,11 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   void _handleBack() {
-    navController.switchTab(0);
+    if (selectedCategory.value.isNotEmpty) {
+      selectedCategory.value = '';
+    } else {
+      navController.switchTab(0);
+    }
   }
 
   @override
@@ -113,13 +115,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           )),
           elevation: 0,
           backgroundColor: Colors.transparent,
-          leading: Obx(() {
-            if (selectedCategory.value.isEmpty) return const SizedBox.shrink();
-            return IconButton(
-              icon: Icon(Icons.arrow_back_ios_rounded, color: themeTextColor, size: 20),
-              onPressed: _handleBack,
-            );
-          }),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_rounded, color: themeTextColor, size: 20),
+            onPressed: _handleBack,
+          ),
         ),
         body: Obx(() {
           if (homeController.categories.isEmpty) {

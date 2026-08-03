@@ -38,8 +38,8 @@ class _DeliveryEmployeesScreenState extends State<DeliveryEmployeesScreen> {
     try {
       final branchId = authController.currentBranchId.value;
       final response = await supabase
-          .from('delivery_employees')
-          .select('*, profiles!inner(full_name, phone, avatar_url, is_online)')
+          .from('delivery_employees_with_profiles')
+          .select('*')
           .eq('branch_id', branchId)
           .eq('is_active', true)
           .order('created_at', ascending: false);
@@ -161,11 +161,10 @@ class _DeliveryEmployeesScreenState extends State<DeliveryEmployeesScreen> {
                         itemCount: employees.length,
                         itemBuilder: (context, index) {
                           final emp = employees[index];
-                          final profile = emp['profiles'] as Map<String, dynamic>?;
-                          final isOnline = profile?['is_online'] ?? false;
-                          final fullName = profile?['full_name'] ?? 'مندوب';
-                          final phone = profile?['phone'] ?? '--';
-                          final avatarUrl = profile?['avatar_url'] as String?;
+                          final isOnline = emp['is_online'] ?? false;
+                          final fullName = emp['full_name'] ?? 'مندوب';
+                          final phone = emp['phone'] ?? '--';
+                          final avatarUrl = emp['avatar_url'] as String?;
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 16),
@@ -258,7 +257,7 @@ class _DeliveryEmployeesScreenState extends State<DeliveryEmployeesScreen> {
                                   ),
                                   IconButton(
                                     onPressed: () {
-                                      _showEmployeeDetails(context, emp, profile);
+                                      _showEmployeeDetails(context, emp, null);
                                     },
                                     icon: const Icon(LucideIcons.chevronLeft, color: AppTheme.textSecondary),
                                   ),
@@ -278,14 +277,14 @@ class _DeliveryEmployeesScreenState extends State<DeliveryEmployeesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(profile?['full_name'] ?? 'تفاصيل المندوب'),
+        title: Text(profile?['full_name'] ?? emp['full_name'] ?? 'تفاصيل المندوب'),
         content: SizedBox(
           width: 400,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _detailRow('الهاتف', profile?['phone'] ?? '--'),
+              _detailRow('الهاتف', profile?['phone'] ?? emp['phone'] ?? '--'),
               _detailRow('الحالة', emp['status'] == 'online' ? 'متصل' : 'غير متصل'),
               _detailRow('حالة الحساب', emp['is_active'] == true ? 'نشط' : 'موقف'),
               _detailRow('إجمالي التوصيلات', '${emp['total_deliveries'] ?? 0}'),

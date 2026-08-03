@@ -148,6 +148,41 @@ class _MainLayoutState extends State<MainLayout> {
                           ),
                           const SizedBox(height: 32),
 
+                          // Branch name (top)
+                          Obx(() => Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.primary.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(LucideIcons.store, color: AppTheme.primaryLight, size: 18),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    authController.currentBranchName.value.isEmpty
+                                        ? 'جاري التحميل...'
+                                        : authController.currentBranchName.value,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                          const SizedBox(height: 16),
+
                           // Navigation items
                           _buildNavItem(0, LucideIcons.monitor, 'شاشة الكاشير', controller),
                           _buildNavItem(1, LucideIcons.shoppingBag, 'طلبات التوصيل', controller),
@@ -157,7 +192,7 @@ class _MainLayoutState extends State<MainLayout> {
                           _buildNavItem(4, LucideIcons.truck, 'المشتريات', controller),
                           _buildNavItem(5, LucideIcons.barChart3, 'الإحصائيات', controller),
                           _buildNavItem(6, LucideIcons.settings, 'إعدادات الأجهزة', controller),
-                          _buildNavItem(7, LucideIcons.scan, 'Price Checker', controller),
+                          _buildNavItem(7, LucideIcons.scanLine, 'شاشة عرض السعر', controller),
 
                           const Spacer(),
 

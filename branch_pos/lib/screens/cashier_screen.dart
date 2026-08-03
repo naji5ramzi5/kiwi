@@ -672,9 +672,11 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasStock = (product.stockQuantity ?? 0) > 0;
-    return GestureDetector(
-      onTap: hasStock ? onTap : null,
-      child: Container(
+    return MouseRegion(
+      cursor: hasStock ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+      child: GestureDetector(
+        onTap: hasStock ? onTap : null,
+        child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -754,6 +756,7 @@ class _ProductCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

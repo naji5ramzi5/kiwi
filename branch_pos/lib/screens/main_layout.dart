@@ -183,18 +183,23 @@ class _MainLayoutState extends State<MainLayout> {
                           )),
                           const SizedBox(height: 16),
 
-                          // Navigation items
-                          _buildNavItem(0, LucideIcons.monitor, 'شاشة الكاشير', controller),
-                          _buildNavItem(1, LucideIcons.shoppingBag, 'طلبات التوصيل', controller),
-                          _buildNavItem(8, LucideIcons.truck, 'مناديب التوصيل', controller),
-                          _buildNavItem(2, LucideIcons.package, 'إدارة المخزون', controller),
-                          _buildNavItem(3, LucideIcons.box, 'إدخال المخزون', controller),
-                          _buildNavItem(4, LucideIcons.truck, 'المشتريات', controller),
-                          _buildNavItem(5, LucideIcons.barChart3, 'الإحصائيات', controller),
-                          _buildNavItem(6, LucideIcons.settings, 'إعدادات الأجهزة', controller),
-                          _buildNavItem(7, LucideIcons.scanLine, 'شاشة عرض السعر', controller),
-
-                          const Spacer(),
+                          // Navigation items (scrollable so all items stay reachable)
+                          Expanded(
+                            child: ListView(
+                              padding: EdgeInsets.zero,
+                              children: [
+                                _buildNavItem(0, LucideIcons.monitor, 'شاشة الكاشير', controller),
+                                _buildNavItem(1, LucideIcons.shoppingBag, 'طلبات التوصيل', controller),
+                                _buildNavItem(8, LucideIcons.truck, 'المندوبين', controller),
+                                _buildNavItem(2, LucideIcons.package, 'إدارة المخزون', controller),
+                                _buildNavItem(3, LucideIcons.box, 'إدخال المخزون', controller),
+                                _buildNavItem(4, LucideIcons.truck, 'المشتريات', controller),
+                                _buildNavItem(5, LucideIcons.barChart3, 'الإحصائيات', controller),
+                                _buildNavItem(6, LucideIcons.settings, 'إعدادات الأجهزة', controller),
+                                _buildNavItem(7, LucideIcons.scanLine, 'شاشة عرض السعر', controller),
+                              ],
+                            ),
+                          ),
 
                           // Fullscreen toggle
                           Container(
@@ -339,7 +344,7 @@ class _MainLayoutState extends State<MainLayout> {
                                       const Icon(LucideIcons.truck, color: AppTheme.primaryLight, size: 16),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'مناديب التوصيل',
+                                        'المندوبين',
                                         style: TextStyle(
                                           color: AppTheme.primaryLight.withOpacity(0.9),
                                           fontSize: 12,

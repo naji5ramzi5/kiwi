@@ -114,15 +114,15 @@ class _DeliveryEmployeesScreenState extends State<DeliveryEmployeesScreen> {
                     children: [
                       Icon(LucideIcons.truck, color: Colors.white, size: 18),
                       SizedBox(width: 8),
-                      Text('مناديب التوصيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('المندوبين', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     ],
                   ),
                 ),
                 const Spacer(),
-                Obx(() => Text(
+                Text(
                   '${employees.length} مندوب',
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
-                )),
+                ),
                 const SizedBox(width: 12),
                 Container(
                   decoration: BoxDecoration(
@@ -150,7 +150,7 @@ class _DeliveryEmployeesScreenState extends State<DeliveryEmployeesScreen> {
                           children: [
                             Icon(LucideIcons.truck, size: 64, color: Colors.grey.shade200),
                             const SizedBox(height: 16),
-                            Text('لا يوجد مناديب في هذا الفرع', style: TextStyle(color: Colors.grey.shade400, fontSize: 16)),
+                            Text('لا يوجد مندوبين في هذا الفرع', style: TextStyle(color: Colors.grey.shade400, fontSize: 16)),
                             const SizedBox(height: 8),
                             Text('بعد اعتماد المندوب من الإدارة، سيظهر هنا', style: TextStyle(color: Colors.grey.shade300, fontSize: 13)),
                           ],

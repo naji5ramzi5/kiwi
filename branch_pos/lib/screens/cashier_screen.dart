@@ -134,9 +134,10 @@ class _CashierScreenState extends State<CashierScreen> {
     }
 
     setState(() => _isCheckingOut = true);
+    bool isOffline = false;
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
-      final isOffline = connectivityResult == ConnectivityResult.none;
+      isOffline = connectivityResult == ConnectivityResult.none;
 
       if (isOffline) {
         final orderId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -222,6 +223,48 @@ class _CashierScreenState extends State<CashierScreen> {
         debugPrint('Print error (non-critical): $printError');
       }
     } catch (e) {
+      final errorStr = e.toString();
+      final isNetworkError = errorStr.contains('SocketException') ||
+          errorStr.contains('Connection') ||
+          errorStr.contains('timeout') ||
+          errorStr.contains('Failed host lookup') ||
+          errorStr.contains('NetworkException');
+
+      if (!isOffline && isNetworkError && _cart.isNotEmpty) {
+        final orderId = DateTime.now().millisecondsSinceEpoch.toString();
+        final itemsJson = jsonEncode(_cart.map((c) => {
+          'product_id': c.productId,
+          'name': c.name,
+          'price': c.price,
+          'quantity': c.quantity,
+          'unit': c.unit,
+          'total': c.total,
+        }).toList());
+
+        await DatabaseService().saveOfflineOrder({
+          'id': orderId,
+          'branch_id': _auth.currentBranchId.value,
+          'created_by': _auth.supabase.auth.currentUser?.id ?? '',
+          'total_amount': _total,
+          'items_json': itemsJson,
+          'is_synced': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        setState(() {
+          _cart.clear();
+          _discount = 0.0;
+          _customerName = null;
+        });
+
+        Get.snackbar('تم الحفظ محلياً', 'انقطع الاتصال أثناء البيع، تم حفظ الطلب ويرفع تلقائياً عند عودة الإنترنت',
+          backgroundColor: AppTheme.warning,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
       Get.snackbar('خطأ', 'فشل إتمام البيع: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppTheme.error,

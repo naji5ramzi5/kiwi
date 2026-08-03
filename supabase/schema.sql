@@ -1063,7 +1063,9 @@ CREATE TABLE IF NOT EXISTS "public"."order_items" (
     "unit_price" numeric(12,2) NOT NULL,
     "total_price" numeric(12,2) NOT NULL,
     "product_name" "text",
-    "image_url" "text"
+    "image_url" "text",
+    "unit_type" character varying,
+    "unit" "text" DEFAULT 'kg'::"text"
 );
 
 

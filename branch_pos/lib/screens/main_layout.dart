@@ -198,7 +198,7 @@ class _MainLayoutState extends State<MainLayout> {
 
                           const SizedBox(height: 16),
 
-                          // Branch info
+                          // Branch info + Delivery count + Logout
                           Obx(() => Container(
                             margin: const EdgeInsets.all(16),
                             padding: const EdgeInsets.all(16),
@@ -215,61 +215,122 @@ class _MainLayoutState extends State<MainLayout> {
                                 width: 1,
                               ),
                             ),
-                            child: Row(
+                            child: Column(
                               children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    gradient: AppTheme.primaryGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    LucideIcons.store,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        authController.currentBranchName.value,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        gradient: AppTheme.primaryGradient,
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'مسؤول الفرع',
-                                        style: TextStyle(
-                                          color: AppTheme.primaryLight.withOpacity(0.8),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                      child: const Icon(
+                                        LucideIcons.store,
+                                        color: Colors.white,
+                                        size: 20,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            authController.currentBranchName.value,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'مسؤول الفرع',
+                                            style: TextStyle(
+                                              color: AppTheme.primaryLight.withOpacity(0.8),
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () async {
+                                          final confirm = await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('تسجيل الخروج'),
+                                              content: const Text('هل تريد تسجيل الخروج والانتقال لفرع آخر؟'),
+                                              actions: [
+                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+                                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('تسجيل الخروج', style: TextStyle(color: Colors.red))),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirm == true) {
+                                            authController.logout();
+                                          }
+                                        },
+                                        icon: const Icon(
+                                          LucideIcons.logOut,
+                                          color: AppTheme.primaryLight,
+                                          size: 18,
+                                        ),
+                                        tooltip: 'تسجيل الخروج',
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: 12),
+                                // Delivery employees count
                                 Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: IconButton(
-                                    onPressed: () => authController.logout(),
-                                    icon: const Icon(
-                                      LucideIcons.logOut,
-                                      color: AppTheme.primaryLight,
-                                      size: 18,
-                                    ),
-                                    tooltip: 'تسجيل الخروج',
+                                  child: Row(
+                                    children: [
+                                      const Icon(LucideIcons.truck, color: AppTheme.primaryLight, size: 16),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'مناديب التوصيل',
+                                        style: TextStyle(
+                                          color: AppTheme.primaryLight.withOpacity(0.9),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primary.withOpacity(0.3),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Obx(() {
+                                          final count = Get.find<DashboardController>().deliveryCount.value;
+                                          return Text(
+                                            '$count',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],

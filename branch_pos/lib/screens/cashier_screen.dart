@@ -93,14 +93,16 @@ class _CashierScreenState extends State<CashierScreen> {
     setState(() {
       final existingIndex = _cart.indexWhere((c) => c.productId == product.id);
       if (existingIndex >= 0) {
-        _cart[existingIndex].quantity++;
+        final item = _cart[existingIndex];
+        item.quantity = item.quantity + item.stepSize;
       } else {
         _cart.add(CartItem(
           id: UniqueKey().toString(),
           productId: product.id,
           name: product.name,
           price: product.defaultPrice,
-          unit: product.unit,
+          unit: product.unitDisplayName,
+          unitType: product.unitType,
         ));
       }
     });
@@ -110,13 +112,14 @@ class _CashierScreenState extends State<CashierScreen> {
     setState(() => _cart.removeAt(index));
   }
 
-  void _updateQuantity(int index, int delta) {
+  void _updateQuantity(int index, double delta) {
     setState(() {
-      final newQty = _cart[index].quantity + delta;
+      final item = _cart[index];
+      final newQty = item.quantity + (delta * item.stepSize);
       if (newQty <= 0) {
         _cart.removeAt(index);
       } else {
-        _cart[index].quantity = newQty;
+        item.quantity = newQty;
       }
     });
   }
@@ -475,10 +478,10 @@ class _CashierScreenState extends State<CashierScreen> {
                                               color: Colors.grey.shade300,
                                             ),
                                             Container(
-                                              width: 36,
+                                              width: 42,
                                               alignment: Alignment.center,
                                               child: Text(
-                                                '${item.quantity}',
+                                                item.displayQuantity,
                                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                               ),
                                             ),

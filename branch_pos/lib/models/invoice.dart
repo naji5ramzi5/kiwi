@@ -68,7 +68,7 @@ class InvoiceItem {
   final String productId;
   final String name;
   final double price;
-  final int quantity;
+  final double quantity;
   final String unit;
   final double total;
 
@@ -80,6 +80,11 @@ class InvoiceItem {
     this.unit = 'قطعة',
     double? total,
   }) : total = total ?? price * quantity;
+
+  String get displayQuantity {
+    if (quantity == quantity.toInt()) return quantity.toInt().toString();
+    return quantity.toStringAsFixed(1);
+  }
 
   Map<String, dynamic> toJson() => {
     'product_id': productId,
@@ -94,7 +99,7 @@ class InvoiceItem {
     productId: json['product_id'] ?? '',
     name: json['name'] ?? '',
     price: (json['price'] ?? 0).toDouble(),
-    quantity: json['quantity'] ?? 1,
+    quantity: (json['quantity'] ?? 1).toDouble(),
     unit: json['unit'] ?? 'قطعة',
     total: (json['total'] ?? 0).toDouble(),
   );

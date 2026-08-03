@@ -38,7 +38,7 @@ class DeliveryOrderDetails extends StatelessWidget {
         productId: item['product_id'] ?? '',
         name: item['products']?['name'] ?? 'منتج',
         price: (item['unit_price'] as num).toDouble(),
-        quantity: (item['quantity'] as num).toInt(),
+        quantity: (item['quantity'] as num).toDouble(),
         unit: item['products']?['unit'] ?? 'قطعة',
         total: (item['total_price'] as num).toDouble(),
       );

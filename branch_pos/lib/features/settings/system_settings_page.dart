@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:window_manager/window_manager.dart';
 import '../../theme/app_theme.dart';
 
 class SystemSettingsPage extends StatefulWidget {
@@ -19,6 +20,31 @@ class _SystemSettingsPageState extends State<SystemSettingsPage> {
   int _cacheSizeMB = 128;
   bool _debugMode = false;
   String _logLevel = 'info';
+  bool _isFullscreen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFullscreen();
+  }
+
+  Future<void> _checkFullscreen() async {
+    try {
+      final isFull = await windowManager.isFullScreen();
+      if (mounted) setState(() => _isFullscreen = isFull);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFullscreen() async {
+    try {
+      if (_isFullscreen) {
+        await windowManager.setFullScreen(false);
+      } else {
+        await windowManager.setFullScreen(true);
+      }
+      setState(() => _isFullscreen = !_isFullscreen);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +61,8 @@ class _SystemSettingsPageState extends State<SystemSettingsPage> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
+                    _buildDisplayCard(),
+                    const SizedBox(height: 16),
                     _buildPrinterSettingsCard(),
                     const SizedBox(height: 16),
                     _buildNotificationSettingsCard(),
@@ -129,6 +157,47 @@ class _SystemSettingsPageState extends State<SystemSettingsPage> {
           const SizedBox(height: 20),
           child,
         ],
+      ),
+    );
+  }
+
+  Widget _buildDisplayCard() {
+    return _buildSectionCard(
+      title: 'الشاشة',
+      subtitle: 'التحكم بوضع ملء الشاشة',
+      icon: LucideIcons.maximize2,
+      iconColor: AppTheme.info,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isFullscreen ? 'وضع ملء الشاشة مفعّل' : 'وضع ملء الشاشة',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'يمكنك أيضاً استخدام مفتاح F11',
+                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: _isFullscreen,
+              activeColor: AppTheme.primary,
+              onChanged: (_) => _toggleFullscreen(),
+            ),
+          ],
+        ),
       ),
     );
   }

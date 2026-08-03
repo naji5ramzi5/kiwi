@@ -2,6 +2,7 @@
 import 'package:get/get.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
 import 'dart:convert';
 import '../controllers/auth_controller.dart';
 import '../services/supabase_service.dart';
@@ -217,11 +218,10 @@ class _CashierScreenState extends State<CashierScreen> {
         snackPosition: SnackPosition.BOTTOM,
       );
 
-      try {
-        await _invoiceService.printDirect(invoice);
-      } catch (printError) {
+      // Print in background so the sale completes instantly
+      unawaited(_invoiceService.printDirect(invoice).catchError((printError) {
         debugPrint('Print error (non-critical): $printError');
-      }
+      }));
     } catch (e) {
       final errorStr = e.toString();
       final isNetworkError = errorStr.contains('SocketException') ||

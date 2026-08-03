@@ -201,40 +201,7 @@ class _MainLayoutState extends State<MainLayout> {
                             ),
                           ),
 
-                          // Fullscreen toggle
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: InkWell(
-                              onTap: _toggleFullscreen,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _isFullscreen ? LucideIcons.minimize2 : LucideIcons.maximize2,
-                                      color: AppTheme.primaryLight,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      _isFullscreen ? 'خروج من ملء الشاشة' : 'شاشة كاملة (F11)',
-                                      style: const TextStyle(
-                                        color: AppTheme.primaryLight,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
+                          // Fullscreen toggle removed (moved to Settings page)
 
                           const SizedBox(height: 16),
 

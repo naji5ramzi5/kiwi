@@ -74,30 +74,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
-  Future<void> updateStock(String productId, double qty) async {
-    try {
-      final branchId = authController.currentBranchId.value;
-
-      await supabase.from('branch_inventory').upsert({
-        'branch_id': branchId,
-        'product_id': productId,
-        'actual_stock': qty,
-        'is_active': true,
-      }, onConflict: 'branch_id,product_id');
-
-      Get.snackbar('تم', 'تم تحديث كمية المخزون بنجاح',
-        backgroundColor: AppTheme.success,
-        colorText: Colors.white,
-      );
-      fetchInventory();
-    } catch (e) {
-      Get.snackbar('خطأ', 'فشل تحديث المخزون: $e',
-        backgroundColor: AppTheme.error,
-        colorText: Colors.white,
-      );
-    }
-  }
-
   Future<void> reportWaste(String productId, double qty) async {
     final branchId = authController.currentBranchId.value;
     try {
@@ -206,7 +182,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(40.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -220,25 +196,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             gradient: AppTheme.primaryGradient,
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Icon(LucideIcons.package, color: Colors.white, size: 22),
+                          child: const Icon(LucideIcons.package, color: Colors.white, size: 28),
                         ),
-                        const SizedBox(width: 14),
-                        const Text('إدارة المخزون والتوالف', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: AppTheme.primaryDarker)),
+                        const SizedBox(width: 16),
+                        const Text('إدارة المخزون والتوالف', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.primaryDarker)),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Obx(() => Text('جرد المنتجات الحالي لفرع: ${authController.currentBranchName.value}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+                    const SizedBox(height: 6),
+                    Obx(() => Text('جرد المنتجات الحالي لفرع: ${authController.currentBranchName.value}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15))),
                   ],
                 ),
                 _buildSearchField(),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
             Expanded(
               child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -252,8 +228,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Widget _buildSearchField() {
     return Container(
-      width: 360,
-      height: 44,
+      width: 420,
+      height: 52,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -271,9 +247,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: 'بحث عن منتج...',
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-          prefixIcon: Icon(LucideIcons.search, size: 18, color: Colors.grey.shade400),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
+          prefixIcon: Icon(LucideIcons.search, size: 22, color: Colors.grey.shade400),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );
@@ -301,11 +277,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.all(AppTheme.primaryLighter),
+                headingRowHeight: 56,
+                dataRowMinHeight: 72,
+                dataRowMaxHeight: 84,
                 columns: const [
-                  DataColumn(label: Text('المنتج', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
-                  DataColumn(label: Text('المخزون الحالي', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
-                  DataColumn(label: Text('الحالة', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
-                  DataColumn(label: Text('الإجراءات', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker))),
+                  DataColumn(label: Text('المنتج', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker, fontSize: 16))),
+                  DataColumn(label: Text('المخزون الحالي', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker, fontSize: 16))),
+                  DataColumn(label: Text('الحالة', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker, fontSize: 16))),
+                  DataColumn(label: Text('الإجراءات', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryDarker, fontSize: 16))),
                 ],
                 rows: items.map((item) {
                   final stock = item['stock_quantity'];
@@ -314,32 +293,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     DataCell(Row(
                       children: [
                         Container(
-                          width: 40,
-                          height: 40,
+                          width: 52,
+                          height: 52,
                           decoration: BoxDecoration(
                             gradient: AppTheme.primaryGradient,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(13),
                           ),
-                          child: const Icon(LucideIcons.package, size: 18, color: Colors.white),
+                          child: const Icon(LucideIcons.package, size: 24, color: Colors.white),
                         ),
-                        const SizedBox(width: 12),
-                        Text(item['products']['name'], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(width: 14),
+                        Text(item['products']['name'], style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                       ],
                     )),
                     DataCell(Text(
                       '$stock $unit',
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.primaryDarker),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 19, color: AppTheme.primaryDarker),
                     )),
                     DataCell(_buildStatusBadge(stock)),
                     DataCell(Row(
                       children: [
-                        _buildActionBtn(
-                          'تحديث الكمية',
-                          LucideIcons.edit2,
-                          AppTheme.primary,
-                          () => _showUpdateStockDialog(item),
-                        ),
-                        const SizedBox(width: 8),
                         _buildActionBtn(
                           'تسجيل تالف',
                           LucideIcons.alertTriangle,
@@ -351,12 +323,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         IconButton(
                           onPressed: () => _generateBarcode(item),
                           icon: Container(
-                            padding: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryLighter,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.qr_code, size: 16, color: AppTheme.primary),
+                            child: const Icon(Icons.qr_code, size: 20, color: AppTheme.primary),
                           ),
                           tooltip: 'توليد وطباعة باركود',
                         ),
@@ -376,19 +348,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Container(
       decoration: BoxDecoration(
         color: isDestructive ? AppTheme.errorLight : color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 6),
-              Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
+              Icon(icon, size: 17, color: color),
+              const SizedBox(width: 7),
+              Text(label, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w700)),
             ],
           ),
         ),
@@ -403,12 +375,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
     else if (stock < 5) { label = 'منخفض'; color = AppTheme.warning; }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      child: Text(label, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -432,37 +404,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
           }
         },
         child: const Text('تأكيد التلف'),
-      ),
-      cancel: TextButton(onPressed: () => Get.back(), child: const Text('إلغاء')),
-    );
-  }
-
-  void _showUpdateStockDialog(Map<String, dynamic> item) {
-    final controller = TextEditingController(text: item['stock_quantity'].toString());
-    Get.defaultDialog(
-      title: 'تعديل مخزون: ${item['products']['name']}',
-      content: Column(
-        children: [
-          const Text('أدخل الكمية الفعلية المتوفرة في الرفوف حالياً'),
-          const SizedBox(height: 20),
-          TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(hintText: 'الكمية بـ ${item['products']['unit']}')
-          ),
-        ],
-      ),
-      confirm: ElevatedButton(
-        onPressed: () {
-          final qty = double.tryParse(controller.text) ?? -1;
-          if (qty >= 0) {
-            updateStock(item['product_id'], qty);
-            Get.back();
-          } else {
-            Get.snackbar('تنبيه', 'يرجى إدخال كمية صحيحة');
-          }
-        },
-        child: const Text('تأكيد الكمية'),
       ),
       cancel: TextButton(onPressed: () => Get.back(), child: const Text('إلغاء')),
     );

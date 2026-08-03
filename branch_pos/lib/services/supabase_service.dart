@@ -113,13 +113,35 @@ class SupabaseService {
 
     await supabase.from('order_items').insert(orderItems);
 
-    // Deduct inventory for each item
+    // Deduct inventory in a single batch (fast, single round-trip per step)
+    final productIds = items.map((item) => item.productId).toList();
+    final stockResponse = await supabase
+        .from('branch_inventory')
+        .select('product_id, actual_stock')
+        .eq('branch_id', branchId)
+        .inFilter('product_id', productIds);
+
+    final stockMap = {
+      for (final inv in stockResponse) inv['product_id']: (inv['actual_stock'] as num?)?.toDouble() ?? 0.0,
+    };
+
+    final updatedRows = <Map<String, dynamic>>[];
     for (final item in items) {
-      final currentStock = await getStock(branchId, item.productId);
+      final currentStock = stockMap[item.productId] ?? 0.0;
       final newStock = currentStock - item.quantity;
       if (newStock >= 0) {
-        await updateStock(branchId, item.productId, newStock);
+        updatedRows.add({
+          'branch_id': branchId,
+          'product_id': item.productId,
+          'actual_stock': newStock,
+          'is_active': true,
+        });
       }
+    }
+
+    if (updatedRows.isNotEmpty) {
+      await supabase.from('branch_inventory').upsert(updatedRows,
+          onConflict: 'branch_id,product_id');
     }
 
     return orderData;

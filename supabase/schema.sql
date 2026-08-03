@@ -231,16 +231,8 @@ CREATE OR REPLACE FUNCTION "public"."fn_update_stock_on_sale"() RETURNS "trigger
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
-  -- خصم المخزون عند الانتقال من pending إلى أي حالة أخرى (preparing/shipped/delivered)
-  IF OLD.status = 'pending' AND NEW.status != 'pending' THEN
-    -- إنقاص المخزون
-    UPDATE branch_inventory
-    SET actual_stock = actual_stock - oi.quantity
-    FROM order_items oi
-    WHERE oi.order_id = NEW.id
-      AND branch_inventory.product_id = oi.product_id
-      AND branch_inventory.branch_id = NEW.branch_id;
-  END IF;
+  -- ملاحظة: الخصم يتم عبر RPC decrement_branch_inventory عند إنشاء الطلب
+  -- (من التطبيق أو لوحة التحكم)، لذا لا نخصم هنا مرة ثانية.
 
   -- إرجاع المخزون عند الإلغاء أو الرفض (بعد الخصم)
   IF OLD.status IN ('preparing', 'shipped', 'in_delivery') 
@@ -1092,8 +1084,8 @@ CREATE TABLE IF NOT EXISTS "public"."orders" (
     "driver_id" "uuid",
     "total_amount" numeric(12,2) NOT NULL,
     "delivery_fee" numeric(12,2) DEFAULT 0,
-    "status" character varying(50) DEFAULT 'قيد الانتظار'::character varying,
-    "payment_method" character varying(50) DEFAULT 'كاش'::character varying,
+    "status" character varying(50) DEFAULT '??? ????????'::character varying,
+    "payment_method" character varying(50) DEFAULT '???'::character varying,
     "delivery_address" "text" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "proof_image" "text",
@@ -1102,7 +1094,23 @@ CREATE TABLE IF NOT EXISTS "public"."orders" (
     "notes" "text",
     "cancelled_at" timestamp with time zone,
     "cancellation_reason" "text",
-    "status_history" "jsonb" DEFAULT '[]'::"jsonb"
+    "status_history" "jsonb" DEFAULT '[]'::"jsonb",
+    "discount_amount" numeric DEFAULT 0,
+    "discount_code" "text",
+    "total_price" numeric(12,2),
+    "customer_lat" double precision,
+    "customer_lng" double precision,
+    "delivery_lat" double precision,
+    "delivery_lng" double precision,
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "customer_phone" "text",
+    "user_id" "uuid",
+    "delivered_at" timestamp with time zone,
+    "assigned_delivery_id" "uuid",
+    "assigned_at" timestamp with time zone,
+    "picked_up_at" timestamp with time zone,
+    "on_the_way_at" timestamp with time zone,
+    "created_by" "uuid"
 );
 
 

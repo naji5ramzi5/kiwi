@@ -3,15 +3,17 @@ import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/home_controller.dart';
-import '../../controllers/cart_controller.dart';
-import '../../controllers/favorites_controller.dart';
-import '../../controllers/main_screen_controller.dart';
 import 'widgets/category_grid.dart';
-import 'widgets/category_product_list.dart';
+import 'category_products_screen.dart';
 
+/// Root-level Categories screen (Bottom Navigation tab).
+///
+/// Behaves exactly like Home / Cart / Profile:
+/// - No Back button (it is a root screen, never navigates backward).
+/// - Tapping a category pushes [CategoryProductsScreen] on the stack, so Back
+///   returns to this screen naturally.
 class CategoriesScreen extends StatefulWidget {
-  final String? initialCategory;
-  const CategoriesScreen({super.key, this.initialCategory});
+  const CategoriesScreen({super.key});
 
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
@@ -19,21 +21,9 @@ class CategoriesScreen extends StatefulWidget {
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
   final HomeController homeController = Get.find<HomeController>();
-  final CartController cartController = Get.isRegistered<CartController>()
-      ? Get.find<CartController>()
-      : Get.put(CartController());
-  final FavoritesController favController = Get.isRegistered<FavoritesController>()
-      ? Get.find<FavoritesController>()
-      : Get.put(FavoritesController());
-  final MainScreenController navController = Get.find<MainScreenController>();
 
-  final RxString selectedCategory = ''.obs;
   final TextEditingController searchController = TextEditingController();
-  final TextEditingController catSearchController = TextEditingController();
   final RxString searchQuery = ''.obs;
-  final RxString catSearchQuery = ''.obs;
-
-  Worker? _categoryWorker;
 
   final Map<String, IconData> categoryIcons = {
     'category_fruits'.tr: LucideIcons.apple,
@@ -48,43 +38,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     'cat_cleaning'.tr: LucideIcons.sprayCan,
   };
 
-  String formatPrice(dynamic price) {
-    if (price == null) return '0';
-    final doubleVal = double.tryParse(price.toString());
-    if (doubleVal == null) return price.toString();
-    if (doubleVal == doubleVal.toInt()) return doubleVal.toInt().toString();
-    return doubleVal.toStringAsFixed(2);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    final catFromNav = navController.selectedCategory.value;
-    if (catFromNav.isNotEmpty) {
-      selectedCategory.value = catFromNav;
-    }
-    // React to tab switches: show subcategory when selected, grid otherwise
-    _categoryWorker = ever(navController.currentIndex, (int idx) {
-      if (idx == 1) {
-        selectedCategory.value = navController.selectedCategory.value;
-      }
-    });
-  }
-
   @override
   void dispose() {
-    _categoryWorker?.dispose();
     searchController.dispose();
-    catSearchController.dispose();
     super.dispose();
-  }
-
-  void _handleBack() {
-    if (selectedCategory.value.isNotEmpty) {
-      selectedCategory.value = '';
-    } else {
-      navController.switchTab(0);
-    }
   }
 
   @override
@@ -95,63 +52,42 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final bgColor = isDark ? AppTheme.backgroundDark : AppTheme.background;
     final cardBgColor = isDark ? const Color(0xFF1E291F) : Colors.white;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        _handleBack();
-      },
-      child: Scaffold(
-        backgroundColor: bgColor,
-        appBar: AppBar(
-          title: Obx(() => Text(
-            selectedCategory.value.isEmpty ? 'categories_title'.tr : selectedCategory.value,
-            style: TextStyle(
-              color: themeTextColor,
-              fontWeight: FontWeight.w900,
-              fontSize: selectedCategory.value.isEmpty ? 22 : 18,
-              fontFamily: 'Cairo',
-            ),
-          )),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded, color: themeTextColor, size: 20),
-            onPressed: _handleBack,
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        // Root screen: no Back button
+        automaticallyImplyLeading: false,
+        title: Text(
+          'categories_title'.tr,
+          style: TextStyle(
+            color: themeTextColor,
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
+            fontFamily: 'Cairo',
           ),
         ),
-        body: Obx(() {
-          if (homeController.categories.isEmpty) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
-          }
-          if (selectedCategory.value.isEmpty) {
-            return CategoryGrid(
-              homeController: homeController,
-              categoryIcons: categoryIcons,
-              searchController: searchController,
-              searchQuery: searchQuery,
-              isDark: isDark,
-              themeTextColor: themeTextColor,
-              themeTextSecColor: themeTextSecColor,
-              cardBgColor: cardBgColor,
-              onCategoryTap: (name) => selectedCategory.value = name,
-            );
-          }
-          return CategoryProductList(
-            homeController: homeController,
-            cartController: cartController,
-            favController: favController,
-            selectedCategory: selectedCategory,
-            searchController: catSearchController,
-            searchQuery: catSearchQuery,
-            isDark: isDark,
-            themeTextColor: themeTextColor,
-            themeTextSecColor: themeTextSecColor,
-            cardBgColor: cardBgColor,
-            formatPrice: formatPrice,
-          );
-        }),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
+      body: Obx(() {
+        if (homeController.categories.isEmpty) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+        }
+        return CategoryGrid(
+          homeController: homeController,
+          categoryIcons: categoryIcons,
+          searchController: searchController,
+          searchQuery: searchQuery,
+          isDark: isDark,
+          themeTextColor: themeTextColor,
+          themeTextSecColor: themeTextSecColor,
+          cardBgColor: cardBgColor,
+          onCategoryTap: (name) => Get.to(
+            () => CategoryProductsScreen(category: name),
+            transition: Transition.fadeIn,
+          ),
+        );
+      }),
     );
   }
 }

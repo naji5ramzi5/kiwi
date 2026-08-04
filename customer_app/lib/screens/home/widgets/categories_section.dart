@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../theme/app_theme.dart';
 import '../../../controllers/home_controller.dart';
 import '../../../controllers/main_screen_controller.dart';
+import '../../categories/category_products_screen.dart';
 
 // Static fallback categories - use function to resolve .tr at build time
 List<Map<String, String>> _getStaticCategories() => [
@@ -122,7 +123,10 @@ class CategoriesSection extends StatelessWidget {
 
                 return GestureDetector(
                   onTap: () {
-                    Get.find<MainScreenController>().switchTab(1, category: name);
+                    Get.to(
+                      () => CategoryProductsScreen(category: name),
+                      transition: Transition.fadeIn,
+                    );
                   },
                   child: Container(
                     width: 85,

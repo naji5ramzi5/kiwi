@@ -49,8 +49,6 @@ class _MainScreenState extends State<MainScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        // Never show "Press again to exit" on categories tab
-        if (nav.currentIndex.value == 1) return;
         final now = DateTime.now().millisecondsSinceEpoch;
         if (_lastBackPress == null || now - _lastBackPress! > 2000) {
           _lastBackPress = now;

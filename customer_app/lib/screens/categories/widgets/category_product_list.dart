@@ -12,7 +12,7 @@ class CategoryProductList extends StatelessWidget {
   final HomeController homeController;
   final CartController cartController;
   final FavoritesController favController;
-  final RxString selectedCategory;
+  final String category;
   final TextEditingController searchController;
   final RxString searchQuery;
   final bool isDark;
@@ -26,7 +26,7 @@ class CategoryProductList extends StatelessWidget {
     required this.homeController,
     required this.cartController,
     required this.favController,
-    required this.selectedCategory,
+    required this.category,
     required this.searchController,
     required this.searchQuery,
     required this.isDark,
@@ -120,7 +120,7 @@ class CategoryProductList extends StatelessWidget {
           child: Obx(() {
             List<dynamic> products = homeController.allProducts.where((p) {
               final cat = (p['category'] ?? '').toString();
-              return cat.toLowerCase() == selectedCategory.value.toLowerCase();
+              return cat.toLowerCase() == category.toLowerCase();
             }).toList();
 
             if (searchQuery.value.isNotEmpty) {

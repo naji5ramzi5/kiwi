@@ -235,7 +235,7 @@ BEGIN
     FROM public.delivery_employees
     WHERE id = p_employee_id;
 
-    IF v_old_branch_id IS NULL THEN
+    IF NOT FOUND THEN
         RAISE EXCEPTION 'Employee not found';
     END IF;
 

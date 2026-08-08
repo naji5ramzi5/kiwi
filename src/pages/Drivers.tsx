@@ -41,8 +41,10 @@ export default function Drivers() {
   }
 
   async function toggleApproval(id: string, currentStatus: boolean) {
-    const { error } = await supabase.from('profiles').update({ is_approved: !currentStatus }).eq('id', id)
-    if (error) toast.error('فشلت العملية')
+    const { error } = !currentStatus
+      ? await supabase.rpc('ops_approve_driver', { p_profile_id: id })
+      : await supabase.rpc('ops_reject_driver', { p_profile_id: id })
+    if (error) toast.error(error.message || 'فشلت العملية')
     else { toast.success(currentStatus ? 'تم إلغاء التفعيل' : 'تم تفعيل حساب المندوب'); fetchDrivers() }
   }
 

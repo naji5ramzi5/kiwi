@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, GitBranch, Activity,
   Truck, Megaphone, DollarSign, Users, Bell, Search, Settings, FileText, Box,
-  X, CheckCheck, Trash2, ShieldAlert, Tag, Printer, MapPin, Star,
+  X, CheckCheck, Trash2, ShieldAlert, Tag, Printer, MapPin, Star, PackageCheck,
   Moon, Sun, ChevronDown, ChevronLeft, LogOut, User, Home, TrendingUp, ArrowLeftRight
 } from 'lucide-react'
 import { useNotifications } from '../lib/notifications'

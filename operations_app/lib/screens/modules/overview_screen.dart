@@ -27,13 +27,13 @@ class _OverviewScreenState extends State<OverviewScreen> {
     _load();
   }
 
-  Future<void> _load() async {
+Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final data = await OpsApi.dashboardData(superAdmin: widget.auth.isSuper);
+      final data = await OpsApi.dashboardData();
       if (!mounted) return;
       setState(() {
         _data = data;
@@ -42,7 +42,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = OpsApi.friendlyError(e, fallback: 'تعذر تحميل البيانات');
         _loading = false;
       });
     }
@@ -324,11 +324,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
                   dense: true,
                   leading: const Icon(Icons.hourglass_top,
                       color: Color(0xFFf59e0b)),
-                  title: Text(p['order_number']?.toString() ?? '',
-                      style: GoogleFonts.cairo(fontSize: 13)),
-                  subtitle: Text(p['status']?.toString() ?? '',
-                      style: GoogleFonts.cairo(
-                          fontSize: 11, color: Colors.grey)),
+                  title: Text(
+                    '#${LiveOrder.shortId(p['id']?.toString() ?? '')}',
+                    style: GoogleFonts.cairo(fontSize: 13),
+                  ),
+                  subtitle: Text(
+                    p['status']?.toString() ?? '',
+                    style: GoogleFonts.cairo(
+                        fontSize: 11, color: Colors.grey),
+                  ),
                 ))
             .toList(),
       ),

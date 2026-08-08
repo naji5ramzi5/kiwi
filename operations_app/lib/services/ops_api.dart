@@ -283,9 +283,13 @@ class LiveOrder {
     this.lng,
   });
 
-  factory LiveOrder.fromRow(Map<String, dynamic> m) => LiveOrder(
-        id: m['id']?.toString() ?? '',
-        orderNumber: m['order_number']?.toString() ?? '',
+  factory LiveOrder.fromRow(Map<String, dynamic> m) {
+    final id = m['id']?.toString() ?? '';
+    final number = m['order_number']?.toString();
+    return LiveOrder(
+        id: id,
+        orderNumber:
+            number != null && number.isNotEmpty ? number : shortId(id),
         customerName: m['customer_name_manual']?.toString() ??
             m['customer_name']?.toString(),
         phone: m['customer_phone']?.toString(),
@@ -309,6 +313,13 @@ class LiveOrder {
         lng: double.tryParse(
             m['delivery_lng']?.toString() ?? m['customer_lng']?.toString() ?? ''),
       );
+  }
+
+  /// رقم الطلب المعروض: أول 8 خانات من المعرّف (كما في بقية التطبيقات)
+  static String shortId(String id) {
+    if (id.isEmpty) return '—';
+    return id.replaceAll('-', '').substring(0, 8).toUpperCase();
+  }
 
   String get statusLabel {
     switch (status) {
@@ -449,7 +460,7 @@ class OpsApi {
     try {
       final pp = await _sb
           .from('orders')
-          .select('id,status,order_number')
+          .select('id,status')
           .inFilter('status', ['pending', 'picked_up', 'on_the_way', 'assigned']);
       pendingRows.addAll(pp);
     } catch (_) {}
@@ -749,7 +760,7 @@ class OpsApi {
     try {
       final rows = await _sb
           .from('orders')
-          .select('id,order_number,status,total_price,delivery_fee,customer_name_manual,customer_phone,delivery_address,created_at,assigned_at,picked_up_at,on_the_way_at,delivery_lat,delivery_lng,branch_id,branch:branches(name),driver:drivers(full_name)')
+          .select('id,status,total_price,delivery_fee,customer_name_manual,customer_phone,delivery_address,created_at,assigned_at,picked_up_at,on_the_way_at,delivery_lat,delivery_lng,branch_id,branch:branches(name),driver:drivers(full_name)')
           .inFilter('status', st)
           .order('created_at', ascending: false)
           .limit(200);
@@ -950,47 +961,73 @@ class OpsApi {
   }
 
   /// أجهزة FCM لمناديب محددين (لا broadcast أبداً من هنا)
+  /// يدمج `user_fcm_tokens` مع عمود `fcm_token` في profiles كاحتياط
   static Future<List<String>> fetchDriverFcmTokens({
     List<String>? profileIds,
     String? branchId,
   }) async {
     try {
-      var q = _sb.from('user_fcm_tokens').select('token');
+      List<String> ids;
       if (profileIds != null && profileIds.isNotEmpty) {
-        q = q.inFilter('user_id', profileIds);
-      } else if (branchId != null) {
-        final rows = await _sb
-            .from('delivery_employees')
-            .select('user_id')
-            .eq('branch_id', branchId)
-            .eq('is_active', true);
-        final ids = rows
-            .map((r) => r['user_id']?.toString())
-            .whereType<String>()
-            .toList();
-        if (ids.isEmpty) return const [];
-        q = q.inFilter('user_id', ids);
+        ids = profileIds;
       } else {
-        final rows = await _sb
-            .from('delivery_employees')
-            .select('user_id')
-            .eq('is_active', true);
-        final ids = rows
+        var q = _sb.from('delivery_employees').select('user_id');
+        if (branchId != null) q = q.eq('branch_id', branchId);
+        q = q.eq('is_active', true);
+        final rows = await q;
+        ids = rows
             .map((r) => r['user_id']?.toString())
             .whereType<String>()
             .toList();
         if (ids.isEmpty) return const [];
-        q = q.inFilter('user_id', ids);
       }
+
+      var q = _sb.from('user_fcm_tokens').select('token');
+      q = q.inFilter('user_id', ids);
       final rows = await q;
       final tokens = <String>[];
       for (final r in rows) {
         final t = r['token']?.toString();
         if (t != null && t.isNotEmpty && !tokens.contains(t)) tokens.add(t);
       }
+
+      // احتياط: أعمدة fcm_token القديمة (profiles.fcm_token)
+      try {
+        final pr = await _sb
+            .from('profiles')
+            .select('fcm_token')
+            .inFilter('id', ids)
+            .not('fcm_token', 'is', null);
+        for (final r in pr) {
+          final t = r['fcm_token']?.toString();
+          if (t != null && t.isNotEmpty && !tokens.contains(t)) tokens.add(t);
+        }
+      } catch (_) {}
+
       return tokens;
     } catch (e) {
       throw OpsApiException(friendlyError(e, fallback: 'تعذر جلب أجهزة المندوبين'));
+    }
+  }
+
+  /// إعلان داخلي يظهر في تطبيق الإدارة وبرنامج الفروع (الجرس)
+  /// يكتب في admin_notifications — لا يُرسل أي FCM
+  static Future<void> broadcastAdminNote({
+    required String title,
+    required String message,
+    String? targetBranchId,
+    String type = 'ops_announcement',
+  }) async {
+    try {
+      await _sb.from('admin_notifications').insert({
+        'title': title,
+        'message': message,
+        'type': type,
+        if (targetBranchId != null) 'target_branch_id': targetBranchId,
+        'sender_id': _sb.auth.currentUser?.id,
+      });
+    } catch (e) {
+      throw OpsApiException(friendlyError(e, fallback: 'تعذر حفظ الإعلان'));
     }
   }
 

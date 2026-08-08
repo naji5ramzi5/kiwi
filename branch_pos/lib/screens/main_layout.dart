@@ -8,6 +8,7 @@ import '../controllers/dashboard_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/pos_orders_controller.dart';
+import '../controllers/notifications_controller.dart';
 import '../widgets/window_controls.dart';
 import 'orders/delivery_orders_screen.dart';
 import 'inventory/inventory_screen.dart';
@@ -18,6 +19,7 @@ import '../features/settings/settings_page.dart';
 import 'stock_entry.dart';
 import 'price_checker_screen.dart';
 import 'delivery_employees_screen.dart';
+import 'notifications_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -58,6 +60,7 @@ class _MainLayoutState extends State<MainLayout> {
     final DashboardController controller = Get.put(DashboardController());
     final AuthController authController = Get.find<AuthController>();
     Get.put(InventoryController());
+    Get.put(NotificationsController());
 
     return Scaffold(
       body: CallbackShortcuts(
@@ -191,6 +194,7 @@ class _MainLayoutState extends State<MainLayout> {
                                 _buildNavItem(0, LucideIcons.monitor, 'شاشة الكاشير', controller),
                                 _buildNavItem(1, LucideIcons.shoppingBag, 'طلبات التوصيل', controller),
                                 _buildNavItem(8, LucideIcons.truck, 'المندوبين', controller),
+                                _buildNavItem(9, LucideIcons.bell, 'الإشعارات', controller, badgeIndex: 1),
                                 _buildNavItem(2, LucideIcons.package, 'إدارة المخزون', controller),
                                 _buildNavItem(3, LucideIcons.box, 'إدخال المخزون', controller),
                                 _buildNavItem(4, LucideIcons.truck, 'المشتريات', controller),
@@ -370,6 +374,8 @@ class _MainLayoutState extends State<MainLayout> {
                             return const PriceCheckerScreen();
                           case 8:
                             return const DeliveryEmployeesScreen();
+                          case 9:
+                            return const NotificationsPage();
                           default:
                             return const Center(
                               child: Text(
@@ -390,7 +396,7 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label, DashboardController controller) {
+  Widget _buildNavItem(int index, IconData icon, String label, DashboardController controller, {int? badgeIndex}) {
     return Obx(() {
       final isSelected = controller.selectedIndex.value == index;
       return Container(
@@ -451,6 +457,35 @@ class _MainLayoutState extends State<MainLayout> {
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFFEF4444).withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    }),
+                  if (badgeIndex == 1)
+                    Obx(() {
+                      final count = Get.find<NotificationsController>().unreadCount.value;
+                      if (count == 0) return const SizedBox();
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF10B981), Color(0xFF059669)],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withOpacity(0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),

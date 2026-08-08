@@ -384,6 +384,17 @@ class _NotificationComposerState extends State<NotificationComposer> {
         tokens: tokens,
       );
 
+      // يظهر الإعلان أيضاً في تطبيق الإدارة وبرنامج الفروع (الجرس)
+      try {
+        String? branchId;
+        if (_target == 'branch') branchId = _branchId;
+        await OpsApi.broadcastAdminNote(
+          title: title,
+          message: body,
+          targetBranchId: branchId,
+        );
+      } catch (_) {}
+
       if (!mounted) return;
       setState(() => _sending = false);
       Navigator.pop(context);

@@ -33,16 +33,33 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final results = await Future.wait([
-      OpsApi.fetchLiveOrders(),
-      OpsApi.fetchEmployees(),
-    ]);
-    if (!mounted) return;
-    setState(() {
-      _orders = results[0] as List<LiveOrder>;
-      _employees = results[1] as List<EmployeeRow>;
-      _loading = false;
-    });
+    try {
+      final results = await Future.wait([
+        OpsApi.fetchLiveOrders(),
+        OpsApi.fetchEmployees(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _orders = results[0] as List<LiveOrder>;
+        _employees = results[1] as List<EmployeeRow>;
+        _loading = false;
+      });
+    } on OpsApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message, style: GoogleFonts.cairo()),
+        duration: const Duration(seconds: 3),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('تعذر تحميل البيانات الحية',
+            style: GoogleFonts.cairo()),
+        duration: const Duration(seconds: 3),
+      ));
+    }
     if (_realtime) _subscribe();
   }
 

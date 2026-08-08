@@ -354,6 +354,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         icon = LucideIcons.clock;
         color = Colors.orange;
         break;
+      case 'prepared':
+        icon = LucideIcons.packageCheck;
+        color = const Color(0xFF7C3AED);
+        break;
       case 'picked_up':
         icon = LucideIcons.packageCheck;
         color = Colors.indigo;

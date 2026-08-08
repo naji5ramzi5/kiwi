@@ -181,6 +181,10 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                   statusColor = Colors.orange;
                   statusText = 'preparing'.tr;
                   break;
+                case 'prepared':
+                  statusColor = const Color(0xFF7C3AED);
+                  statusText = 'status_prepared'.tr;
+                  break;
                 case 'shipped':
                   statusColor = Colors.blue;
                   statusText = 'on_the_way'.tr;

@@ -18,12 +18,18 @@ class OrderTimelineWidget extends StatelessWidget {
     final steps = [
       {'label': 'order_received'.tr, 'key': 'pending', 'icon': LucideIcons.checkCircle2},
       {'label': 'preparing_order'.tr, 'key': 'preparing', 'icon': LucideIcons.clock},
-      {'label': 'picked_up_from_branch'.tr, 'key': 'picked_up', 'icon': LucideIcons.packageCheck},
+      {'label': 'status_prepared'.tr, 'key': 'prepared', 'icon': LucideIcons.packageCheck},
       {'label': 'on_the_way'.tr, 'key': 'shipped', 'icon': LucideIcons.truck},
       {'label': 'order_delivered'.tr, 'key': 'delivered', 'icon': LucideIcons.packageCheck},
     ];
 
-    final currentIndex = steps.indexWhere((s) => s['key'] == status);
+    // Map driver-assignment / pick-up states onto the nearest visible step.
+    final mappedStatus = switch (status) {
+      'picked_up' || 'ready' => 'prepared',
+      _ => status,
+    };
+
+    final currentIndex = steps.indexWhere((s) => s['key'] == mappedStatus);
     final activeIndex = currentIndex >= 0 ? currentIndex : 0;
 
     return Container(

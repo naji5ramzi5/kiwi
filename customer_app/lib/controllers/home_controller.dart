@@ -30,6 +30,8 @@ class HomeController extends GetxController {
 
   var searchQuery = ''.obs;
   var userAddress = ''.obs;
+  var userArea = ''.obs;
+  var userStreet = ''.obs;
   var userLat = 0.0.obs;
   var userLng = 0.0.obs;
   var isInDeliveryZone = true.obs;
@@ -164,6 +166,8 @@ class HomeController extends GetxController {
         );
         if (resolvedAddr['fullAddress']!.isNotEmpty) {
           userAddress.value = resolvedAddr['fullAddress']!;
+          userArea.value = resolvedAddr['area'] ?? '';
+          userStreet.value = resolvedAddr['street'] ?? '';
           userLat.value = position.latitude;
           userLng.value = position.longitude;
         }
@@ -177,14 +181,18 @@ class HomeController extends GetxController {
 
         if (zones.isNotEmpty) {
           final userPoint = [position.longitude.toDouble(), position.latitude.toDouble()];
+          double? bestArea;
           for (var zone in zones) {
             final geojson = zone['geojson'];
             if (geojson == null) continue;
             try {
               final polygons = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
               if (polygons != null && TurfHelper.pointInAnyPolygon(userPoint, polygons)) {
-                matchedBranchId = zone['branch_id'];
-                break;
+                final area = _polygonArea(polygons);
+                if (bestArea == null || area < bestArea) {
+                  bestArea = area;
+                  matchedBranchId = zone['branch_id'];
+                }
               }
             } catch (e) {
               debugPrint('Error parsing polygon coords: $e');
@@ -255,7 +263,9 @@ class HomeController extends GetxController {
 
       String? matchedBranchId;
 
-      // Check Point-in-Polygon
+      // Check Point-in-Polygon - pick the SMALLEST matching zone
+      // so the most specific delivery area wins when zones overlap.
+      double? bestArea;
       if (zones.isNotEmpty) {
         final userPoint = [lng, lat];
         debugPrint('updateUserLocation: checking ${zones.length} zones, userPoint=$userPoint');
@@ -266,9 +276,12 @@ class HomeController extends GetxController {
             final polygons = _parseDeliveryZoneGeojson(geojson as Map<String, dynamic>);
             debugPrint('  zone ${zone['id']}: geojsonType=${geojson['type']}, parsed=${polygons != null}');
             if (polygons != null && TurfHelper.pointInAnyPolygon(userPoint, polygons)) {
-              matchedBranchId = zone['branch_id'];
-              debugPrint('  >> MATCHED branch_id=$matchedBranchId');
-              break;
+              final area = _polygonArea(polygons);
+              debugPrint('  >> MATCH branch_id=${zone['branch_id']} area=$area');
+              if (bestArea == null || area < bestArea) {
+                bestArea = area;
+                matchedBranchId = zone['branch_id'];
+              }
             }
           } catch (e) {
             debugPrint('Error parsing polygon coords: $e');
@@ -515,5 +528,24 @@ class HomeController extends GetxController {
         return p.map<double>((v) => v.toDouble()).toList();
       }).toList();
     }).toList();
+  }
+
+  /// Approximate polygon area (Shoelace formula on lng/lat degrees).
+  /// Used to pick the most specific delivery zone when several overlap.
+  double _polygonArea(List<List<List<List<double>>>> polygons) {
+    double total = 0;
+    for (final polygon in polygons) {
+      for (final ring in polygon) {
+        if (ring.length < 3) continue;
+        double sum = 0;
+        for (int i = 0; i < ring.length; i++) {
+          final p1 = ring[i];
+          final p2 = ring[(i + 1) % ring.length];
+          sum += p1[0] * p2[1] - p2[0] * p1[1];
+        }
+        total += (sum / 2).abs();
+      }
+    }
+    return total;
   }
 }

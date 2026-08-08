@@ -15,20 +15,43 @@ class POSOrdersController extends GetxController {
   var pendingCount = 0.obs;
 
   RealtimeChannel? _ordersChannel;
+  bool _subscribed = false;
 
   int get _pendingOrders => orders.where((o) {
     final status = o['status']?.toString() ?? '';
-    return status == 'pending' || status == 'preparing';
+    return status == 'pending' || status == 'preparing' || status == 'prepared';
   }).length;
 
   @override
   void onInit() {
     super.onInit();
-    if (authController.isLoggedIn.value) {
-      fetchOrders();
-      fetchDrivers();
-      subscribeToOrders();
-    }
+    // Subscribe once the branch logs in — the controller is created before
+    // login, so a plain isLoggedIn check in onInit would never subscribe.
+    _startIfLoggedIn();
+    ever(authController.isLoggedIn, (loggedIn) {
+      if (loggedIn) {
+        _startIfLoggedIn();
+      } else {
+        // Full reset on logout so a subsequent login (possibly a different
+        // branch) re-subscribes with the new branch filter.
+        if (_ordersChannel != null) {
+          supabase.removeChannel(_ordersChannel!);
+          _ordersChannel = null;
+        }
+        _subscribed = false;
+        orders.clear();
+        pendingCount.value = 0;
+      }
+    });
+  }
+
+  void _startIfLoggedIn() {
+    if (!authController.isLoggedIn.value) return;
+    if (_subscribed) return;
+    _subscribed = true;
+    fetchOrders();
+    fetchDrivers();
+    subscribeToOrders();
   }
 
   Future<void> fetchDrivers() async {
@@ -158,18 +181,23 @@ class POSOrdersController extends GetxController {
     super.onClose();
   }
 
-  /// Plays a vibration and shows an alert when a new order arrives for this branch.
+  /// Plays an audible alert and shows a popup when a new order arrives.
   Future<void> _alertNewOrder() async {
+    // Audible notification (works on Windows desktop)
+    try {
+      SystemSound.play(SystemSoundType.alert);
+    } catch (_) {}
     try {
       HapticFeedback.heavyImpact();
     } catch (_) {}
     Get.snackbar(
-      'طلب جديد',
+      '🔔 طلب جديد',
       'وصل طلب جديد إلى الفرع',
       backgroundColor: const Color(0xFF10b981),
       colorText: Colors.white,
       snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 6),
+      isDismissible: true,
     );
   }
 
@@ -192,6 +220,7 @@ class POSOrdersController extends GetxController {
       final statusArabic = {
         'pending': 'بالانتظار',
         'preparing': 'قيد التحضير',
+        'prepared': 'تم التحضير',
         'picked_up': 'تم الاستلام من الفرع',
         'rejected': 'مرفوض',
         'shipped': 'في الطريق',

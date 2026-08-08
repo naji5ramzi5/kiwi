@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:214305510491:android:379de70091d30e52ec5b7e",
+        "mobilesdk_app_id": "1:214305510491:android:fcc1cbb83f320bd3ec5b7e",
         "android_client_info": {
-          "package_name": "com.example.customer_app"
+          "package_name": "com.kiwi.customer"
         }
       },
       "oauth_client": [],
@@ -26,9 +26,9 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:214305510491:android:0d29f2afd6d9f331ec5b7e",
+        "mobilesdk_app_id": "1:214305510491:android:02e1a024571815adec5b7e",
         "android_client_info": {
-          "package_name": "com.example.driver_app"
+          "package_name": "com.kiwi.driver"
         }
       },
       "oauth_client": [],

@@ -19,6 +19,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _plateController = TextEditingController();
+  final _phoneController = TextEditingController();
   
   bool isRegistering = false;
   String vehicleType = 'bike'; // 'bike' or 'truck'
@@ -50,7 +51,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
   }
 
   Future<void> _handleAuth() async {
-    if (isRegistering && (_nameController.text.isEmpty || _plateController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty)) {
+    if (isRegistering && (_nameController.text.isEmpty || _plateController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty || _phoneController.text.isEmpty)) {
       Get.snackbar('تنبيه', 'يرجى إكمال كافة البيانات المطلوبة', backgroundColor: Colors.orange.withOpacity(0.9), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
       return;
     }
@@ -72,6 +73,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
             'role': 'driver',
             'vehicle_type': vehicleType,
             'plate_number': _plateController.text.trim(),
+            'phone': _phoneController.text.trim(),
           },
         );
         
@@ -95,6 +97,7 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
             'role': 'driver',
             'vehicle_type': vehicleType,
             'plate_number': _plateController.text.trim(),
+            'phone': _phoneController.text.trim(),
             'avatar_url': avatarUrl,
             'is_approved': false,
             'is_online': false,
@@ -244,6 +247,8 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
                                   _buildTextField(_nameController, 'الاسم الكامل', LucideIcons.user),
                                   const SizedBox(height: 16),
                                   _buildTextField(_plateController, 'رقم اللوحة المرورية', LucideIcons.hash),
+                                  const SizedBox(height: 16),
+                                  _buildTextField(_phoneController, 'رقم الجوال', LucideIcons.smartphone, keyboardType: TextInputType.phone),
                                   const SizedBox(height: 24),
                                   
                                   const Align(alignment: Alignment.centerRight, child: Text('نوع المركبة:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F2937)))),

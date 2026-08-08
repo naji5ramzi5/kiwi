@@ -34,9 +34,15 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
   RealtimeChannel? _ordersChannel;
   RealtimeChannel? _assignmentsChannel;
   RealtimeChannel? _employeeChannel;
+  RealtimeChannel? _branchOrdersChannel;
   String? branchName;
+  String? driverBranchId;
   int dailyDeliveries = 0;
   int monthlyDeliveries = 0;
+  double todayEarnings = 0;
+  double monthlyEarnings = 0;
+  String? joinedAt;
+  int employeeTotalDeliveries = 0;
 
   @override
   void initState() {
@@ -65,6 +71,9 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     }
     if (_employeeChannel != null) {
       supabase.removeChannel(_employeeChannel!);
+    }
+    if (_branchOrdersChannel != null) {
+      supabase.removeChannel(_branchOrdersChannel!);
     }
     fcmNavigateToOrders.removeListener(_onFcmNavigate);
     super.dispose();
@@ -135,13 +144,20 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     try {
       final emp = await supabase
           .from('delivery_employees')
-          .select('branch_id, status, total_deliveries, branches!inner(name)')
+          .select('branch_id, status, total_deliveries, joined_at, branches!inner(name)')
           .eq('user_id', userId)
           .maybeSingle();
       if (emp != null) {
+        final branchId = emp['branch_id']?.toString();
         setState(() {
           branchName = emp['branches']?['name'] as String?;
+          driverBranchId = branchId;
+          joinedAt = emp['joined_at']?.toString();
+          employeeTotalDeliveries = (emp['total_deliveries'] as num?)?.toInt() ?? 0;
         });
+        if (branchId != null) {
+          _setupBranchOrdersRealtime(branchId);
+        }
       }
     } catch (e) {
       debugPrint('Error fetching delivery employee info: $e');
@@ -155,10 +171,40 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
             .eq('id', driverProfile!['branch_id'])
             .maybeSingle();
         if (branch != null) {
-          setState(() => branchName = branch['name'] as String?);
+          setState(() {
+            branchName = branch['name'] as String?;
+            driverBranchId = driverProfile!['branch_id']?.toString();
+          });
+          final bid = driverBranchId;
+          if (bid != null) {
+            _setupBranchOrdersRealtime(bid);
+          }
         }
       } catch (_) {}
     }
+  }
+
+  // Listen for ANY new/updated order in the driver's branch so the card
+  // renders the instant the FCM notification arrives — even before the
+  // order has been assigned to this driver.
+  void _setupBranchOrdersRealtime(String branchId) {
+    if (_branchOrdersChannel != null) return;
+    _branchOrdersChannel = supabase
+        .channel('driver-branch-orders-$branchId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'branch_id',
+            value: branchId,
+          ),
+          callback: (payload) {
+            fetchOrders();
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _fetchRating(String driverId) async {
@@ -180,40 +226,62 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
     } catch (_) {}
   }
 
-  Future<void> _fetchEarnings(String driverId) async {
+  Future<void> _fetchEarnings(String userId) async {
     try {
-      final delivered = await supabase
-          .from('orders')
-          .select('delivery_fee, delivered_at')
-          .eq('driver_id', driverId)
-          .eq('status', 'delivered');
-      if (delivered is List) {
+      // Read earnings from the delivery_earnings ledger (source of truth).
+      final empId = await _myEmployeeId();
+      if (empId == null) return;
+      final earned = await supabase
+          .from('delivery_earnings')
+          .select('amount, created_at')
+          .eq('delivery_employee_id', empId);
+      if (earned is List) {
         double total = 0;
         int daily = 0;
         int monthly = 0;
+        double dailyAmount = 0;
+        double monthlyAmount = 0;
         final now = DateTime.now();
-        for (var o in delivered) {
-          total += (o['delivery_fee'] as num?)?.toDouble() ?? 0;
-          if (o['delivered_at'] != null) {
-            final d = DateTime.tryParse(o['delivered_at'].toString());
+        for (var o in earned) {
+          final amount = (o['amount'] as num?)?.toDouble() ?? 0;
+          total += amount;
+          if (o['created_at'] != null) {
+            final d = DateTime.tryParse(o['created_at'].toString());
             if (d != null) {
               if (d.year == now.year && d.month == now.month && d.day == now.day) {
                 daily++;
+                dailyAmount += amount;
               }
               if (d.year == now.year && d.month == now.month) {
                 monthly++;
+                monthlyAmount += amount;
               }
             }
           }
         }
         setState(() {
-          deliveryCount = delivered.length;
+          deliveryCount = earned.length;
           totalEarnings = total;
           dailyDeliveries = daily;
           monthlyDeliveries = monthly;
+          todayEarnings = dailyAmount;
+          monthlyEarnings = monthlyAmount;
         });
       }
     } catch (_) {}
+  }
+
+  Future<String?> _myEmployeeId() async {
+    try {
+      final emp = await supabase
+          .from('delivery_employees')
+          .select('id')
+          .eq('user_id', supabase.auth.currentUser!.id)
+          .maybeSingle();
+      return emp?['id']?.toString();
+    } catch (_) {
+      return null;
+    }
   }
 
   void _setupRealtime() {
@@ -280,11 +348,17 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
 
   Future<void> fetchOrders() async {
     try {
+      final userId = supabase.auth.currentUser!.id;
+      // Orders assigned to me (active work) PLUS new/unassigned orders
+      // that belong to my branch zone so they render the moment the
+      // FCM notification arrives.
       final response = await supabase
           .from('orders')
           .select()
-          .inFilter('status', ['shipped', 'picked_up', 'assigned'])
-          .eq('driver_id', supabase.auth.currentUser!.id)
+          .or(
+            'and(status.in.(pending,preparing,prepared,ready),branch_id.eq.$driverBranchId),'
+            'and(driver_id.eq.$userId,status.in.(shipped,picked_up,assigned,ready,preparing,prepared))',
+          )
           .order('created_at', ascending: false);
       setState(() {
         activeOrders = List<Map<String, dynamic>>.from(response);
@@ -365,9 +439,24 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
         deliveryCount: deliveryCount,
         avgRating: avgRating,
         totalRatings: totalRatings,
+        dailyDeliveries: dailyDeliveries,
+        monthlyDeliveries: monthlyDeliveries,
+        todayEarnings: todayEarnings,
+        monthlyEarnings: monthlyEarnings,
       ),
       DriverHistoryTab(historyOrders: historyOrders),
-      DriverSettingsTab(driverProfile: driverProfile),
+      DriverSettingsTab(
+        driverProfile: driverProfile,
+        branchName: branchName,
+        joinedAt: joinedAt,
+        employeeTotalDeliveries: employeeTotalDeliveries,
+        isOnline: isOnline,
+        totalEarnings: totalEarnings,
+        dailyDeliveries: dailyDeliveries,
+        monthlyDeliveries: monthlyDeliveries,
+        todayEarnings: todayEarnings,
+        monthlyEarnings: monthlyEarnings,
+      ),
     ];
 
     return Scaffold(

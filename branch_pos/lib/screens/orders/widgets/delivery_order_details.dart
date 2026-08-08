@@ -128,7 +128,7 @@ class DeliveryOrderDetails extends StatelessWidget {
               ),
               Row(
                 children: [
-                  if (order['status'] == 'preparing')
+                  if (order['status'] == 'preparing' || order['status'] == 'prepared')
                     _buildActionButton(
                       'طباعة الفاتورة',
                       LucideIcons.printer,
@@ -137,48 +137,100 @@ class DeliveryOrderDetails extends StatelessWidget {
                     ),
                   if (order['status'] == 'pending')
                     _buildActionButton(
-                      'قبول / جاري التحضير',
+                      'بدء التحضير',
                       LucideIcons.packageCheck,
                       AppTheme.secondary,
                       () async {
                         await controller.updateStatus(order['id'], 'preparing');
                         Get.snackbar(
-                          'تم قبول الطلب',
-                          'يمكنك الآن طباعة الفاتورة',
+                          'بدء التحضير',
+                          'تم بدء تحضير الطلب.',
                           backgroundColor: AppTheme.primary,
                           colorText: Colors.white,
                           snackPosition: SnackPosition.BOTTOM,
-                          mainButton: TextButton(
-                            onPressed: _printInvoice,
-                            child: const Text(
-                              'طباعة',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          duration: const Duration(seconds: 6),
+                          duration: const Duration(seconds: 3),
                         );
                       },
                     ),
-                  const SizedBox(width: 12),
-                  if (order['status'] == 'picked_up')
+                  if (order['status'] == 'preparing')
                     _buildActionButton(
-                      'تأكيد استلام المندوب',
-                      LucideIcons.packageCheck,
+                      'تم التحضير',
+                      LucideIcons.checkCheck,
+                      const Color(0xFF7C3AED),
+                      () async {
+                        await controller.updateStatus(order['id'], 'prepared');
+                        Get.snackbar(
+                          'تم التحضير',
+                          'الطلب جاهز للتسليم.',
+                          backgroundColor: AppTheme.primary,
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.BOTTOM,
+                          duration: const Duration(seconds: 3),
+                        );
+                      },
+                    ),
+                  if (order['status'] == 'prepared' || order['status'] == 'ready')
+                    _buildActionButton(
+                      'يتم التوصيل',
+                      LucideIcons.truck,
                       AppTheme.primary,
                       () async {
                         await controller.updateStatus(order['id'], 'shipped');
+                        Get.snackbar(
+                          'في الطريق',
+                          'تم إرسال الطلب للتوصيل.',
+                          backgroundColor: AppTheme.primary,
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.BOTTOM,
+                          duration: const Duration(seconds: 3),
+                        );
                       },
                     ),
-                  const SizedBox(width: 12),
-                  _buildActionButton(
-                    'إسناد مندوب',
-                    LucideIcons.userPlus,
-                    Colors.orange,
-                    () => _showDriverAssignmentDialog(context),
-                  ),
+                  if (order['status'] == 'picked_up')
+                    _buildActionButton(
+                      'يتم التوصيل',
+                      LucideIcons.truck,
+                      AppTheme.primary,
+                      () async {
+                        await controller.updateStatus(order['id'], 'shipped');
+                        Get.snackbar(
+                          'في الطريق',
+                          'تم إرسال الطلب للتوصيل.',
+                          backgroundColor: AppTheme.primary,
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.BOTTOM,
+                          duration: const Duration(seconds: 3),
+                        );
+                      },
+                    ),
+                  if (order['status'] == 'shipped')
+                    _buildActionButton(
+                      'تم التوصيل',
+                      LucideIcons.checkCheck,
+                      AppTheme.success,
+                      () async {
+                        await controller.updateStatus(order['id'], 'delivered');
+                        Get.snackbar(
+                          'تم التوصيل',
+                          'اكتمل الطلب بنجاح.',
+                          backgroundColor: AppTheme.success,
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.BOTTOM,
+                          duration: const Duration(seconds: 3),
+                        );
+                      },
+                    ),
+                  if (order['status'] == 'pending' ||
+                      order['status'] == 'prepared' ||
+                      order['status'] == 'ready') ...[
+                    const SizedBox(width: 12),
+                    _buildActionButton(
+                      'إسناد مندوب',
+                      LucideIcons.userPlus,
+                      Colors.orange,
+                      () => _showDriverAssignmentDialog(context),
+                    ),
+                  ],
                 ],
               ),
             ],

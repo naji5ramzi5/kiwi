@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Shield, User, HeartPulse, Save, Loader, Lock, Unlock, Store } from 'lucide-react'
+import { Shield, User, HeartPulse, Save, Loader, Lock, Unlock, Store, Bike, Car, Truck, Bus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -20,6 +20,14 @@ export default function Settings() {
     { key: 'owner_partner_ratio', value_decimal: 0.55, label: 'حصة صاحب المشروع', color: '#d97706' },
     { key: 'system_maintenance_ratio', value_decimal: 0.10, label: 'صندوق الصيانة والسيرفر', color: '#7c3aed' },
   ])
+  const [deliveryEarning, setDeliveryEarning] = useState(0)
+  const [vehicleEarnings, setVehicleEarnings] = useState<Record<string, number>>({
+    delivery_earnings_motorcycle: 0,
+    delivery_earnings_car: 0,
+    delivery_earnings_van: 0,
+    delivery_earnings_truck: 0,
+  })
+  const [savingEarning, setSavingEarning] = useState(false)
 
   useEffect(() => { fetchSettings() }, [])
 
@@ -31,6 +39,16 @@ export default function Settings() {
           const found = data.find((s: { key: string; value_decimal: number }) => s.key === p.key)
           return found ? { ...p, value_decimal: found.value_decimal } : p
         }))
+        const earning = data.find((s: { key: string; value_decimal: number }) => s.key === 'delivery_earnings_per_order')
+        if (earning) setDeliveryEarning(Number(earning.value_decimal) || 0)
+        setVehicleEarnings(prev => {
+          const next = { ...prev }
+          for (const key of Object.keys(next)) {
+            const found = data.find((s: { key: string; value_decimal: number }) => s.key === key)
+            if (found) next[key] = Number(found.value_decimal) || 0
+          }
+          return next
+        })
       }
     } catch (err) { console.error(err) }
   }
@@ -60,6 +78,27 @@ export default function Settings() {
       toast.error('خطأ في الحفظ: ' + ((err as Error).message))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function saveDeliveryEarning() {
+    setSavingEarning(true)
+    try {
+      await supabase.from('system_settings').upsert(
+        { key: 'delivery_earnings_per_order', value_decimal: deliveryEarning },
+        { onConflict: 'key' }
+      )
+      for (const [key, val] of Object.entries(vehicleEarnings)) {
+        await supabase.from('system_settings').upsert(
+          { key, value_decimal: val },
+          { onConflict: 'key' }
+        )
+      }
+      toast.success('تم حفظ أرباح التوصيل (حسب نوع المركبة) بنجاح')
+    } catch (err: unknown) {
+      toast.error('خطأ في الحفظ: ' + ((err as Error).message))
+    } finally {
+      setSavingEarning(false)
     }
   }
 
@@ -201,6 +240,77 @@ export default function Settings() {
               </div>
             </>
           )}
+        </div>
+      </div>
+
+      {/* Delivery Earnings Section */}
+      <div className="card" style={{ marginTop: 24 }}>
+        <div className="card-header">
+          <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Bike size={18} /> أرباح التوصيل — للمناديب
+          </span>
+        </div>
+        <div className="card-body">
+          <p style={{ fontSize: 13, color: 'var(--gray500)', marginBottom: 20 }}>
+            حدد أجر المندوب عن كل طلب تم توصيله حسب نوع مركبته. عند ترك القيمة صفراً، يُحتسب أجر المندوب
+            من التسعيرة العامة أدناه، وإن كانت صفراً فمن رسوم التوصيل (delivery_fee) الخاصة بالطلب.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 20 }}>
+            {[
+              { key: 'delivery_earnings_motorcycle', label: 'الدراجة النارية', icon: <Bike size={18} />, color: '#10b981' },
+              { key: 'delivery_earnings_car', label: 'السيارة', icon: <Car size={18} />, color: '#2563eb' },
+              { key: 'delivery_earnings_van', label: 'الفان', icon: <Bus size={18} />, color: '#8b5cf6' },
+              { key: 'delivery_earnings_truck', label: 'الشاحنة', icon: <Truck size={18} />, color: '#f59e0b' },
+            ].map(v => (
+              <div key={v.key} style={{ padding: 14, background: 'var(--gray50)', borderRadius: 14, border: '1px solid var(--gray100)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: v.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', color: v.color }}>
+                    {v.icon}
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{v.label}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="number" min="0" step="250"
+                    className="form-input"
+                    style={{ flex: 1, fontWeight: 700, fontSize: 15, textAlign: 'center' }}
+                    value={vehicleEarnings[v.key]}
+                    onChange={e => setVehicleEarnings(prev => ({ ...prev, [v.key]: Math.max(0, Number(e.target.value) || 0) }))}
+                  />
+                  <span style={{ fontSize: 12, color: 'var(--gray400)', fontWeight: 700 }}>د.ع/طلب</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--gray600)', marginBottom: 6 }}>
+                التسعير العام لكل طلب (د.ع) — يُستخدم عند غياب تسعيرة المركبة
+              </label>
+              <input
+                type="number" min="0" step="500"
+                className="form-input"
+                style={{ width: '100%', fontWeight: 700, fontSize: 16, textAlign: 'center' }}
+                value={deliveryEarning}
+                onChange={e => setDeliveryEarning(Math.max(0, Number(e.target.value) || 0))}
+              />
+            </div>
+            <button
+              className="btn btn-primary"
+              style={{ height: 44, minWidth: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              onClick={saveDeliveryEarning}
+              disabled={savingEarning}
+            >
+              {savingEarning ? <><Loader size={16} className="spin" /> جاري الحفظ...</> : <><Save size={16} /> حفظ الأرباح</>}
+            </button>
+          </div>
+          <div style={{ marginTop: 12, fontSize: 12, color: 'var(--gray400)' }}>
+            {deliveryEarning > 0
+              ? `سيُضاف ${deliveryEarning.toLocaleString()} د.ع إلى رصيد المندوب عند كل تسليم كإعداد عام.`
+              : 'سيُستخدم مبلغ delivery_fee الخاص بكل طلب كأجر للمندوب (عند غياب التسعيرات أعلاه).'}
+          </div>
         </div>
       </div>
 

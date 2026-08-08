@@ -153,6 +153,7 @@ class OrderTrackingController extends GetxController {
     switch (status) {
       case 'pending': return 0;
       case 'preparing': return 1;
+      case 'prepared':
       case 'picked_up': return 2;
       case 'shipped': return 3;
       case 'delivered': return 4;
@@ -165,6 +166,7 @@ class OrderTrackingController extends GetxController {
     switch (status) {
       case 'pending': return 'status_pending'.tr;
       case 'preparing': return 'status_preparing'.tr;
+      case 'prepared': return 'status_prepared'.tr;
       case 'picked_up': return 'status_picked_up'.tr;
       case 'shipped': return 'status_shipped'.tr;
       case 'delivered': return 'status_delivered'.tr;

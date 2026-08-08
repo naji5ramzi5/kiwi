@@ -37,6 +37,9 @@ interface Order {
   status: string;
   total_amount: number;
   delivery_address: string;
+  area?: string;
+  street?: string;
+  building?: string;
   customer_id: string;
   branch_id: string;
   customer_name?: string;
@@ -202,6 +205,7 @@ export default function Orders() {
             <p><strong>اسم الزبون:</strong> ${order.customer_name || '-'}</p>
             <p><strong>رقم الهاتف:</strong> ${order.customer_phone || '-'}</p>
             <p><strong>عنوان التوصيل:</strong> ${order.delivery_address || '-'}</p>
+            ${order.area || order.street || order.building ? `<p><strong>المنطقة / الشارع / البناء:</strong> ${[order.area, order.street, order.building].filter(Boolean).join(' — ')}</p>` : ''}
             <p><strong>الحالة:</strong> ${order.status || '-'}</p>
           </div>
           <div class="total">

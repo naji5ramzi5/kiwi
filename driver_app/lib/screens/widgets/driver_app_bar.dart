@@ -54,7 +54,17 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(driverProfile?['vehicle_type'] == 'truck' ? LucideIcons.truck : LucideIcons.bike, size: 14, color: Colors.grey.shade500),
+                        Icon(
+                          driverProfile?['vehicle_type'] == 'truck'
+                              ? LucideIcons.truck
+                              : driverProfile?['vehicle_type'] == 'car'
+                                  ? LucideIcons.car
+                                  : driverProfile?['vehicle_type'] == 'van'
+                                      ? LucideIcons.bus
+                                      : LucideIcons.bike,
+                          size: 14,
+                          color: Colors.grey.shade500,
+                        ),
                         const SizedBox(width: 4),
                         Text(driverProfile?['plate_number'] ?? 'جاهز للانطلاق', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                       ],

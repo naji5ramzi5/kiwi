@@ -388,6 +388,8 @@ class CartController extends GetxController {
     String? branchId;
     double? customerLat;
     double? customerLng;
+    String? userArea;
+    String? userStreet;
     if (Get.isRegistered<HomeController>()) {
       final homeController = Get.find<HomeController>();
       branchId = homeController.selectedBranch.value?['id']?.toString();
@@ -395,6 +397,8 @@ class CartController extends GetxController {
         customerLat = homeController.userLat.value;
         customerLng = homeController.userLng.value;
       }
+      if (homeController.userArea.value.isNotEmpty) userArea = homeController.userArea.value;
+      if (homeController.userStreet.value.isNotEmpty) userStreet = homeController.userStreet.value;
     }
 
     try {
@@ -408,6 +412,8 @@ class CartController extends GetxController {
         'delivery_address': address,
         'payment_method': paymentMethod,
       };
+      if (userArea != null) orderData['area'] = userArea;
+      if (userStreet != null) orderData['street'] = userStreet;
       if (customerLat != null && customerLng != null) {
         orderData['customer_lat'] = customerLat;
         orderData['customer_lng'] = customerLng;

@@ -1,8 +1,11 @@
-﻿import 'dart:async';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../delivery_map_screen.dart';
 
 String orderShort(String id) => id.length >= 5 ? id.substring(0, 5) : id;
@@ -34,81 +37,91 @@ class DriverHomeTab extends StatefulWidget {
 }
 
 class _DriverHomeTabState extends State<DriverHomeTab> {
-  final Map<String, int> _countdowns = {};
-  final Map<String, Timer> _timers = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _startCountdowns();
-  }
-
-  @override
-  void didUpdateWidget(DriverHomeTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _startCountdowns();
-  }
-
-  void _startCountdowns() {
-    for (final order in widget.activeOrders) {
-      final id = order['id'].toString();
-      if ((order['status'] == 'assigned' || order['status'] == 'pending' || order['status'] == 'preparing') && !_timers.containsKey(id)) {
-        _countdowns[id] = 30;
-        _timers[id] = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (!mounted) { timer.cancel(); return; }
-          final remaining = (_countdowns[id] ?? 0) - 1;
-          if (remaining <= 0) {
-            timer.cancel();
-            _timers.remove(id);
-            _countdowns.remove(id);
-            _autoRejectOrder(id);
-          } else {
-            setState(() => _countdowns[id] = remaining);
-          }
-        });
-      }
-    }
-    // Clean up timers for orders no longer in the list
-    final activeIds = widget.activeOrders.map((o) => o['id'].toString()).toSet();
-    _timers.removeWhere((id, timer) {
-      if (!activeIds.contains(id)) {
-        timer.cancel();
-        return true;
-      }
-      return false;
-    });
-    _countdowns.removeWhere((id, _) => !activeIds.contains(id));
-  }
-
-  Future<void> _autoRejectOrder(String orderId) async {
+  Future<void> _claimOrder(Map<String, dynamic> order) async {
     try {
-      // Release order back to branch
-      await Supabase.instance.client.rpc('release_order_from_delivery', params: {'p_order_id': orderId});
-      widget.onRefresh();
-      if (mounted) {
-        Get.snackbar('انتهت المهلة', 'تم إرجاع الطلب للفرع لعدم الرد',
-            backgroundColor: Colors.orange, colorText: Colors.white, snackPosition: SnackPosition.TOP);
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+      final emp = await Supabase.instance.client
+          .from('delivery_employees')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (emp == null) {
+        Get.snackbar('تنبيه', 'لا يوجد سجل مندوب مرتبط بحسابك',
+            backgroundColor: Colors.orange, colorText: Colors.white, margin: const EdgeInsets.all(16));
+        return;
       }
-    } catch (_) {
-      // Fallback: reset order
-      try {
-        await Supabase.instance.client.from('orders').update({
-          'assigned_delivery_id': null,
-          'driver_id': null,
-          'status': 'ready',
-          'assigned_at': null,
-        }).eq('id', orderId);
-      } catch (_) {}
+      await Supabase.instance.client.rpc('assign_order_to_delivery', params: {
+        'p_order_id': order['id'],
+        'p_employee_id': emp['id'],
+      });
+      widget.onRefresh();
+      Get.snackbar('تم الاستلام', 'تم إسناد الطلب إليك، توجه إلى الفرع للتجهيز.',
+          backgroundColor: const Color(0xFF10b981), colorText: Colors.white, margin: const EdgeInsets.all(16));
+    } catch (e) {
+      Get.snackbar('فشل الاستلام', 'تعذر إسناد الطلب: $e',
+          backgroundColor: Colors.red, colorText: Colors.white, margin: const EdgeInsets.all(16));
     }
   }
 
-  @override
-  void dispose() {
-    for (final timer in _timers.values) {
-      timer.cancel();
+  Future<void> _confirmDelivery(Map<String, dynamic> order) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 60);
+
+    if (picked == null) {
+      final confirm = await Get.dialog<bool>(
+        AlertDialog(
+          title: const Text('تأكيد التسليم'),
+          content: const Text('لم يتم التقاط صورة إثبات التوصيل. هل تريد تأكيد التسليم بدون صورة؟'),
+          actions: [
+            TextButton(onPressed: () => Get.back(result: false), child: const Text('إلغاء')),
+            ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('تأكيد بدون صورة')),
+          ],
+        ),
+      );
+      if (confirm != true) return;
     }
-    _timers.clear();
-    super.dispose();
+
+    double? lat;
+    double? lng;
+    try {
+      if (await Geolocator.isLocationServiceEnabled()) {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10),
+        );
+        lat = pos.latitude;
+        lng = pos.longitude;
+      }
+    } catch (_) {}
+
+    String? proofUrl;
+    if (picked != null) {
+      try {
+        final fileName = 'proof_${order['id']}.jpg';
+        await Supabase.instance.client.storage.from('delivery_proofs').upload(fileName, File(picked.path));
+        proofUrl = Supabase.instance.client.storage.from('delivery_proofs').getPublicUrl(fileName);
+      } catch (e) {
+        debugPrint('Proof upload failed: $e');
+      }
+    }
+
+    try {
+      await Supabase.instance.client.rpc('confirm_delivery', params: {
+        'p_order_id': order['id'],
+        'p_photo_url': proofUrl,
+        'p_latitude': lat,
+        'p_longitude': lng,
+      });
+    } catch (e) {
+      debugPrint('confirm_delivery RPC failed, falling back: $e');
+      if (proofUrl != null) {
+        await Supabase.instance.client.from('orders').update({'proof_image': proofUrl}).eq('id', order['id']);
+      }
+      await Supabase.instance.client.from('orders').update({'status': 'delivered'}).eq('id', order['id']);
+    }
+    widget.onRefresh();
+    Get.snackbar('عمل ممتاز!', 'تم إنهاء الطلب وتسليمه للعميل بنجاح', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, margin: const EdgeInsets.all(16));
   }
 
   @override
@@ -196,10 +209,15 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
   Widget _buildOrderCard(Map<String, dynamic> order) {
     bool isDelivering = order['status'] == 'shipped';
     bool isAssigned = order['status'] == 'picked_up';
-    bool isNew = order['status'] == 'assigned' || order['status'] == 'pending' || order['status'] == 'preparing';
+    bool isNew = order['status'] == 'assigned' || order['status'] == 'pending' || order['status'] == 'preparing' || order['status'] == 'prepared' || order['status'] == 'ready';
     final orderId = order['id'].toString();
-    final countdown = _countdowns[orderId];
     final bool showAcceptReject = order['status'] == 'assigned';
+    // Unassigned order in the driver's zone that can be claimed directly.
+    final bool isZoneNew = (order['driver_id'] == null) &&
+        (order['status'] == 'pending' ||
+            order['status'] == 'preparing' ||
+            order['status'] == 'prepared' ||
+            order['status'] == 'ready');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -218,33 +236,6 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
       ),
       child: Column(
         children: [
-          if (isNew && countdown != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: countdown <= 10 ? Colors.red.shade50 : Colors.orange.shade50,
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    LucideIcons.clock,
-                    size: 16,
-                    color: countdown <= 10 ? Colors.red : Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'وقت القبول: $countdown ثانية',
-                    style: TextStyle(
-                      color: countdown <= 10 ? Colors.red : Colors.orange,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -375,13 +366,32 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))),
-              child: Row(
+              child: isZoneNew
+                  // Unassigned order in the driver's zone: single claim button
+                  ? SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await _claimOrder(order);
+                        },
+                        icon: const Icon(LucideIcons.hand, size: 18),
+                        label: const Text('استلام الطلب'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10b981),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    )
+                  : Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () => Get.to(() => DeliveryMapScreen(order: order)),
                       icon: Icon(isDelivering ? LucideIcons.map : LucideIcons.navigation, size: 18),
-                      label: Text(isDelivering ? 'عرض الخريطة' : 'استلام الطلب'),
+                      label: Text(isDelivering ? 'عرض الخريطة' : 'بدء التوصيل'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF10b981),
                         foregroundColor: Colors.white,
@@ -424,11 +434,7 @@ class _DriverHomeTabState extends State<DriverHomeTab> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await Supabase.instance.client.from('orders').update({'status': 'delivered'}).eq('id', order['id']);
-                          widget.onRefresh();
-                          Get.snackbar('تم التوصيل', 'أحسنت عملاً! تمت إضافة الأرباح لرصيدك.', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, margin: const EdgeInsets.all(16));
-                        },
+                        onPressed: () async => _confirmDelivery(order),
                         icon: const Icon(LucideIcons.checkCircle, size: 18),
                         label: const Text('إنهاء'),
                         style: OutlinedButton.styleFrom(

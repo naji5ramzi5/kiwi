@@ -29,6 +29,8 @@ const DeliveryZones = lazy(() => import('./pages/DeliveryZones'))
 const BranchPrices = lazy(() => import('./pages/BranchPrices'))
 const Profile = lazy(() => import('./pages/Profile'))
 const TransferDelivery = lazy(() => import('./pages/TransferDelivery'))
+const DeliveredOrders = lazy(() => import('./pages/DeliveredOrders'))
+const DeliveryEmployeesReport = lazy(() => import('./pages/DeliveryEmployeesReport'))
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -100,6 +102,8 @@ export default function App() {
           <Route path="orders" element={<Orders />} />
           <Route path="drivers" element={<Drivers />} />
           <Route path="transfer-delivery" element={<TransferDelivery />} />
+          <Route path="delivered-orders" element={<DeliveredOrders />} />
+          <Route path="delivery-employees-report" element={<DeliveryEmployeesReport />} />
           <Route path="marketing" element={<Marketing />} />
           <Route path="finance" element={<Finance />} />
           <Route path="financial-dashboard" element={<FinancialDashboard />} />

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -173,9 +174,6 @@ class DriverApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final supabase = Supabase.instance.client;
-    final session = supabase.auth.currentSession;
-
     return GetMaterialApp(
       title: 'Kiwi_Driver',
       debugShowCheckedModeBanner: false,
@@ -192,8 +190,42 @@ class DriverApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: session == null ? const DriverLoginScreen() : const AuthWrapper(),
+      home: const SessionGate(),
     );
+  }
+}
+
+/// Listens to auth state changes so login/logout/session-refresh always
+/// navigate correctly without a manual app restart.
+class SessionGate extends StatefulWidget {
+  const SessionGate({super.key});
+
+  @override
+  State<SessionGate> createState() => _SessionGateState();
+}
+
+class _SessionGateState extends State<SessionGate> {
+  StreamSubscription<AuthState>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) return const DriverLoginScreen();
+    return const AuthWrapper();
   }
 }
 

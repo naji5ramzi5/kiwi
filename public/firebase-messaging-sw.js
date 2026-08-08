@@ -2,11 +2,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyB0d9fRqVZ5e0f6b5c4a3d2e1f0a9b8c7d6e5f4",
+  apiKey: "AIzaSyCE4WX7pdUsiqghBpDz9jfc0mLCbsfcGZI",
   authDomain: "fresh-enterprise.firebaseapp.com",
   projectId: "fresh-enterprise",
-  messagingSenderId: "112645303767989129446",
-  appId: "1:112645303767989129446:web:abc123def456"
+  storageBucket: "fresh-enterprise.firebasestorage.app",
+  messagingSenderId: "214305510491",
+  appId: "1:214305510491:web:fe1e3ce1100ea92bec5b7e"
 });
 
 const messaging = firebase.messaging();
@@ -15,8 +16,8 @@ messaging.onBackgroundMessage(function(payload) {
   const notificationTitle = payload.notification?.title || 'Fresh';
   const notificationOptions = {
     body: payload.notification?.body || '',
-    icon: '/fresh-icon.png',
-    badge: '/fresh-badge.png',
+    icon: '/kiwi-logo.jpg',
+    badge: '/kiwi-logo.jpg',
     vibrate: [200, 100, 200],
   };
 

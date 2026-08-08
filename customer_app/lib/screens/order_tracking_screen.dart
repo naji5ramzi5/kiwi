@@ -194,6 +194,24 @@ class OrderTrackingScreen extends StatelessWidget {
                                               fontFamily: 'Cairo',
                                             ),
                                           ),
+                                          const SizedBox(height: 4),
+                                          if (driverProfile?['vehicle_type'] != null && driverProfile!['vehicle_type'].toString().isNotEmpty)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.emerald.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                _vehicleTypeLabel(driverProfile!['vehicle_type'].toString()),
+                                                style: TextStyle(
+                                                  color: AppTheme.emerald,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  fontFamily: 'Cairo',
+                                                ),
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
@@ -552,6 +570,20 @@ class OrderTrackingScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _vehicleTypeLabel(String type) {
+    switch (type) {
+      case 'truck':
+        return 'شاحنة';
+      case 'car':
+        return 'سيارة';
+      case 'van':
+        return 'فان';
+      case 'bike':
+      default:
+        return 'دراجة نارية';
+    }
   }
 }
 

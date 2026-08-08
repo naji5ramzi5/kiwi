@@ -105,18 +105,49 @@ class _DeliveryMapScreenState extends State<DeliveryMapScreen> {
         ),
       );
       if (confirm != true) return;
-    } else {
+    }
+
+    // Capture GPS confirmation coordinates (best effort)
+    double? lat;
+    double? lng;
+    try {
+      if (await Geolocator.isLocationServiceEnabled()) {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 10),
+        );
+        lat = pos.latitude;
+        lng = pos.longitude;
+      }
+    } catch (_) {}
+
+    String? proofUrl;
+    if (picked != null) {
       try {
         final fileName = 'proof_${widget.order['id']}.jpg';
         await Supabase.instance.client.storage.from('delivery_proofs').upload(fileName, File(picked.path));
-        final proofUrl = Supabase.instance.client.storage.from('delivery_proofs').getPublicUrl(fileName);
-        await Supabase.instance.client.from('orders').update({'proof_image': proofUrl}).eq('id', widget.order['id']);
+        proofUrl = Supabase.instance.client.storage.from('delivery_proofs').getPublicUrl(fileName);
       } catch (e) {
         debugPrint('Proof upload failed: $e');
       }
     }
 
-    await Supabase.instance.client.from('orders').update({'status': 'delivered'}).eq('id', widget.order['id']);
+    // Atomic close: photo + GPS + confirmation record + order delivered
+    try {
+      await Supabase.instance.client.rpc('confirm_delivery', params: {
+        'p_order_id': widget.order['id'],
+        'p_photo_url': proofUrl,
+        'p_latitude': lat,
+        'p_longitude': lng,
+      });
+    } catch (e) {
+      // Fallback for very old DBs missing the RPC: keep direct update
+      debugPrint('confirm_delivery RPC failed, falling back: $e');
+      if (proofUrl != null) {
+        await Supabase.instance.client.from('orders').update({'proof_image': proofUrl}).eq('id', widget.order['id']);
+      }
+      await Supabase.instance.client.from('orders').update({'status': 'delivered'}).eq('id', widget.order['id']);
+    }
     Get.back();
     Get.snackbar('عمل ممتاز!', 'تم إنهاء الطلب وتسليمه للعميل بنجاح', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, margin: const EdgeInsets.all(16));
   }
@@ -138,7 +169,9 @@ class _DeliveryMapScreenState extends State<DeliveryMapScreen> {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.freshenterprise.driver',
+                userAgentPackageName: 'com.kiwi.driver',
+                maxNativeZoom: 19,
+                maxZoom: 19,
               ),
               PolylineLayer(
                 polylines: <Polyline>[
@@ -289,6 +322,34 @@ class _DeliveryMapScreenState extends State<DeliveryMapScreen> {
                       ],
                     ),
                   ),
+                  if (widget.order['customer_name'] != null || widget.order['customer_name_manual'] != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+                      child: Row(
+                        children: [
+                          const Icon(LucideIcons.user, color: Color(0xFF10b981), size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(widget.order['customer_name'] ?? widget.order['customer_name_manual'] ?? 'العميل', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1F2937)))),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (widget.order['notes'] != null && widget.order['notes'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.amber.shade200)),
+                      child: Row(
+                        children: [
+                          const Icon(LucideIcons.fileText, color: Colors.amber, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(widget.order['notes'].toString(), style: const TextStyle(fontSize: 13, color: Color(0xFF92400E)))),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Row(
                     children: [

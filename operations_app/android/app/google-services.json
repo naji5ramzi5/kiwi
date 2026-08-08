@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "214305510491",
+    "project_id": "fresh-enterprise",
+    "storage_bucket": "fresh-enterprise.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214305510491:android:fcc1cbb83f320bd3ec5b7e",
+        "android_client_info": {
+          "package_name": "com.kiwi.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ5Z_S6_fLECnRyu0MeIO5cdDmrEscIF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214305510491:android:02e1a024571815adec5b7e",
+        "android_client_info": {
+          "package_name": "com.kiwi.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ5Z_S6_fLECnRyu0MeIO5cdDmrEscIF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214305510491:android:6f6320e49c15d065ec5b7e",
+        "android_client_info": {
+          "package_name": "com.kiwi.operations"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ5Z_S6_fLECnRyu0MeIO5cdDmrEscIF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

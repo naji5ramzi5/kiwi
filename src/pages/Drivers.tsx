@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User, Star, Search } from 'lucide-react'
+import { UserCheck, UserX, Truck, Bike, ShieldCheck, ShieldAlert, CreditCard, User, Star, Search, Wallet, PackageCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Driver {
   id: string; full_name: string; email: string; vehicle_type: string;
   is_approved: boolean; is_online: boolean; plate_number?: string;
   avatar_url?: string; avg_rating?: number; total_ratings?: number;
+  wallet_balance?: number; total_deliveries?: number;
 }
 
 export default function Drivers() {
@@ -23,7 +24,17 @@ export default function Drivers() {
       const { data: ratingData } = await supabase.from('driver_ratings').select('rating').eq('driver_id', d.id)
       const ratings = (ratingData || []) as { rating: number }[]
       const avg = ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0
-      return { ...d, avg_rating: Math.round(avg * 10) / 10, total_ratings: ratings.length }
+
+      const { data: empData } = await supabase.from('delivery_employees').select('total_deliveries').eq('user_id', d.id).maybeSingle()
+      const { data: walletData } = await supabase.from('driver_wallets').select('balance').eq('driver_id', d.id).maybeSingle()
+
+      return {
+        ...d,
+        avg_rating: Math.round(avg * 10) / 10,
+        total_ratings: ratings.length,
+        total_deliveries: Number(empData?.total_deliveries) || 0,
+        wallet_balance: Number(walletData?.balance) || 0,
+      }
     }))
     setDrivers(driversWithRatings)
     setLoading(false)
@@ -99,6 +110,26 @@ export default function Drivers() {
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 800, color: driver.is_approved ? '#059669' : '#d97706' }}>
                   {driver.is_approved ? 'حساب معتمد' : 'بانتظار المراجعة'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--gray50)', borderRadius: 12, border: '1px solid var(--gray100)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--gray600)' }}>
+                  <Wallet size={16} style={{ color: '#10b981' }} />
+                  <span style={{ fontWeight: 700 }}>رصيد الأرباح:</span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#059669' }}>
+                  {(driver.wallet_balance ?? 0).toLocaleString()} د.ع
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--gray50)', borderRadius: 12, border: '1px solid var(--gray100)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--gray600)' }}>
+                  <PackageCheck size={16} style={{ color: '#8b5cf6' }} />
+                  <span style={{ fontWeight: 700 }}>توصيلات مكتملة:</span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--gray900)' }}>
+                  {driver.total_deliveries ?? 0}
                 </span>
               </div>
 

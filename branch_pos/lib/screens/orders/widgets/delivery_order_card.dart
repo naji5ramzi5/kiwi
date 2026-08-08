@@ -6,6 +6,9 @@ import '../../../theme/app_theme.dart';
 const Map<String, String> _statusLabels = {
   'pending': 'جديد',
   'preparing': 'قيد التحضير',
+  'prepared': 'تم التحضير',
+  'ready': 'جاهز للتسليم',
+  'assigned': 'مسند للمندوب',
   'picked_up': 'تم الاستلام من الفرع',
   'shipped': 'في الطريق',
   'delivered': 'تم التوصيل',
@@ -16,6 +19,9 @@ const Map<String, String> _statusLabels = {
 const Map<String, Color> _statusColors = {
   'pending': AppTheme.accent,
   'preparing': AppTheme.info,
+  'prepared': Color(0xFF7C3AED),
+  'ready': AppTheme.secondary,
+  'assigned': AppTheme.secondary,
   'picked_up': AppTheme.secondary,
   'shipped': AppTheme.primary,
   'delivered': AppTheme.success,

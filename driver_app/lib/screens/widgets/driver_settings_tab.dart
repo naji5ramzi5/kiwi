@@ -6,8 +6,29 @@ import '../auth/driver_login_screen.dart';
 
 class DriverSettingsTab extends StatelessWidget {
   final Map<String, dynamic>? driverProfile;
+  final String? branchName;
+  final String? joinedAt;
+  final int employeeTotalDeliveries;
+  final bool isOnline;
+  final double totalEarnings;
+  final int dailyDeliveries;
+  final int monthlyDeliveries;
+  final double todayEarnings;
+  final double monthlyEarnings;
 
-  const DriverSettingsTab({super.key, required this.driverProfile});
+  const DriverSettingsTab({
+    super.key,
+    required this.driverProfile,
+    this.branchName,
+    this.joinedAt,
+    this.employeeTotalDeliveries = 0,
+    this.isOnline = false,
+    this.totalEarnings = 0,
+    this.dailyDeliveries = 0,
+    this.monthlyDeliveries = 0,
+    this.todayEarnings = 0,
+    this.monthlyEarnings = 0,
+  });
 
   String _resolvePhone() {
     final profilePhone = driverProfile?['phone'];
@@ -19,6 +40,16 @@ class DriverSettingsTab extends StatelessWidget {
       if (user.phone != null && user.phone!.isNotEmpty) return user.phone!;
     }
     return '';
+  }
+
+  String _formatDate(String? iso) {
+    if (iso == null || iso.isEmpty) return 'غير محددة';
+    try {
+      final d = DateTime.parse(iso).toLocal();
+      return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso.substring(0, 10);
+    }
   }
 
   @override
@@ -45,25 +76,65 @@ class DriverSettingsTab extends StatelessWidget {
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isOnline
+                      ? const Color(0xFF10b981).withOpacity(0.1)
+                      : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.circleDot, size: 14, color: isOnline ? const Color(0xFF10b981) : Colors.orange),
+                    const SizedBox(width: 6),
+                    Text(
+                      isOnline ? 'متصل الآن' : 'غير متصل',
+                      style: TextStyle(color: isOnline ? const Color(0xFF10b981) : Colors.orange, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(color: const Color(0xFF10b981).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                child: Text(driverProfile?['vehicle_type'] == 'truck' ? 'مركبة شحن' : 'دراجة نارية', style: const TextStyle(color: Color(0xFF10b981), fontWeight: FontWeight.bold)),
+                child: Text(
+                  driverProfile?['vehicle_type'] == 'truck'
+                      ? 'شاحنة'
+                      : driverProfile?['vehicle_type'] == 'car'
+                          ? 'سيارة'
+                          : driverProfile?['vehicle_type'] == 'van'
+                              ? 'فان'
+                              : 'دراجة نارية',
+                  style: const TextStyle(color: Color(0xFF10b981), fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)]),
-          child: Column(
-            children: [
-              _settingsTile(LucideIcons.hash, 'رقم اللوحة', driverProfile?['plate_number'] ?? ''),
-              const Divider(),
-              _settingsTile(LucideIcons.smartphone, 'رقم الجوال', _resolvePhone()),
-              const Divider(),
-              _settingsTile(LucideIcons.mail, 'البريد الإلكتروني', driverProfile?['email'] ?? ''),
-            ],
+        _sectionCard('بيانات الموظف', Column(children: [
+          _settingsTile(LucideIcons.building2, 'الفرع', branchName ?? 'غير محدد'),
+          const Divider(),
+          _settingsTile(LucideIcons.hash, 'رقم اللوحة', driverProfile?['plate_number'] ?? ''),
+          const Divider(),
+          _settingsTile(LucideIcons.smartphone, 'رقم الجوال', _resolvePhone()),
+          const Divider(),
+          _settingsTile(LucideIcons.mail, 'البريد الإلكتروني', driverProfile?['email'] ?? ''),
+          const Divider(),
+          _settingsTile(LucideIcons.calendarDays, 'تاريخ الانضمام', _formatDate(joinedAt)),
+          const Divider(),
+          _settingsTile(LucideIcons.packageCheck, 'إجمالي عمليات التوصيل', '$employeeTotalDeliveries'),
+          const Divider(),
+          _settingsTile(
+            LucideIcons.shieldCheck,
+            'حالة الحساب',
+            driverProfile?['is_approved'] == true ? 'مقبول ✅' : 'بانتظار الموافقة ⏳',
           ),
+        ])),
+        const SizedBox(height: 16),
+        _sectionCard('الأرباح',
+          _earningsTile(dailyDeliveries, monthlyDeliveries, employeeTotalDeliveries, totalEarnings, todayEarnings, monthlyEarnings),
         ),
         const SizedBox(height: 24),
         SizedBox(
@@ -84,6 +155,65 @@ class DriverSettingsTab extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _sectionCard(String title, Widget child) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _earningsTile(int daily, int monthly, int total, double amount, double todayAmount, double monthlyAmount) {
+    return Row(
+      children: [
+        Expanded(
+          child: _statBox('توصيلات اليوم', '$daily', const Color(0xFF10b981)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statBox('توصيلات الشهر', '$monthly', const Color(0xFF3B82F6)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statBox('إجمالي التوصيلات', '$total', const Color(0xFF8B5CF6)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statBox('الأرباح اليوم', '${todayAmount.toStringAsFixed(0)} د.ع', const Color(0xFF10b981)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statBox('الأرباح الشهر', '${monthlyAmount.toStringAsFixed(0)} د.ع', const Color(0xFF3B82F6)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statBox('إجمالي الأرباح', '${amount.toStringAsFixed(0)} د.ع', const Color(0xFFF59E0B)),
+        ),
+      ],
+    );
+  }
+
+  Widget _statBox(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+        ],
+      ),
     );
   }
 

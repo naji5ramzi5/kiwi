@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'modules/overview_screen.dart';
 import 'modules/live_monitor_screen.dart';
+import 'modules/map_screen.dart';
 import 'modules/employees_screen.dart';
 import 'modules/delivered_screen.dart';
 import 'modules/notifications_screen.dart';
@@ -22,6 +23,7 @@ class _OpsMainScreenState extends State<OpsMainScreen> {
     final tabs = <Widget>[
       OverviewScreen(auth: widget.auth),
       const LiveMonitorScreen(),
+      const MapScreen(),
       EmployeesScreen(auth: widget.auth),
       const DeliveredScreen(),
       const NotificationsScreen(),
@@ -42,6 +44,11 @@ class _OpsMainScreenState extends State<OpsMainScreen> {
             icon: Icon(Icons.radar_outlined),
             selectedIcon: Icon(Icons.radar),
             label: 'المباشر',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.map_outlined),
+            selectedIcon: Icon(Icons.map),
+            label: 'الخريطة',
           ),
           const NavigationDestination(
             icon: Icon(Icons.people_outline),

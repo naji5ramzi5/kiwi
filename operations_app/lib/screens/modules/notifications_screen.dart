@@ -44,12 +44,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     setState(() {});
   }
 
+  void _openComposer() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const NotificationComposer(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('الإشعارات', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            tooltip: 'إرسال إشعار',
+            onPressed: _openComposer,
+            icon: const Icon(Icons.outgoing_mail, color: Color(0xFF10b981)),
+          ),
           IconButton(
             onPressed: () async {
               final ok = await showDialog<bool>(
@@ -241,6 +255,349 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// نموذج إنشاء وإرسال إشعار للمندوبين — بلا broadcast
+class NotificationComposer extends StatefulWidget {
+  const NotificationComposer({super.key});
+
+  @override
+  State<NotificationComposer> createState() => _NotificationComposerState();
+}
+
+class _NotificationComposerState extends State<NotificationComposer> {
+  final _titleController = TextEditingController();
+  final _bodyController = TextEditingController();
+  final _imageController = TextEditingController();
+
+  String _target = 'all'; // all | branch | driver
+  String? _branchId;
+  String? _driverId;
+  int? _recipientCount;
+  bool _counting = false;
+  bool _sending = false;
+
+  List<Map<String, dynamic>>? _branches;
+  List<DeliveryEmployeeModel>? _drivers;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOptions();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _bodyController.dispose();
+    _imageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadOptions() async {
+    try {
+      final results = await Future.wait([
+        OpsApi.fetchBranches(),
+        OpsApi.fetchEmployees(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _branches = (results[0] as List).cast<Map<String, dynamic>>();
+        _drivers = (results[1] as List).cast<DeliveryEmployeeModel>();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _previewCount() async {
+    setState(() => _counting = true);
+    try {
+      int count = 0;
+      if (_target == 'all') {
+        final tokens = await OpsApi.fetchDriverFcmTokens();
+        count = tokens.length;
+      } else if (_target == 'branch') {
+        if (_branchId == null) {
+          throw const OpsApiException('اختر الفرع أولاً');
+        }
+        final tokens = await OpsApi.fetchDriverFcmTokens(branchId: _branchId);
+        count = tokens.length;
+      } else {
+        if (_driverId == null) {
+          throw const OpsApiException('اختر المندوب أولاً');
+        }
+        final tokens = await OpsApi.fetchDriverFcmTokens(profileIds: [_driverId!]);
+        count = tokens.length;
+      }
+      if (!mounted) return;
+      setState(() {
+        _recipientCount = count;
+        _counting = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _counting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e is OpsApiException ? e.message : 'تعذر حساب المستلمين',
+            style: GoogleFonts.cairo(fontSize: 12)),
+      ));
+    }
+  }
+
+  Future<void> _send() async {
+    final title = _titleController.text.trim();
+    final body = _bodyController.text.trim();
+    if (title.isEmpty) {
+      _toast('اكتب عنوان الإشعار');
+      return;
+    }
+    if (body.isEmpty) {
+      _toast('اكتب نص الإشعار');
+      return;
+    }
+
+    setState(() => _sending = true);
+    try {
+      List<String> tokens;
+      if (_target == 'branch') {
+        if (_branchId == null) throw const OpsApiException('اختر الفرع أولاً');
+        tokens = await OpsApi.fetchDriverFcmTokens(branchId: _branchId);
+      } else if (_target == 'driver') {
+        if (_driverId == null) throw const OpsApiException('اختر المندوب أولاً');
+        tokens = await OpsApi.fetchDriverFcmTokens(profileIds: [_driverId!]);
+      } else {
+        tokens = await OpsApi.fetchDriverFcmTokens();
+      }
+
+      if (tokens.isEmpty) {
+        throw const OpsApiException('لا توجد أجهزة مستهدفة لهذا الاختيار');
+      }
+
+      final sent = await OpsApi.sendDriverNotification(
+        title: title,
+        body: body,
+        imageUrl: _imageController.text.trim().isEmpty
+            ? null
+            : _imageController.text.trim(),
+        tokens: tokens,
+      );
+
+      if (!mounted) return;
+      setState(() => _sending = false);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: const Color(0xFF10b981),
+        content: Text('تم الإرسال بنجاح — $sent جهاز',
+            style: GoogleFonts.cairo(fontSize: 12)),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _toast(e is OpsApiException ? e.message : 'تعذر إرسال الإشعار');
+    }
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.cairo(fontSize: 12)),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: bottomInset + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('إرسال إشعار للمندوبين',
+                style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _titleController,
+              textAlign: TextAlign.right,
+              decoration: _fieldDecoration('عنوان الإشعار'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _bodyController,
+              textAlign: TextAlign.right,
+              maxLines: 4,
+              decoration: _fieldDecoration('نص الإشعار'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _imageController,
+              textAlign: TextAlign.left,
+              decoration: _fieldDecoration('رابط صورة (اختياري)'),
+            ),
+            const SizedBox(height: 16),
+            Text('الاستهداف', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _targetChip('الكل', 'all'),
+                const SizedBox(width: 8),
+                _targetChip('فرع معيّن', 'branch'),
+                const SizedBox(width: 8),
+                _targetChip('مندوب معيّن', 'driver'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_target == 'branch') ...[
+              DropdownButtonFormField<String>(
+                initialValue: _branchId,
+                isExpanded: true,
+                decoration: _fieldDecoration('اختر الفرع'),
+                items: (_branches ?? [])
+                    .map((b) => DropdownMenuItem(
+                          value: b['id'].toString(),
+                          child: Text(b['name']?.toString() ?? '—',
+                              style: GoogleFonts.cairo(fontSize: 13)),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => _branchId = v),
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (_target == 'driver') ...[
+              DropdownButtonFormField<String>(
+                initialValue: _driverId,
+                isExpanded: true,
+                decoration: _fieldDecoration('اختر المندوب'),
+                items: (_drivers ?? [])
+                    .map((d) => DropdownMenuItem(
+                          value: d.userId,
+                          child: Text('${d.fullName} — ${d.branchName}',
+                              style: GoogleFonts.cairo(fontSize: 13)),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => _driverId = v),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _counting ? null : _previewCount,
+                    icon: _counting
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.people_alt_outlined, size: 16),
+                    label: Text('معاينة المستلمين', style: GoogleFonts.cairo(fontSize: 12)),
+                  ),
+                ),
+                if (_recipientCount != null) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10b981).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text('$_recipientCount جهاز',
+                        style: GoogleFonts.cairo(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF10b981))),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF10b981),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: _sending ? null : _send,
+                icon: _sending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.send, size: 16),
+                label: Text(_sending ? 'جارٍ الإرسال...' : 'إرسال الإشعار',
+                    style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _targetChip(String label, String value) {
+    final selected = _target == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _target = value),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF10b981) : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: selected ? const Color(0xFF10b981) : Colors.transparent),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.cairo(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: selected ? Colors.white : Colors.black54,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _fieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.cairo(fontSize: 12),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      isDense: true,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
       ),
     );
   }

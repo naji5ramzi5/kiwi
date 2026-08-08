@@ -327,10 +327,10 @@ class _LiveMonitorScreenState extends State<LiveMonitorScreen> {
                               : Colors.grey,
                         ),
                       ),
-                      title: Text(e.name ?? '—',
+                      title: Text(e.fullName,
                           style: GoogleFonts.cairo(fontSize: 13)),
                       subtitle: Text(
-                        '${e.branchName ?? ''} - ${e.totalDeliveries} توصيل',
+                        '${e.branchName} - ${e.totalDeliveries} توصيل',
                         style: GoogleFonts.cairo(fontSize: 11, color: Colors.grey),
                       ),
                       trailing: FilledButton(

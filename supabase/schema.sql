@@ -2269,9 +2269,10 @@ CREATE POLICY "own_profile_select" ON "public"."profiles" FOR SELECT USING ((("i
 
 
 
-CREATE POLICY "own_profile_update" ON "public"."profiles" FOR UPDATE USING (("id" = "auth"."uid"())) WITH CHECK ((("id" = "auth"."uid"()) AND (("role")::"text" = (( SELECT "p"."role"
-   FROM "public"."profiles" "p"
-  WHERE ("p"."id" = "auth"."uid"())))::"text")));
+-- role immutability is enforced via SECURITY DEFINER get_my_role() to avoid
+-- the infinite-recursion that a same-table subquery in the WITH CHECK caused
+-- (see migrations/027 + 028)
+CREATE POLICY "own_profile_update" ON "public"."profiles" FOR UPDATE USING (("id" = "auth"."uid"())) WITH CHECK ((("id" = "auth"."uid"()) AND ("role" = "public"."get_my_role"())));
 
 
 

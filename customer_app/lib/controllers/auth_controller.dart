@@ -182,18 +182,6 @@ class AuthController extends GetxController {
       if (res.user != null) {
         debugPrint('[Auth] Signup success, user ID: ${res.user!.id}');
 
-        try {
-          await supabase.from('profiles').upsert({
-            'id': res.user!.id,
-            'full_name': trimmedName,
-            'phone': normalizedPhone,
-            'role': 'customer',
-          });
-          debugPrint('[Auth] Profile upserted successfully');
-        } catch (profileErr) {
-          debugPrint('[Auth] Profile upsert error: $profileErr');
-        }
-
         if (res.session == null) {
           debugPrint('[Auth] No session returned. Attempting auto-login...');
           bool autoLoggedIn = false;
@@ -216,6 +204,20 @@ class AuthController extends GetxController {
           if (!autoLoggedIn) {
             debugPrint('[Auth] All auto-login attempts failed');
           }
+        }
+
+        // Create the profile only once a session is present: the upsert
+        // relies on auth.uid() matching profiles.id (RLS own_profile_insert).
+        try {
+          await supabase.from('profiles').upsert({
+            'id': res.user!.id,
+            'full_name': trimmedName,
+            'phone': normalizedPhone,
+            'role': 'customer',
+          });
+          debugPrint('[Auth] Profile upserted successfully');
+        } catch (profileErr) {
+          debugPrint('[Auth] Profile upsert error: $profileErr');
         }
 
         await fetchUserProfile();

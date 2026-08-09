@@ -493,6 +493,7 @@ class CartController extends GetxController {
       return true;
     } catch (e) {
       final errStr = e.toString();
+      debugPrint('[Cart] placeOrder failed: $errStr');
       Get.snackbar(
         'order_error'.tr,
         errStr.contains('network') ? 'no_internet'.tr : 'order_send_failed'.tr,

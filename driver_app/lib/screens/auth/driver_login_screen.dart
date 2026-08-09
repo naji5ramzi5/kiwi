@@ -90,7 +90,8 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
             }
           }
 
-          // Create profile entry
+          // Create profile entry — phone AND email saved so they show
+          // in settings and in the admin dashboard after approval
           await supabase.from('profiles').upsert({
             'id': res.user!.id,
             'full_name': _nameController.text.trim(),
@@ -98,10 +99,11 @@ class _DriverLoginScreenState extends State<DriverLoginScreen> with SingleTicker
             'vehicle_type': vehicleType,
             'plate_number': _plateController.text.trim(),
             'phone': _phoneController.text.trim(),
+            'email': _emailController.text.trim(),
             'avatar_url': avatarUrl,
             'is_approved': false,
             'is_online': false,
-          });
+          }, onConflict: 'id');
           
           Get.snackbar('نجاح', 'تم إنشاء الحساب بنجاح، بانتظار موافقة الإدارة!', backgroundColor: const Color(0xFF10b981), colorText: Colors.white, snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(20));
         }

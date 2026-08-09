@@ -760,11 +760,37 @@ class OpsApi {
     try {
       final rows = await _sb
           .from('orders')
-          .select('id,status,total_price,delivery_fee,customer_name_manual,customer_phone,delivery_address,created_at,assigned_at,picked_up_at,on_the_way_at,delivery_lat,delivery_lng,branch_id,branch:branches(name),driver:drivers(full_name)')
+          .select('id,status,total_price,delivery_fee,customer_name_manual,customer_phone,delivery_address,created_at,assigned_at,picked_up_at,on_the_way_at,delivery_lat,delivery_lng,driver_id,branch_id,branch:branches(name)')
           .inFilter('status', st)
           .order('created_at', ascending: false)
           .limit(200);
-      return _liveFrom(rows);
+      final maps = (rows as List).cast<Map<String, dynamic>>();
+      final driverIds = maps
+          .map((m) => m['driver_id']?.toString())
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+      final nameByUser = <String, String>{};
+      if (driverIds.isNotEmpty) {
+        try {
+          final ps = await _sb
+              .from('profiles')
+              .select('id,full_name')
+              .inFilter('id', driverIds);
+          for (final p in ps) {
+            nameByUser[p['id'].toString()] =
+                p['full_name']?.toString() ?? '';
+          }
+        } catch (_) {}
+      }
+      for (final m in maps) {
+        final id = m['driver_id']?.toString();
+        if (id != null && nameByUser.containsKey(id)) {
+          m['driver_name'] = nameByUser[id];
+        }
+      }
+      return _liveFrom(maps);
     } catch (e) {
       throw OpsApiException(friendlyError(e, fallback: 'تعذر تحميل الطلبات الحية'));
     }

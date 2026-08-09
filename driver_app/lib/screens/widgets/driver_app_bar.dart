@@ -17,106 +17,234 @@ class DriverAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(80);
+  Size get preferredSize => const Size.fromHeight(92);
 
   @override
   Widget build(BuildContext context) {
+    final vehicleIcon = driverProfile?['vehicle_type'] == 'truck'
+        ? LucideIcons.truck
+        : driverProfile?['vehicle_type'] == 'car'
+            ? LucideIcons.car
+            : driverProfile?['vehicle_type'] == 'van'
+                ? LucideIcons.bus
+                : LucideIcons.bike;
+
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 5))],
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0B7A4B), Color(0xFF12A36D)],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF0B7A4B),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: SafeArea(
+        bottom: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
           child: Row(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF10b981), width: 2),
-                  boxShadow: [BoxShadow(color: const Color(0xFF10b981).withOpacity(0.2), blurRadius: 10)],
-                ),
-                child: CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Colors.white,
-                  backgroundImage: driverProfile?['avatar_url'] != null ? NetworkImage(driverProfile!['avatar_url']) : null,
-                  child: driverProfile?['avatar_url'] == null ? const Icon(LucideIcons.user, color: Color(0xFF10b981)) : null,
-                ),
+              Stack(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.white, Color(0xFFD1FAE5)],
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 26,
+                      backgroundColor: const Color(0xFF0F172A),
+                      backgroundImage: driverProfile?['avatar_url'] != null
+                          ? NetworkImage(driverProfile!['avatar_url'])
+                          : null,
+                      child: driverProfile?['avatar_url'] == null
+                          ? const Icon(LucideIcons.user,
+                              color: Colors.white, size: 26)
+                          : null,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isOnline
+                            ? const Color(0xFF34D399)
+                            : const Color(0xFF9CA3AF),
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x33000000), blurRadius: 4),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('أهلاً بك، ${driverProfile?['full_name'] ?? 'كابتن'}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
-                    const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(
-                          driverProfile?['vehicle_type'] == 'truck'
-                              ? LucideIcons.truck
-                              : driverProfile?['vehicle_type'] == 'car'
-                                  ? LucideIcons.car
-                                  : driverProfile?['vehicle_type'] == 'van'
-                                      ? LucideIcons.bus
-                                      : LucideIcons.bike,
-                          size: 14,
-                          color: Colors.grey.shade500,
+                        const Flexible(
+                          child: Text(
+                            'أهلاً بك',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xD9FFFFFF),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 4),
-                        Text(driverProfile?['plate_number'] ?? 'جاهز للانطلاق', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                        Flexible(
+                          child: Text(
+                            driverProfile?['full_name'] ?? 'كابتن',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    if (branchName != null) ...[
-                      const SizedBox(height: 2),
-                      Row(
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(LucideIcons.store, size: 12, color: const Color(0xFF10b981)),
-                          const SizedBox(width: 4),
-                          Text(branchName!, style: TextStyle(fontSize: 11, color: const Color(0xFF10b981), fontWeight: FontWeight.w600)),
+                          Icon(vehicleIcon,
+                              size: 13, color: const Color(0xFFD1FAE5)),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              driverProfile?['plate_number'] ??
+                                  'جاهز للانطلاق',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          if (branchName != null) ...[
+                            Container(
+                              width: 1,
+                              height: 12,
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              color: Colors.white.withOpacity(0.35),
+                            ),
+                            const Icon(LucideIcons.store,
+                                size: 12, color: Color(0xFFD1FAE5)),
+                            const SizedBox(width: 4),
+                            Text(
+                              branchName!,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationCenterScreen()),
                   );
                 },
-                  child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  child: const Icon(LucideIcons.bell, color: Color(0xFF10b981), size: 20),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.25), width: 1),
+                  ),
+                  child: const Icon(LucideIcons.bell,
+                      color: Colors.white, size: 20),
                 ),
               ),
+              const SizedBox(width: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isOnline ? const Color(0xFF10b981).withOpacity(0.1) : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
+                  color: isOnline
+                      ? const Color(0xFFFDE68A).withOpacity(0.22)
+                      : Colors.white.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: isOnline
+                        ? const Color(0xFFFDE047)
+                        : Colors.white.withOpacity(0.25),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(isOnline ? 'متصل' : 'أوفلاين', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isOnline ? const Color(0xFF10b981) : Colors.grey.shade600)),
+                    Text(
+                      isOnline ? 'متصل' : 'أوفلاين',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                        color: const Color(0xFFFDE68A),
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     SizedBox(
                       height: 24,
                       child: Switch(
                         value: isOnline,
-                        activeColor: const Color(0xFF10b981),
-                        activeTrackColor: const Color(0xFF10b981).withOpacity(0.3),
+                        activeColor: const Color(0xFF34D399),
+                        activeTrackColor: const Color(0xFF0B7A4B),
+                        inactiveThumbColor: const Color(0xFF9CA3AF),
+                        inactiveTrackColor: Colors.white.withOpacity(0.35),
                         onChanged: onToggleOnline,
                       ),
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),

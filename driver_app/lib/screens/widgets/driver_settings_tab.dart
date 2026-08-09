@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../auth/driver_login_screen.dart';
 
-class DriverSettingsTab extends StatelessWidget {
+class DriverSettingsTab extends StatefulWidget {
   final Map<String, dynamic>? driverProfile;
   final String? branchName;
   final String? joinedAt;
@@ -30,16 +30,133 @@ class DriverSettingsTab extends StatelessWidget {
     this.monthlyEarnings = 0,
   });
 
+  @override
+  State<DriverSettingsTab> createState() => _DriverSettingsTabState();
+}
+
+class _DriverSettingsTabState extends State<DriverSettingsTab> {
+  late Map<String, dynamic>? _profile = widget.driverProfile;
+
   String _resolvePhone() {
-    final profilePhone = driverProfile?['phone'];
-    if (profilePhone != null && profilePhone.toString().isNotEmpty) return profilePhone.toString();
+    final p = _profile?['phone'];
+    if (p != null && p.toString().isNotEmpty) return p.toString();
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       final metaPhone = user.userMetadata?['phone'];
-      if (metaPhone != null && metaPhone.toString().isNotEmpty) return metaPhone.toString();
+      if (metaPhone != null && metaPhone.toString().isNotEmpty) {
+        return metaPhone.toString();
+      }
       if (user.phone != null && user.phone!.isNotEmpty) return user.phone!;
     }
     return '';
+  }
+
+  String _resolveEmail() {
+    final e = _profile?['email'];
+    if (e != null && e.toString().isNotEmpty) return e.toString();
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null && user.email != null && user.email!.isNotEmpty) {
+      return user.email!;
+    }
+    return '';
+  }
+
+  Future<void> _savePhone(String phone) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    final value = phone.trim();
+    if (value.isEmpty) return;
+    try {
+      await Supabase.instance.client
+          .from('profiles')
+          .update({'phone': value, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', user.id);
+    } catch (e) {
+      debugPrint('save phone -> profiles failed: $e');
+    }
+    try {
+      await Supabase.instance.client
+          .from('delivery_employees')
+          .update({'phone': value, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('save phone -> delivery_employees failed: $e');
+    }
+    try {
+      await Supabase.instance.client
+          .from('drivers')
+          .update({'phone': value, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', user.id);
+    } catch (e) {
+      debugPrint('save phone -> drivers failed: $e');
+    }
+    setState(() {
+      _profile = {...?_profile, 'phone': value};
+    });
+    Get.snackbar('تم', 'تم تحديث رقم الجوال بنجاح',
+        backgroundColor: const Color(0xFF10b981),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16));
+  }
+
+  Future<void> _saveEmail(String email) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    final value = email.trim();
+    if (value.isEmpty) return;
+    try {
+      await Supabase.instance.client
+          .from('profiles')
+          .update({'email': value, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', user.id);
+      setState(() {
+        _profile = {...?_profile, 'email': value};
+      });
+      Get.snackbar('تم', 'تم تحديث البريد الإلكتروني بنجاح',
+          backgroundColor: const Color(0xFF10b981),
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16));
+    } catch (e) {
+      Get.snackbar('خطأ', 'تعذر حفظ البريد الإلكتروني',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16));
+      debugPrint('save email failed: $e');
+    }
+  }
+
+  Future<void> _editField(String title, String current, bool isPhone) async {
+    final controller = TextEditingController(text: current);
+    final res = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          keyboardType:
+              isPhone ? TextInputType.phone : TextInputType.emailAddress,
+          decoration: InputDecoration(
+            hintText: isPhone ? 'رقم الجوال' : 'البريد الإلكتروني',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10b981)),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+    if (res == null || res.isEmpty) return;
+    if (isPhone) {
+      await _savePhone(res);
+    } else {
+      await _saveEmail(res);
+    }
   }
 
   String _formatDate(String? iso) {
@@ -66,18 +183,18 @@ class DriverSettingsTab extends StatelessWidget {
               CircleAvatar(
                 radius: 40,
                 backgroundColor: Colors.white,
-                backgroundImage: driverProfile?['avatar_url'] != null ? NetworkImage(driverProfile!['avatar_url']) : null,
-                child: driverProfile?['avatar_url'] == null ? const Icon(LucideIcons.user, size: 40, color: Color(0xFF10b981)) : null,
+                backgroundImage: _profile?['avatar_url'] != null ? NetworkImage(_profile!['avatar_url']) : null,
+                child: _profile?['avatar_url'] == null ? const Icon(LucideIcons.user, size: 40, color: Color(0xFF10b981)) : null,
               ),
               const SizedBox(height: 12),
-              Text(driverProfile?['full_name'] ?? 'كابتن', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(_profile?['full_name'] ?? 'كابتن', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(driverProfile?['email'] ?? '', style: TextStyle(color: Colors.grey.shade500)),
+              Text(_resolveEmail(), style: TextStyle(color: Colors.grey.shade500)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isOnline
+                  color: widget.isOnline
                       ? const Color(0xFF10b981).withOpacity(0.1)
                       : Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -85,11 +202,11 @@ class DriverSettingsTab extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(LucideIcons.circleDot, size: 14, color: isOnline ? const Color(0xFF10b981) : Colors.orange),
+                    Icon(LucideIcons.circleDot, size: 14, color: widget.isOnline ? const Color(0xFF10b981) : Colors.orange),
                     const SizedBox(width: 6),
                     Text(
-                      isOnline ? 'متصل الآن' : 'غير متصل',
-                      style: TextStyle(color: isOnline ? const Color(0xFF10b981) : Colors.orange, fontWeight: FontWeight.bold),
+                      widget.isOnline ? 'متصل الآن' : 'غير متصل',
+                      style: TextStyle(color: widget.isOnline ? const Color(0xFF10b981) : Colors.orange, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -99,11 +216,11 @@ class DriverSettingsTab extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(color: const Color(0xFF10b981).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
                 child: Text(
-                  driverProfile?['vehicle_type'] == 'truck'
+                  _profile?['vehicle_type'] == 'truck'
                       ? 'شاحنة'
-                      : driverProfile?['vehicle_type'] == 'car'
+                      : _profile?['vehicle_type'] == 'car'
                           ? 'سيارة'
-                          : driverProfile?['vehicle_type'] == 'van'
+                          : _profile?['vehicle_type'] == 'van'
                               ? 'فان'
                               : 'دراجة نارية',
                   style: const TextStyle(color: Color(0xFF10b981), fontWeight: FontWeight.bold),
@@ -114,27 +231,27 @@ class DriverSettingsTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _sectionCard('بيانات الموظف', Column(children: [
-          _settingsTile(LucideIcons.building2, 'الفرع', branchName ?? 'غير محدد'),
+          _editTile(LucideIcons.smartphone, 'رقم الجوال', _resolvePhone(), isPhone: true),
           const Divider(),
-          _settingsTile(LucideIcons.hash, 'رقم اللوحة', driverProfile?['plate_number'] ?? ''),
+          _editTile(LucideIcons.mail, 'البريد الإلكتروني', _resolveEmail(), isPhone: false),
           const Divider(),
-          _settingsTile(LucideIcons.smartphone, 'رقم الجوال', _resolvePhone()),
+          _settingsTile(LucideIcons.building2, 'الفرع', widget.branchName ?? 'غير محدد'),
           const Divider(),
-          _settingsTile(LucideIcons.mail, 'البريد الإلكتروني', driverProfile?['email'] ?? ''),
+          _settingsTile(LucideIcons.hash, 'رقم اللوحة', _profile?['plate_number'] ?? ''),
           const Divider(),
-          _settingsTile(LucideIcons.calendarDays, 'تاريخ الانضمام', _formatDate(joinedAt)),
+          _settingsTile(LucideIcons.calendarDays, 'تاريخ الانضمام', _formatDate(widget.joinedAt)),
           const Divider(),
-          _settingsTile(LucideIcons.packageCheck, 'إجمالي عمليات التوصيل', '$employeeTotalDeliveries'),
+          _settingsTile(LucideIcons.packageCheck, 'إجمالي عمليات التوصيل', '${widget.employeeTotalDeliveries}'),
           const Divider(),
           _settingsTile(
             LucideIcons.shieldCheck,
             'حالة الحساب',
-            driverProfile?['is_approved'] == true ? 'مقبول ✅' : 'بانتظار الموافقة ⏳',
+            _profile?['is_approved'] == true ? 'مقبول ✅' : 'بانتظار الموافقة ⏳',
           ),
         ])),
         const SizedBox(height: 16),
         _sectionCard('الأرباح',
-          _earningsTile(dailyDeliveries, monthlyDeliveries, employeeTotalDeliveries, totalEarnings, todayEarnings, monthlyEarnings),
+          _earningsTile(widget.dailyDeliveries, widget.monthlyDeliveries, widget.employeeTotalDeliveries, widget.totalEarnings, widget.todayEarnings, widget.monthlyEarnings),
         ),
         const SizedBox(height: 24),
         SizedBox(
@@ -174,38 +291,29 @@ class DriverSettingsTab extends StatelessWidget {
   }
 
   Widget _earningsTile(int daily, int monthly, int total, double amount, double todayAmount, double monthlyAmount) {
-    return Row(
-      children: [
-        Expanded(
-          child: _statBox('توصيلات اليوم', '$daily', const Color(0xFF10b981)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statBox('توصيلات الشهر', '$monthly', const Color(0xFF3B82F6)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statBox('إجمالي التوصيلات', '$total', const Color(0xFF8B5CF6)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statBox('الأرباح اليوم', '${todayAmount.toStringAsFixed(0)} د.ع', const Color(0xFF10b981)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statBox('الأرباح الشهر', '${monthlyAmount.toStringAsFixed(0)} د.ع', const Color(0xFF3B82F6)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statBox('إجمالي الأرباح', '${amount.toStringAsFixed(0)} د.ع', const Color(0xFFF59E0B)),
-        ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _statBox('توصيلات اليوم', '$daily', const Color(0xFF10b981)),
+          const SizedBox(width: 12),
+          _statBox('توصيلات الشهر', '$monthly', const Color(0xFF3B82F6)),
+          const SizedBox(width: 12),
+          _statBox('إجمالي التوصيلات', '$total', const Color(0xFF8B5CF6)),
+          const SizedBox(width: 12),
+          _statBox('الأرباح اليوم', '${todayAmount.toStringAsFixed(0)} د.ع', const Color(0xFF10b981)),
+          const SizedBox(width: 12),
+          _statBox('الأرباح الشهر', '${monthlyAmount.toStringAsFixed(0)} د.ع', const Color(0xFF3B82F6)),
+          const SizedBox(width: 12),
+          _statBox('إجمالي الأرباح', '${amount.toStringAsFixed(0)} د.ع', const Color(0xFFF59E0B)),
+        ],
+      ),
     );
   }
 
   Widget _statBox(String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
@@ -228,6 +336,38 @@ class DriverSettingsTab extends StatelessWidget {
           const Spacer(),
           Text(value.isNotEmpty ? value : 'غير مضاف', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: value.isNotEmpty ? Colors.black : Colors.grey.shade400)),
         ],
+      ),
+    );
+  }
+
+  Widget _editTile(IconData icon, String label, String value, {required bool isPhone}) {
+    return InkWell(
+      onTap: () => _editField(label, value, isPhone),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: const Color(0xFF10b981)),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+            const Spacer(),
+            Flexible(
+              child: Text(
+                value.isNotEmpty ? value : 'إضافته (اضغط)',
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: value.isNotEmpty ? Colors.black : const Color(0xFF10b981),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(LucideIcons.pencil, size: 14, color: const Color(0xFF10b981)),
+          ],
+        ),
       ),
     );
   }

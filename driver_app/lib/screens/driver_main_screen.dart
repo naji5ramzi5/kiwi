@@ -351,21 +351,26 @@ class _DriverMainScreenState extends State<DriverMainScreen> {
       final userId = supabase.auth.currentUser!.id;
       // Orders assigned to me (active work) PLUS new/unassigned orders
       // that belong to my branch zone so they render the moment the
-      // FCM notification arrives.
-      final response = await supabase
+      // FCM notification arrives. Branch zone is optional (driver may
+      // not be assigned to a branch yet).
+      final zoneCond = driverBranchId != null
+          ? 'and(status.in.(pending,preparing,prepared,ready),branch_id.eq.$driverBranchId),'
+          : '';
+      final query = supabase
           .from('orders')
           .select()
           .or(
-            'and(status.in.(pending,preparing,prepared,ready),branch_id.eq.$driverBranchId),'
-            'and(driver_id.eq.$userId,status.in.(shipped,picked_up,assigned,ready,preparing,prepared))',
+            '${zoneCond}and(driver_id.eq.$userId,status.in.(shipped,picked_up,assigned,ready,preparing,prepared))',
           )
           .order('created_at', ascending: false);
+      final response = await query;
       setState(() {
         activeOrders = List<Map<String, dynamic>>.from(response);
-        isLoading = false;
       });
     } catch (e) {
       debugPrint('Orders error: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
